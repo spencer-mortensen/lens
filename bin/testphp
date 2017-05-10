@@ -1,0 +1,8 @@
+#!/usr/bin/env php
+<?php
+
+namespace TestPhp\Executable;
+
+require dirname(__DIR__) . '/bootstrap.php';
+
+new Command();

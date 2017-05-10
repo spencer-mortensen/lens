@@ -1,0 +1,44 @@
+th {
+	font-weight: normal;
+	min-width: 100%;
+	text-align: left;
+}
+
+td {
+	padding: 0 .75em;
+}
+
+th {
+	border-left: 1px dotted #cccccc;
+}
+
+table a {
+	color: #333333;
+	text-decoration: none;
+	padding: 0 .75em;
+}
+
+table a:hover {
+	color: #000000;
+	text-decoration: underline;
+}
+
+table a span {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	background: url("filesystem.png") 0 0 no-repeat;
+	margin: 0 .375em 0 0;
+}
+
+.directory a:hover span {
+	background-position: -16px 0;
+}
+
+.file span {
+	background-position: 0 -16px;
+}
+
+.file a:hover span {
+	background-position: -16px -16px;
+}

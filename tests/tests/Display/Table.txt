@@ -1,0 +1,14 @@
+<?php
+
+namespace TestPhp\Display;
+
+require __DIR__ . '/../../bootstrap.php';
+
+
+// Cause
+$table = new Table();
+$x = $table->getText();
+unset($table);
+
+// Effect
+$x = null;
