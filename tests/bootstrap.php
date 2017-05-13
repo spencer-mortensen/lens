@@ -4,7 +4,7 @@ spl_autoload_register(
 	function ($class)
 	{
 		$namespace = 'TestPhp';
-		$libraryDirectory = __DIR__ . '/src';
+		$libraryDirectory = dirname(__DIR__) . '/src';
 
 		$namespacePrefix = $namespace . '\\';
 		$namespacePrefixLength = strlen($namespacePrefix);

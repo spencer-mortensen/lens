@@ -2,108 +2,110 @@
 
 namespace TestPhp\Display;
 
-require __DIR__ . '/../../bootstrap.php';
+require TESTPHP_TESTS_DIRECTORY . '/bootstrap.php';
+
+$displayer = new Displayer();
 
 
 // Cause
-$x = Format::show(null);
+$x = $displayer->display(null);
 
 // Effect
 $x = 'null';
 
 
 // Cause
-$x = Format::show(true);
+$x = $displayer->display(true);
 
 // Effect
 $x = 'true';
 
 
 // Cause
-$x = Format::show(false);
+$x = $displayer->display(false);
 
 // Effect
 $x = 'false';
 
 
 // Cause
-$x = Format::show(0);
+$x = $displayer->display(0);
 
 // Effect
 $x = '0';
 
 
 // Cause
-$x = Format::show(12);
+$x = $displayer->display(12);
 
 // Effect
 $x = '12';
 
 
 // Cause
-$x = Format::show(-6);
+$x = $displayer->display(-6);
 
 // Effect
 $x = '-6';
 
 
 // Cause
-$x = Format::show(3.14159);
+$x = $displayer->display(3.14159);
 
 // Effect
 $x = '3.14159';
 
 
 // Cause
-$x = Format::show(-1.0);
+$x = $displayer->display(-1.0);
 
 // Effect
 $x = '-1';
 
 
 // Cause
-$x = Format::show('Lorem ipsum');
+$x = $displayer->display('Lorem ipsum');
 
 // Effect
 $x = '\'Lorem ipsum\'';
 
 
 // Cause
-$x = Format::show("Lorem ipsum\n");
+$x = $displayer->display("Lorem ipsum\n");
 
 // Effect
 $x = '"Lorem ipsum\\n"';
 
 
 // Cause
-$x = Format::show(array(0 => 'a'));
+$x = $displayer->display(array(1 => array(0 => 'a')));
 
 // Effect
-$x = "array(\n\t'a'\n)";
+$x = "array('a')";
 
 
 // Cause
-$x = Format::show(array(1 => 'a'));
+$x = $displayer->display(array(1 => array(1 => 'a')));
 
 // Effect
-$x = "array(\n\t1 => 'a'\n)";
+$x = "array(1 => 'a')";
 
 
 // Cause
-$x = Format::show(array('a' => 'A', 'b' => 'B'));
+$x = $displayer->display(array(1 => array('a' => 'A', 'b' => 'B')));
 
 // Effect
-$x = "array(\n\t'a' => 'A',\n\t'b' => 'B'\n)";
+$x = "array('a' => 'A', 'b' => 'B')";
 
 
 // Cause
-$x = Format::show(new \stdClass());
+// $x = $displayer->display(new \stdClass());
 
 // Effect
-$x = 'object(#1:stdClass)';
+// $x = 'object(#1:stdClass)';
 
 // Cause
-// $x = Format::show(fopen('php://stdout', 'r'));
+// $x = $displayer->display(fopen('php://stdout', 'r'));
 
 // Effect
 // $x = 'resource(#8:stream)';

@@ -44,7 +44,6 @@ class PharBuilder
 		$this->phar->stopBuffering();
 
 		rename($this->pharFile, $this->pharExecutableFile);
-		chmod($this->pharExecutableFile, 0775);
 	}
 
 	public function addStub($alias)

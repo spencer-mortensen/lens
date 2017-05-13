@@ -31,16 +31,6 @@ use TestPhp\Browser;
 use TestPhp\Evaluator;
 use TestPhp\Filesystem;
 
-/*
-# Normal usage:
-testphp --tests="..." --src="..."
-
-# Evaluate PHP code:
-testphp --mode="test" --code="..." (--coverage)
-
-# Get code coverage:
-testphp --mode="coverage" --file="..."
-*/
 class Command
 {
 	const ERROR_RUNNER_NO_TESTS_DIRECTORY = 1;
@@ -52,7 +42,7 @@ class Command
 	public function __construct()
 	{
 		$this->executable = realpath($GLOBALS['argv'][0]);
-		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage'));
+		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage', 'version'));
 
 		$mode = &$options['mode'];
 
@@ -60,24 +50,35 @@ class Command
 			$this->getTest(@$options['code'], isset($options['coverage']));
 		} elseif ($mode === 'coverage') {
 			$this->getCoverage(@$options['file']);
+		} elseif (isset($options['version'])) {
+			$this->getVersion();
 		} else {
 			$this->getRunner(@$options['tests'], @$options['src']);
 		}
 	}
 
+	private function getVersion()
+	{
+		echo "testphp 0.0.1\n";
+		exit(0);
+	}
+
 	private function getRunner($tests, $src)
 	{
-		list($testsDirectory, $codeDirectory, $coverageDirectory, $currentDirectory) = $this->getDirectories($tests, $src);
+		list($testsDirectory, $codeDirectory, $currentDirectory) = $this->getDirectories($tests, $src);
+
+		$testsTestsDirectory = "{$testsDirectory}/tests";
+		$coverageDirectory = "{$testsDirectory}/coverage";
 
 		$filesystem = new Filesystem();
 		$browser = new Browser($filesystem);
-		$tests = $browser->browse($testsDirectory);
+		$tests = $browser->browse($testsTestsDirectory);
 
 		$evaluator = new Evaluator($filesystem, $this->executable);
-		$results = $evaluator->evaluate($tests, $codeDirectory);
+		$results = $evaluator->evaluate($tests, $testsDirectory, $codeDirectory);
 
 		$console = new Console();
-		echo $console->summarize($testsDirectory, $currentDirectory, $results['tests']);
+		echo $console->summarize($testsTestsDirectory, $currentDirectory, $results['tests']);
 
 		$web = new Web($filesystem);
 		$web->coverage($codeDirectory, $coverageDirectory, $results['coverage']);
@@ -100,15 +101,13 @@ class Command
 		$codeDirectory = realpath($src);
 		// TODO: require a valid code directory (must be a directory and contain at least one PHP file)
 
-		$coverageDirectory = dirname($testsDirectory) . '/coverage';
-
 		$currentDirectory = getcwd();
 
 		if (!is_string($currentDirectory)) {
 			$currentDirectory = '';
 		}
 
-		return array($testsDirectory, $codeDirectory, $coverageDirectory, $currentDirectory);
+		return array($testsDirectory, $codeDirectory, $currentDirectory);
 	}
 
 	private function getTest($code, $enableCoverage)

@@ -34,6 +34,9 @@ class Evaluator
 	private $executable;
 
 	/** @var string */
+	private $testsDirectory;
+
+	/** @var string */
 	private $codeDirectory;
 
 	/** @var array */
@@ -54,8 +57,9 @@ class Evaluator
 		$this->executable = $executable;
 	}
 
-	public function evaluate(array $tests, $codeDirectory)
+	public function evaluate(array $tests, $testsDirectory, $codeDirectory)
 	{
+		$this->testsDirectory = $testsDirectory;
 		$this->codeDirectory = $codeDirectory;
 		$this->code = array();
 		$this->status = array();
@@ -63,8 +67,10 @@ class Evaluator
 		$this->effectAutoloader = self::getEffectAutoloader();
 
 		foreach ($tests as &$suite) {
+			$fixture = $this->insertConstantCode($suite['fixture']);
+
 			foreach ($suite['cases'] as &$case) {
-				$this->evaluateCase($suite['fixture'], $case);
+				$this->evaluateCase($fixture, $case);
 			}
 		}
 
@@ -74,6 +80,33 @@ class Evaluator
 			'tests' => $tests,
 			'coverage' => $coverage
 		);
+	}
+
+	private function insertConstantCode($fixture)
+	{
+		$constantName = 'TESTPHP_TESTS_DIRECTORY';
+
+		if (!is_integer(strpos($fixture, $constantName))) {
+			return $fixture;
+		}
+
+		$constantCode = $this->getConstantCode($constantName);
+		$namespacePattern = '~^\s*namespace\h+[^\n\r]+~';
+
+		if (preg_match($namespacePattern, $fixture, $match, PREG_OFFSET_CAPTURE) !== 1) {
+			return "{$constantCode}\n\n{$fixture}";
+		}
+
+		$i = $match[0][1] + strlen($match[0][0]);
+		return substr_replace($fixture, "\n\n{$constantCode}", $i, 0);
+	}
+
+	private function getConstantCode($constantName)
+	{
+		$constantNameCode = var_export($constantName, true);
+		$constantValueCode = var_export($this->testsDirectory, true);
+
+		return "define({$constantNameCode}, {$constantValueCode});";
 	}
 
 	private function evaluateCase($fixture, array &$case)
