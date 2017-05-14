@@ -8,10 +8,9 @@
         "testing",
         "PHP",
         "testphp",
-        "phpunit",
-        "xunit"
+        "phpunit"
     ],
-    "homepage": "http://spencermortensen.com",
+    "homepage": "http://testphp.org",
     "license": "LGPL-3.0",
     "authors": [
         {
