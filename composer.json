@@ -1,7 +1,7 @@
 {
     "name": "testphp/testphp",
     "type": "library",
-    "description": "Unit test framework for PHP",
+    "description": "testphp is a PHP unit-testing framework that catches more issues, and with simpler tests",
     "keywords": [
         "unit",
         "test",
