@@ -170,7 +170,7 @@ class Console
 
 	private static function showTest($testsDirectory, array $test)
 	{
-		$code = self::getCode($test);
+		$code = self::getCode($test['cause']['code']);
 
 		$file = $testsDirectory . $test['file'];
 		$line = $test['line'];
@@ -199,10 +199,9 @@ class Console
 			self::indent("See it: {$filePosition}", '   ');
 	}
 
-	private static function getCode(array $test)
+	private static function getCode($code)
 	{
-		return "// Cause\n{$test['cause']['code']}\n\n" .
-			"// Effect\n{$test['effect']['code']}";
+		return "// Test\n{$code}";
 	}
 
 	private static function showErrors(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)

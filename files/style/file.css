@@ -5,6 +5,7 @@ table {
 }
 
 th {
+	color: #cccccc;
 	font-weight: normal;
 	padding-right: .75em;
 	text-align: right;

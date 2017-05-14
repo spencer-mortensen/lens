@@ -1,0 +1,12 @@
+pre {
+	background-color: #f6f6f6;
+	border-top: 1px solid #f0f0f0;
+	border-bottom: 1px solid #f0f0f0;
+	line-height: 1em;
+	margin: 0 -6em;
+	padding: .75em 6em;
+}
+
+code {
+	font-family: monospace;
+}

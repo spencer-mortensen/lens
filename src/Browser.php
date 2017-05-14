@@ -219,11 +219,11 @@ class Browser
 
 	private static function isCauseLabel($line)
 	{
-		return $line === '// Cause';
+		return $line === '// Test';
 	}
 
 	private static function isEffectLabel($line)
 	{
-		return $line === '// Effect';
+		return $line === '// Expected';
 	}
 }

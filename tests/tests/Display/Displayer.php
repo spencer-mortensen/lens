@@ -7,105 +7,105 @@ require TESTPHP_TESTS_DIRECTORY . '/bootstrap.php';
 $displayer = new Displayer();
 
 
-// Cause
+// Test
 $x = $displayer->display(null);
 
-// Effect
+// Expected
 $x = 'null';
 
 
-// Cause
+// Test
 $x = $displayer->display(true);
 
-// Effect
+// Expected
 $x = 'true';
 
 
-// Cause
+// Test
 $x = $displayer->display(false);
 
-// Effect
+// Expected
 $x = 'false';
 
 
-// Cause
+// Test
 $x = $displayer->display(0);
 
-// Effect
+// Expected
 $x = '0';
 
 
-// Cause
+// Test
 $x = $displayer->display(12);
 
-// Effect
+// Expected
 $x = '12';
 
 
-// Cause
+// Test
 $x = $displayer->display(-6);
 
-// Effect
+// Expected
 $x = '-6';
 
 
-// Cause
+// Test
 $x = $displayer->display(3.14159);
 
-// Effect
+// Expected
 $x = '3.14159';
 
 
-// Cause
+// Test
 $x = $displayer->display(-1.0);
 
-// Effect
+// Expected
 $x = '-1';
 
 
-// Cause
+// Test
 $x = $displayer->display('Lorem ipsum');
 
-// Effect
+// Expected
 $x = '\'Lorem ipsum\'';
 
 
-// Cause
+// Test
 $x = $displayer->display("Lorem ipsum\n");
 
-// Effect
+// Expected
 $x = '"Lorem ipsum\\n"';
 
 
-// Cause
+// Test
 $x = $displayer->display(array(1 => array(0 => 'a')));
 
-// Effect
+// Expected
 $x = "array('a')";
 
 
-// Cause
+// Test
 $x = $displayer->display(array(1 => array(1 => 'a')));
 
-// Effect
+// Expected
 $x = "array(1 => 'a')";
 
 
-// Cause
+// Test
 $x = $displayer->display(array(1 => array('a' => 'A', 'b' => 'B')));
 
-// Effect
+// Expected
 $x = "array('a' => 'A', 'b' => 'B')";
 
 
-// Cause
+// Test
 // $x = $displayer->display(new \stdClass());
 
-// Effect
+// Expected
 // $x = 'object(#1:stdClass)';
 
-// Cause
+// Test
 // $x = $displayer->display(fopen('php://stdout', 'r'));
 
-// Effect
+// Expected
 // $x = 'resource(#8:stream)';

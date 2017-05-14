@@ -5,10 +5,10 @@ namespace TestPhp\Display;
 require __DIR__ . '/../../bootstrap.php';
 
 
-// Cause
+// Test
 $table = new Table();
 $x = $table->getText();
 unset($table);
 
-// Effect
+// Expected
 $x = null;

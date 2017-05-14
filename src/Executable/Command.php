@@ -25,35 +25,37 @@
 
 namespace TestPhp\Executable;
 
+use TestPhp\Browser;
 use TestPhp\Display\Console;
 use TestPhp\Display\Web;
-use TestPhp\Browser;
 use TestPhp\Evaluator;
+use TestPhp\Exception;
 use TestPhp\Filesystem;
+use TestPhp\Runner;
 
 class Command
 {
-	const ERROR_RUNNER_NO_TESTS_DIRECTORY = 1;
-	const ERROR_RUNNER_NO_CODE_DIRECTORY = 1;
-
 	/** @var string */
 	private $executable;
 
 	public function __construct()
 	{
 		$this->executable = realpath($GLOBALS['argv'][0]);
+
+		set_exception_handler(array($this, 'exceptionHandler'));
+
 		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage', 'version'));
 
-		$mode = &$options['mode'];
-
-		if ($mode === 'test') {
-			$this->getTest(@$options['code'], isset($options['coverage']));
-		} elseif ($mode === 'coverage') {
-			$this->getCoverage(@$options['file']);
+		if (isset($options['mode'])) {
+			if ($options['mode'] === 'test') {
+				$this->getTest(@$options['code'], isset($options['coverage']));
+			} else {
+				$this->getCoverage(@$options['file']);
+			}
 		} elseif (isset($options['version'])) {
 			$this->getVersion();
 		} else {
-			$this->getRunner(@$options['tests'], @$options['src']);
+			$this->getRunner(@$options['src'], @$options['tests']);
 		}
 	}
 
@@ -63,51 +65,68 @@ class Command
 		exit(0);
 	}
 
-	private function getRunner($tests, $src)
+	private function getRunner($code, $tests)
 	{
-		list($testsDirectory, $codeDirectory, $currentDirectory) = $this->getDirectories($tests, $src);
-
-		$testsTestsDirectory = "{$testsDirectory}/tests";
-		$coverageDirectory = "{$testsDirectory}/coverage";
-
 		$filesystem = new Filesystem();
 		$browser = new Browser($filesystem);
-		$tests = $browser->browse($testsTestsDirectory);
-
 		$evaluator = new Evaluator($filesystem, $this->executable);
-		$results = $evaluator->evaluate($tests, $testsDirectory, $codeDirectory);
-
 		$console = new Console();
-		echo $console->summarize($testsTestsDirectory, $currentDirectory, $results['tests']);
-
 		$web = new Web($filesystem);
-		$web->coverage($codeDirectory, $coverageDirectory, $results['coverage']);
+		$runner = new Runner($browser, $evaluator, $console, $web);
+
+		$currentDirectory = self::getCurrentDirectory();
+		$testsDirectory = self::getTestsDirectory($tests, $currentDirectory);
+		$codeDirectory = self::getCodeDirectory($code, $testsDirectory, $currentDirectory);
+
+		$runner->run($codeDirectory, $testsDirectory, $currentDirectory);
 	}
 
-	private function getDirectories($tests, $src)
+	private static function getCurrentDirectory()
 	{
-		if (!isset($tests)) {
-			self::errorRunnerNoTestsDirectory();
+		return self::getString(getcwd());
+	}
+
+	private static function getTestsDirectory($testsDirectory, $currentDirectory)
+	{
+		if ($testsDirectory !== null) {
+			return self::getString(realpath($testsDirectory));
 		}
 
-		$testsDirectory = realpath($tests);
-		// TODO: require a valid tests directory
-		// TODO: see if the corresponding "coverage" directory can be safely overwritten
-
-		if (!isset($src)) {
-			self::errorRunnerNoCodeDirectory();
+		if (substr($currentDirectory, -6) === '/tests') {
+			return substr($currentDirectory, 0, -6);
 		}
 
-		$codeDirectory = realpath($src);
-		// TODO: require a valid code directory (must be a directory and contain at least one PHP file)
+		return $currentDirectory;
+	}
 
-		$currentDirectory = getcwd();
-
-		if (!is_string($currentDirectory)) {
-			$currentDirectory = '';
+	private static function getCodeDirectory($codeDirectory, $testsDirectory, $currentDirectory)
+	{
+		if ($codeDirectory !== null) {
+			return self::getString(realpath($codeDirectory));
 		}
 
-		return array($testsDirectory, $codeDirectory, $currentDirectory);
+		$codeDirectory = $testsDirectory . '/src';
+
+		if (is_dir($codeDirectory)) {
+			return $codeDirectory;
+		}
+
+		$codeDirectory = dirname($testsDirectory) . '/src';
+
+		if (is_dir($codeDirectory)) {
+			return $codeDirectory;
+		}
+
+		return $currentDirectory;
+	}
+
+	private static function getString($value)
+	{
+		if (is_string($value)) {
+			return $value;
+		}
+
+		return null;
 	}
 
 	private function getTest($code, $enableCoverage)
@@ -125,28 +144,11 @@ class Command
 		$coverage->run($filePath);
 	}
 
-	private static function errorRunnerNoTestsDirectory()
+	public function exceptionHandler($exception)
 	{
-		// TODO: make the string "--tests='./tests'" bold
-		$code = self::ERROR_RUNNER_NO_TESTS_DIRECTORY;
-		$message = "Please provide the path to your tests directory\n" .
-		" * Example: testphp --tests=./tests --src=./src";
+		$code = $exception->getCode();
+		$message = $exception->getMessage();
 
-		self::error($code, $message);
-	}
-
-	private static function errorRunnerNoCodeDirectory()
-	{
-		// TODO: make the string "--src='./src'" bold
-		$code = self::ERROR_RUNNER_NO_CODE_DIRECTORY;
-		$message = "Please provide the path to your code directory\n" .
-		" * Example: testphp --tests='./tests' --src='./src'";
-
-		self::error($code, $message);
-	}
-
-	private static function error($code, $message)
-	{
 		file_put_contents('php://stderr', "Error {$code}: {$message}\n");
 		exit($code);
 	}

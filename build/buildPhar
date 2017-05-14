@@ -24,7 +24,6 @@ class PharBuilder
 	public function __construct($pharFile, $alias)
 	{
 		$this->pharFile = $pharFile;
-		$this->pharExecutableFile = self::getExecutableFile($pharFile);
 
 		@unlink($this->pharFile);
 
@@ -33,17 +32,9 @@ class PharBuilder
 		$this->addStub($alias);
 	}
 
-	private static function getExecutableFile($file)
-	{
-		$extension = pathinfo($file, PATHINFO_EXTENSION);
-		return substr($file, 0, -strlen($extension) - 1);
-	}
-
 	public function __destruct()
 	{
 		$this->phar->stopBuffering();
-
-		rename($this->pharFile, $this->pharExecutableFile);
 	}
 
 	public function addStub($alias)

@@ -25,6 +25,8 @@
 
 namespace TestPhp;
 
+use TestPhp\Display\Displayer;
+
 class Exception extends \Exception
 {
 	const INVALID_TESTS_DIRECTORY = 1;
@@ -59,17 +61,19 @@ class Exception extends \Exception
 			'directory' => $testsDirectory
 		);
 
+		$displayer = new Displayer();
+
 		if (!is_string($testsDirectory) || (strlen($testsDirectory) === 0)) {
 			$testsDirectoryValue = self::getValueDescription($testsDirectory);
 			$message = "Expected a path to a tests directory, but received {$testsDirectoryValue} instead";
 		} elseif (!file_exists($testsDirectory)) {
-			$testsDirectoryValue = json_encode($testsDirectory);
+			$testsDirectoryValue = $displayer->display($testsDirectory);
 			$message = "Expected a path to a tests directory, but there is no directory at {$testsDirectoryValue}";
 		} elseif (!is_dir($testsDirectory)) {
-			$testsDirectoryValue = json_encode($testsDirectory);
+			$testsDirectoryValue = $displayer->display($testsDirectory);
 			$message = "Expected a path to a tests directory, but {$testsDirectoryValue} is not a directory";
 		} elseif (!is_readable($testsDirectory)) {
-			$testsDirectoryValue = json_encode($testsDirectory);
+			$testsDirectoryValue = $displayer->display($testsDirectory);
 			$message = "Expected a path to a tests directory, but {$testsDirectoryValue} is not readable";
 		} else {
 			$message = "Expected a valid path to a tests directory";

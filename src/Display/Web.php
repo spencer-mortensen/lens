@@ -51,27 +51,123 @@ class Web
 
 	public function coverage($codeDirectory, $coverageDirectory, $coverage)
 	{
-		// TODO: generate HTML containing instructions for enabling code coverage
+		$this->codeDirectory = $codeDirectory;
+		$this->coverageDirectory = $coverageDirectory;
+
 		if ($coverage === null) {
-			/*
-			extension_loaded('xdebug') &&
-			version_compare(phpversion('xdebug'), '2.2', '>=') &&
-			(boolean)ini_get('xdebug.coverage_enable');
-			*/
+			$this->writeInstructions();
+		} else {
+			$this->writeCodeCoverage($coverage);
+		}
+	}
+
+	private function writeInstructions()
+	{
+		// TODO: use the "Filesystem" object here:
+		exec("rm -rf {$this->coverageDirectory}/*");
+		$this->writeCssFiles('style.css', 'instructions.css');
+		$this->writeInstructionsIndex();
+	}
+	private function writeInstructionsIndex()
+	{
+		$cssFiles = array(
+			'style/style.css',
+			'style/instructions.css'
+		);
+
+		$menuHtml = null;
+		$titleHtml = 'coverage';
+		$bodyHtml = $this->getInstructionsHtml();
+
+		$absoluteFilePath = $this->coverageDirectory . '/index.html';
+		$html = self::getHtml($cssFiles, $menuHtml, $titleHtml, $bodyHtml);
+
+		$this->filesystem->write($absoluteFilePath, $html);
+	}
+
+	private function getInstructionsHtml()
+	{
+		$followupMessage = "When you’re finished making changes, run testphp again and refresh this page to see the results.";
+
+		if (!extension_loaded('xdebug')) {
+			$basicMessage = "You’ll be able to see your code coverage here after you’ve enabled the “xdebug” extension for PHP.";
+
+			if ($this->isLinux($os, $version) && ($os === 'ubuntu')) {
+				$package = self::getUbuntuPackage($version);
+				$command = "sudo apt-get install {$package}";
+				$commandHtml = self::getCodeHtml($command);
+
+				return "<p>{$basicMessage} Here’s the command:</p>\n\n{$commandHtml}\n\n<p>{$followupMessage}</p>";
+			}
+
+			return "<p>{$basicMessage}</p>\n\n<p>{$followupMessage}</p>";
+		}
+
+		$xdebugInstalledVersion = phpversion('xdebug');
+		$xdebugMinimumVersion = '2.2';
+
+		if (!version_compare($xdebugInstalledVersion, $xdebugMinimumVersion, '>=')) {
+			return "<p>You’ll be able to see your code coverage here after you’ve upgraded to xdebug {$xdebugMinimumVersion} or greater. {$followupMessage}</p>";
+		}
+
+		if (!ini_get('xdebug.coverage_enable')) {
+			return "<p>You’ll be able to see your code coverage here after you’ve set your “xdebug.coverage_enable” property to “On” in your PHP configuration settings. {$followupMessage}</p>";
+		}
+
+		return "<p>You’ll be able to see your code coverage here after you’ve enabled the “xdebug” extension for PHP. {$followupMessage}</p>";
+	}
+
+	private function isLinux(&$os, &$version)
+	{
+		$osReleaseText = $this->filesystem->read('/etc/os-release');
+
+		if ($osReleaseText === null) {
+			return false;
+		}
+
+		if (preg_match('~^ID=(.*)$~m', $osReleaseText, $match) === 1) {
+			$os = $match[1];
+		}
+
+		if (preg_match('~^VERSION_ID="(.*)"$~m', $osReleaseText, $match) === 1) {
+			$version = $match[1];
+		}
+
+		return true;
+	}
+
+	private static function getUbuntuPackage($version)
+	{
+		if ((float)$version < 16.04) {
+			return 'php5-xdebug';
+		}
+
+		return 'php-xdebug';
+	}
+
+	private static function getCodeHtml($code)
+	{
+		$codeHtml = self::html5TextEncode($code);
+
+		return "<pre><code>{$codeHtml}</code></pre>";
+	}
+
+	private function writeCodeCoverage($coverage)
+	{
+		if ($coverage === null) {
 			return;
 		}
 
-		$this->codeDirectory = $codeDirectory;
-		$this->coverageDirectory = $coverageDirectory;
 		$this->code = $coverage['code'];
 		$this->status = $coverage['status'];
 
 		$filePaths = array_keys($this->code);
 		$hierarchy = self::getRelativeHierarchy($filePaths);
 
+		// TODO: use the "Filesystem" object here:
 		exec("rm -rf {$this->coverageDirectory}/*");
+		$this->writeCssFiles('style.css', 'directory.css', 'file.css', 'filesystem.png');
 		$this->writeDirectory('coverage', $hierarchy, '');
-		$this->writeCssFiles();
 	}
 
 	private static function getRelativeHierarchy($filePaths)
@@ -344,6 +440,10 @@ class Web
 
 		$headHtml = implode("\n", array_map(array('self', 'indent'), $head));
 
+		if (isset($menuHtml)) {
+			$menuHtml = "\n\n{$menuHtml}";
+		}
+
 		return <<<EOS
 <!DOCTYPE html>
 		
@@ -353,9 +453,7 @@ class Web
 {$headHtml}
 </head>
 
-<body>
-
-{$menuHtml}
+<body>{$menuHtml}
 
 <h1>{$titleHtml}</h1>
 
@@ -397,15 +495,10 @@ EOS;
 
 	private function writeCssFiles()
 	{
+		$files = func_get_args();
+
 		$inputDirectory = dirname(dirname(__DIR__)) . '/files/style';
 		$outputDirectory = "{$this->coverageDirectory}/style";
-
-		$files = array(
-			'style.css',
-			'directory.css',
-			'file.css',
-			'filesystem.png'
-		);
 
 		foreach ($files as $file) {
 			$inputFilePath = "{$inputDirectory}/{$file}";
