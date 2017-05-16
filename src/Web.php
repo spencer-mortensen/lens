@@ -495,7 +495,7 @@ EOS;
 	{
 		$files = func_get_args();
 
-		$inputDirectory = dirname(dirname(__DIR__)) . '/files/style';
+		$inputDirectory = dirname(__DIR__) . '/files/style';
 		$outputDirectory = "{$this->coverageDirectory}/style";
 
 		foreach ($files as $file) {
