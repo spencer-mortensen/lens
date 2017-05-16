@@ -25,8 +25,6 @@
 
 namespace TestPhp;
 
-use TestPhp\Display\Displayer;
-
 class Exception extends \Exception
 {
 	const INVALID_TESTS_DIRECTORY = 1;

@@ -23,15 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Executable;
-
-use TestPhp\Browser;
-use TestPhp\Display\Console;
-use TestPhp\Display\Web;
-use TestPhp\Evaluator;
-use TestPhp\Exception;
-use TestPhp\Filesystem;
-use TestPhp\Runner;
+namespace TestPhp;
 
 class Command
 {
@@ -57,6 +49,22 @@ class Command
 		} else {
 			$this->getRunner(@$options['src'], @$options['tests']);
 		}
+	}
+
+	private function getTest($code, $enableCoverage)
+	{
+		$test = new Test($code, $enableCoverage);
+
+		$test->run();
+	}
+
+	private function getCoverage($file)
+	{
+		$filePath = realpath($file);
+		// TODO: require a valid PHP source-code file
+		$coverage = new Coverage();
+
+		$coverage->run($filePath);
 	}
 
 	private function getVersion()
@@ -129,21 +137,9 @@ class Command
 		return null;
 	}
 
-	private function getTest($code, $enableCoverage)
-	{
-		$test = new Test($code, $enableCoverage);
-		$test->run();
-	}
-
-	private function getCoverage($file)
-	{
-		$filePath = realpath($file);
-		// TODO: require a valid PHP source-code file
-
-		$coverage = new Coverage();
-		$coverage->run($filePath);
-	}
-
+	/**
+	 * @param \Exception|\Throwable $exception
+	 */
 	public function exceptionHandler($exception)
 	{
 		$code = $exception->getCode();

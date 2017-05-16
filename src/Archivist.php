@@ -26,6 +26,7 @@
 namespace TestPhp;
 
 use ReflectionObject;
+use ReflectionProperty;
 
 class Archivist
 {
@@ -77,8 +78,8 @@ class Archivist
 		// completely different object.
 		$id = spl_object_hash($object);
 
-		// Ensure that the hash remains unique by keeping a reference to the object.
-		$reference = self::$objects[$id];
+		// Ensure that the hash remains unique by keeping a reference to the object:
+		$reference = &self::$objects[$id];
 
 		if (!isset($reference)) {
 			$reference = $object;
@@ -94,6 +95,7 @@ class Archivist
 		$reflectionObject = new ReflectionObject($object);
 		$reflectionProperties = $reflectionObject->getProperties();
 
+		/** @var ReflectionProperty $reflectionProperty */
 		foreach ($reflectionProperties as $reflectionProperty) {
 			$reflectionProperty->setAccessible(true);
 			$name = $reflectionProperty->getName();

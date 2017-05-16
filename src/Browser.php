@@ -135,7 +135,7 @@ class Browser
 		$fixture = '';
 
 		for (; $i <= $end; ++$i) {
-			if (self::isCauseLabel($lines[$i])) {
+			if (self::isTestLabel($lines[$i])) {
 				$fixture = trim($fixture);
 
 				if (strlen($fixture) === 0) {
@@ -153,8 +153,8 @@ class Browser
 
 	private static function getCase(array $lines, &$i, &$case)
 	{
-		if (!self::getCause($lines, $i, $begin, $cause) ||
-			!self::getEffect($lines, $i, $effect)
+		if (!self::getTest($lines, $i, $begin, $testCode) ||
+			!self::getExpected($lines, $i, $expectedCode)
 		) {
 			return false;
 		}
@@ -162,67 +162,74 @@ class Browser
 		$case = array(
 			'line' => $begin,
 			'cause' => array(
-				'code' => $cause
+				'code' => $testCode
 			),
 			'effect' => array(
-				'code' => $effect
+				'code' => $expectedCode
 			)
 		);
 
 		return true;
 	}
 
-	private static function getCause(array $lines, &$i, &$begin, &$cause)
+	private static function getTest(array $lines, &$i, &$begin, &$code)
 	{
 		$end = count($lines);
 
-		if (($end < $i) || !self::isCauseLabel($lines[$i])) {
+		if (($end < $i) || !self::isTestLabel($lines[$i])) {
 			return false;
 		}
 
 		$begin = $i;
-		$cause = '';
+		$code = '';
 
 		for (++$i; $i <= $end; ++$i) {
-			if (self::isEffectlabel($lines[$i])) {
-				$cause = trim($cause);
+			if (self::isExpectedLabel($lines[$i])) {
+				$code = trim($code);
 				return true;
 			}
 
-			$cause .= $lines[$i] . "\n";
+			$code .= $lines[$i] . "\n";
 		}
 
 		return false;
 	}
 
-	private static function getEffect(array $lines, &$i, &$effect)
+	private static function getExpected(array $lines, &$i, &$code)
 	{
 		$end = count($lines);
 
-		if (($end < $i) || !self::isEffectLabel($lines[$i])) {
+		if (($end < $i) || !self::isExpectedLabel($lines[$i])) {
 			return false;
 		}
 
-		$effect = '';
+		$code = '';
 
 		for (++$i; $i <= $end; ++$i) {
-			if (self::isCauseLabel($lines[$i])) {
+			if (self::isTestLabel($lines[$i])) {
 				break;
 			}
 
-			$effect .= $lines[$i] . "\n";
+			$code .= $lines[$i] . "\n";
 		}
 
-		$effect = trim($effect);
+		$code = self::prepareMockCalls(trim($code));
 		return true;
 	}
 
-	private static function isCauseLabel($line)
+	private static function prepareMockCalls($code)
+	{
+		$pattern = '~->([a-zA-Z_0-9]+)\((.*)\);\s+//\s+(.*)$~m';
+
+		return preg_replace($pattern, '->$1(array($2), $3);', $code);
+	}
+
+	private static function isTestLabel($line)
 	{
 		return $line === '// Test';
 	}
 
-	private static function isEffectLabel($line)
+	private static function isExpectedLabel($line)
 	{
 		return $line === '// Expected';
 	}

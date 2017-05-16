@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Executable;
+namespace TestPhp;
 
 class Test
 {
@@ -78,9 +78,9 @@ class Test
 			'variables' => self::getUnorderedListArchive($variables),
 			'globals' => self::getUnorderedListArchive($globals),
 			'constants' => self::getUnorderedListArchive($constants),
-			'output' => \TestPhp\Archivist::archive($output),
+			'output' => Archivist::archive($output),
 			'calls' => self::getOrderedListArchive($calls),
-			'exception' => \TestPhp\Archivist::archive($exception),
+			'exception' => Archivist::archive($exception),
 			'errors' => self::getOrderedListArchive($errors),
 		);
 
@@ -102,7 +102,7 @@ class Test
 		$output = array();
 
 		foreach ($input as $key => $value) {
-			$output[$key] = \TestPhp\Archivist::archive($value);
+			$output[$key] = Archivist::archive($value);
 		}
 
 		return $output;
@@ -208,7 +208,7 @@ class Test
 
 	private static function getMethodCalls()
 	{
-		return \TestPhp\Agent::getCalls();
+		return Agent::getCalls();
 	}
 
 	private function getCodeCoverage()

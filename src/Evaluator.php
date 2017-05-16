@@ -45,12 +45,6 @@ class Evaluator
 	/** @var array */
 	private $status;
 
-	/** @var string */
-	private $effectAutoloader;
-
-	/** @var string */
-	private $causeAutoloader;
-
 	public function __construct(Filesystem $filesystem, $executable)
 	{
 		$this->filesystem = $filesystem;
@@ -63,14 +57,12 @@ class Evaluator
 		$this->codeDirectory = $codeDirectory;
 		$this->code = array();
 		$this->status = array();
-		$this->causeAutoloader = self::getCauseAutoloader();
-		$this->effectAutoloader = self::getEffectAutoloader();
 
 		foreach ($tests as &$suite) {
-			$fixture = $this->insertConstantCode($suite['fixture']);
+			list($causeFixture, $effectFixture, $preamble) = $this->getFixtures($suite['fixture']);
 
 			foreach ($suite['cases'] as &$case) {
-				$this->evaluateCase($fixture, $case);
+				$this->evaluateCase($causeFixture, $effectFixture, $preamble, $case);
 			}
 		}
 
@@ -82,43 +74,16 @@ class Evaluator
 		);
 	}
 
-	private function insertConstantCode($fixture)
+	private function evaluateCase($causeFixture, $effectFixture, $preamble, array &$case)
 	{
-		$constantName = 'TESTPHP_TESTS_DIRECTORY';
-
-		if (!is_integer(strpos($fixture, $constantName))) {
-			return $fixture;
-		}
-
-		$constantCode = $this->getConstantCode($constantName);
-		$namespacePattern = '~^\s*namespace\h+[^\n\r]+~';
-
-		if (preg_match($namespacePattern, $fixture, $match, PREG_OFFSET_CAPTURE) !== 1) {
-			return "{$constantCode}\n\n{$fixture}";
-		}
-
-		$i = $match[0][1] + strlen($match[0][0]);
-		return substr_replace($fixture, "\n\n{$constantCode}", $i, 0);
-	}
-
-	private function getConstantCode($constantName)
-	{
-		$constantNameCode = var_export($constantName, true);
-		$constantValueCode = var_export($this->testsDirectory, true);
-
-		return "define({$constantNameCode}, {$constantValueCode});";
-	}
-
-	private function evaluateCase($fixture, array &$case)
-	{
-		$effectCode = self::getCode($fixture, $this->effectAutoloader, $case['effect']['code']);
+		$effectCode = self::combine($effectFixture, $preamble, $case['effect']['code']);
 		$case['effect'] = array_merge($case['effect'], $this->evaluateEffect($effectCode, $mockPhp));
 
-		$causeCode = self::getCode($fixture, $this->causeAutoloader, $mockPhp, $case['cause']['code']);
+		$causeCode = self::combine($causeFixture, $mockPhp, $preamble, $case['cause']['code']);
 		$case['cause'] = array_merge($case['cause'], $this->evaluateCause($causeCode));
 	}
 
-	private static function getCode()
+	private static function combine()
 	{
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
@@ -131,7 +96,7 @@ class Evaluator
 			$calls = $output['results']['calls'];
 
 			if (0 < count($calls)) {
-				$callsPhp = var_export($calls, true);
+				$callsPhp = var_export(json_encode($calls), true);
 				$mockPhp = "\\TestPhp\\Agent::setExpected({$callsPhp});";
 			}
 		}
@@ -162,6 +127,7 @@ class Evaluator
 
 		$command = "{$this->executable} {$arguments} 2>/dev/null";
 
+		// TODO: abstract this away:
 		exec($command, $output, $exitCode);
 
 		$stdout = implode("\n", $output);
@@ -278,6 +244,7 @@ class Evaluator
 		$arguments = "--mode='coverage' --file=" . escapeshellarg($filePath);
 		$command = "{$this->executable} {$arguments} 2>/dev/null";
 
+		// TODO: abstract this away:
 		exec($command, $output, $exitCode);
 
 		$stdout = implode("\n", $output);
@@ -324,6 +291,73 @@ class Evaluator
 		}
 
 		return true;
+	}
+
+	private function getFixtures($fixture)
+	{
+		$preamble = $fixture;
+		$namespace = $this->getNamespace($preamble);
+		$constant = $this->getConstant($preamble);
+		list($causeMock, $effectMock) = $this->getMocks($preamble);
+
+		return array(
+			self::combine($namespace, $constant, $causeMock),
+			self::combine($namespace, $constant, $effectMock),
+			$preamble
+		);
+	}
+
+	private function getNamespace(&$code)
+	{
+		$namespacePattern = '~^\s*namespace\h+[^\n\r]+~';
+
+		if (preg_match($namespacePattern, $code, $match, PREG_OFFSET_CAPTURE) !== 1) {
+			return null;
+		}
+
+		$code = trim(substr($code, $match[0][1] + strlen($match[0][0])));
+		return $match[0][0];
+	}
+
+	private function getConstant($code)
+	{
+		$constant = 'TESTPHP_TESTS_DIRECTORY';
+
+		if (!self::usesConstant($code, $constant)) {
+			return null;
+		}
+
+		return self::getConstantDeclaration($constant, $this->testsDirectory);
+	}
+
+	private static function usesConstant($code, $name)
+	{
+		return is_integer(strpos($code, $name));
+	}
+
+	private static function getConstantDeclaration($name, $value)
+	{
+		$nameCode = var_export($name, true);
+		$valueCode = var_export($value, true);
+
+		return "define({$nameCode}, {$valueCode});";
+	}
+
+	private function getMocks($code)
+	{
+		if (!self::usesMock($code)) {
+			return null;
+		}
+
+		return array(
+			$this->getCauseAutoloader(),
+			$this->getEffectAutoloader()
+		);
+	}
+
+	private static function usesMock($code)
+	{
+		return is_integer(strpos($code, 'use TestPhp\\Mock\\'));
 	}
 
 	private static function getCauseAutoloader()
@@ -405,7 +439,13 @@ class %s {
 	public function __call($name, $input)
 	{
 		$callable = array($this, $name);
-		list($arguments, $result) = $input;
+
+		if (is_array($input) && (count($input) === 2)) {
+			list($arguments, $result) = $input;
+		} else {
+			$arguments = $input;
+			$result = null;
+		}
 
 		return \TestPhp\Agent::record($callable, $arguments, $result);
 	}

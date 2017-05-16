@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-namespace TestPhp\Executable;
+namespace TestPhp;
 
 spl_autoload_register(
 	function ($class)

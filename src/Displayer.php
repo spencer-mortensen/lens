@@ -23,9 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Display;
-
-use TestPhp\Archivist;
+namespace TestPhp;
 
 class Displayer
 {
@@ -96,7 +94,7 @@ class Displayer
 	 * Convert the text input to a PHP string expression. Use single quotes
 	 * by default (e.g. 'single-quoted text'), but switch to double-quotes when
 	 * the input contains special characters (e.g. "double-quoted text\n")
-	 * that would be more readable in their escape-sequence form.
+	 * that would be more readable as escape sequences.
 	 *
 	 * @param string $string
 	 * @return string

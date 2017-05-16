@@ -15,9 +15,6 @@ class PharBuilder
     /** @var string */
     private $pharFile;
 
-    /** @var string */
-    private $pharExecutableFile;
-
 	/** @var Phar */
 	private $phar;
 
@@ -42,7 +39,7 @@ class PharBuilder
 		$stub = <<<EOS
 #!/usr/bin/env php
 <?php
-Phar::mapPhar('{$alias}'); require 'phar://{$alias}/bootstrap.php'; new \TestPhp\Executable\Command(); __HALT_COMPILER();
+Phar::mapPhar('{$alias}'); require 'phar://{$alias}/bootstrap.php'; new \TestPhp\Command(); __HALT_COMPILER();
 EOS;
 		$this->phar->setStub($stub);
 

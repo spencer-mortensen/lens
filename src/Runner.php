@@ -25,9 +25,6 @@
 
 namespace TestPhp;
 
-use TestPhp\Display\Console;
-use TestPhp\Display\Web;
-
 class Runner
 {
 	/** @var Browser */
@@ -62,6 +59,7 @@ class Runner
 
 		$tests = $this->browser->browse($testsTestsDirectory);
 		$results = $this->evaluator->evaluate($tests, $testsDirectory, $codeDirectory);
+
 		echo $this->console->summarize($testsTestsDirectory, $currentDirectory, $results['tests']);
 		$this->web->coverage($codeDirectory, $coverageDirectory, $results['coverage']);
 	}

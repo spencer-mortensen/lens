@@ -23,9 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Display;
-
-use TestPhp\Filesystem;
+namespace TestPhp;
 
 class Web
 {

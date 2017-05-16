@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Display;
+namespace TestPhp;
 
 class Table
 {

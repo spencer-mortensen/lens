@@ -25,7 +25,7 @@
 
 namespace TestPhp;
 
-class Agent
+abstract class Agent
 {
 	/** @var array */
 	private static $actual;
@@ -42,13 +42,15 @@ class Agent
 	/** @var array */
 	private static $map;
 
-	public static function setExpected(array $expected)
+	public static function setExpected($expectedJson)
 	{
+		$expected = json_decode($expectedJson, true);
+
 		foreach ($expected as $callArchive) {
 			list($callableArchive, $argumentsArchive, $result) = current($callArchive);
 			$arguments = current($argumentsArchive);
 			list($objectArchive, $method) = current($callableArchive);
-			list($objectId, $objectClass, $objectProperties)  = current($objectArchive);
+			list($objectId, $objectClass)  = current($objectArchive);
 
 			self::$calls[$objectId][] = array($method, $arguments, $result);
 			self::$classes[$objectId] = $objectClass;
@@ -131,7 +133,7 @@ class Agent
 		}
 	}
 
-	private static function unpackArray($array)
+	private static function unpackArray(array $array)
 	{
 		$output = array();
 
@@ -142,7 +144,7 @@ class Agent
 		return $output;
 	}
 
-	private static function unpackObject($object)
+	private static function unpackObject(array $object)
 	{
 		$id = $object['id'];
 
@@ -151,13 +153,13 @@ class Agent
 		return $output;
 	}
 
-	private static function unpackResource($resource)
+	private static function unpackResource(array $resource)
 	{
 		// TODO:
 		return null;
 	}
 
-	public static function record($callable, $arguments, $result)
+	public static function record(array $callable, array $arguments, $result)
 	{
 		self::$actual[] = array($callable, $arguments, $result);
 
