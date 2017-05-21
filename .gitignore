@@ -1,5 +1,6 @@
-composer.lock
-coverage/
-vendor/
+/build/
+/vendor/
+/composer.lock
 /.idea/
 /.source
+coverage/
