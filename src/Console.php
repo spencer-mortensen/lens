@@ -455,12 +455,12 @@ class Console
 		$keys = self::getKeys($a, $b);
 
 		foreach ($keys as $key) {
-			if (array_key_exists($key, $b)) {
-				$output[] = ' + ' . $b[$key];
-			}
-
 			if (array_key_exists($key, $a)) {
 				$output[] = ' - ' . $a[$key];
+			}
+
+			if (array_key_exists($key, $b)) {
+				$output[] = ' + ' . $b[$key];
 			}
 		}
 	}
@@ -484,12 +484,12 @@ class Console
 
 	private static function getDifferencesValue($a, $b, &$output)
 	{
-		if ($b !== null) {
-			$output[] = ' + ' . $b;
-		}
-
 		if ($a !== null) {
 			$output[] = ' - ' . $a;
+		}
+
+		if ($b !== null) {
+			$output[] = ' + ' . $b;
 		}
 	}
 

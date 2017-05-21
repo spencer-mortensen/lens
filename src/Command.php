@@ -66,7 +66,7 @@ class Command
 
 	private function getVersion()
 	{
-		echo "testphp 0.0.5\n";
+		echo "testphp 0.0.6\n";
 		exit(0);
 	}
 
@@ -122,7 +122,7 @@ class Command
 			return $codeDirectory;
 		}
 
-		return $currentDirectory;
+		return null;
 	}
 
 	private static function getString($value)

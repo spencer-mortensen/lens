@@ -39,6 +39,9 @@ class Evaluator
 	/** @var string */
 	private $codeDirectory;
 
+	/** @var boolean */
+	private $isCoverageEnabled;
+
 	/** @var array */
 	private $code;
 
@@ -55,6 +58,8 @@ class Evaluator
 	{
 		$this->testsDirectory = $testsDirectory;
 		$this->codeDirectory = $codeDirectory;
+
+		$this->isCoverageEnabled = function_exists('xdebug_get_code_coverage') && is_string($this->codeDirectory);
 		$this->code = array();
 		$this->status = array();
 
@@ -109,7 +114,7 @@ class Evaluator
 
 	private function evaluateCause($code)
 	{
-		$output = $this->run($code, true);
+		$output = $this->run($code, $this->isCoverageEnabled);
 
 		if (isset($output['coverage'])) {
 			$this->mergeCoverage($output['coverage']);
@@ -184,7 +189,7 @@ class Evaluator
 
 	private function getCodeCoverage()
 	{
-		if (!function_exists('xdebug_get_code_coverage')) {
+		if (!$this->isCoverageEnabled) {
 			return null;
 		}
 

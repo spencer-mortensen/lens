@@ -52,6 +52,10 @@ class Web
 		$this->codeDirectory = $codeDirectory;
 		$this->coverageDirectory = $coverageDirectory;
 
+		if ($codeDirectory === null) {
+			return;
+		}
+
 		if ($coverage === null) {
 			$this->writeInstructions();
 		} else {
