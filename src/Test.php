@@ -48,8 +48,8 @@ class Test
 
 	public function run()
 	{
-		$this->setFatalErrorHandler();
-		$this->setNonFatalErrorHandler();
+		$this->registerShutdownFunction();
+		$this->registerErrorHandler();
 		self::unsetGlobals();
 		ob_start();
 		$this->startCodeCoverage();
@@ -58,8 +58,10 @@ class Test
 			eval($this->code);
 			$variables = get_defined_vars();
 			$exception = null;
-		} catch (\Exception $exception) {
-			$variables = array();
+		} catch (\Exception $) {
+			$variables = get_defined_vars();
+			$exception = $;
+			unset($, $variables['']);
 		}
 
 		$coverage = $this->getCodeCoverage();
@@ -67,12 +69,13 @@ class Test
 		$globals = self::getGlobals();
 		$constants = self::getConstants();
 		$calls = self::getMethodCalls();
-		$errors = $this->getErrors();
+		$errors = $this->errors;
+		$fatalError = null;
 
-		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $coverage);
+		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage);
 	}
 
-	private function send($variables, $globals, $constants, $output, $calls, $exception, $errors, $coverage)
+	private function send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage)
 	{
 		$results = array(
 			'variables' => self::getUnorderedListArchive($variables),
@@ -82,6 +85,7 @@ class Test
 			'calls' => self::getOrderedListArchive($calls),
 			'exception' => Archivist::archive($exception),
 			'errors' => self::getOrderedListArchive($errors),
+			'fatalError' => Archivist::archive($fatalError)
 		);
 
 		$output = array($results, $coverage);
@@ -108,31 +112,15 @@ class Test
 		return $output;
 	}
 
-	private function setFatalErrorHandler()
+	private function registerShutdownFunction()
 	{
-		$handler = array($this, 'fatalErrorHandler');
+		$callable = array($this, 'shutdownFunction');
 
-		register_shutdown_function($handler);
+		register_shutdown_function($callable);
 		ini_set('display_errors', 'Off');
 	}
 
-	private function setNonFatalErrorHandler()
-	{
-		$handler = array($this, 'nonFatalErrorHandler');
-
-		set_error_handler($handler);
-	}
-
-	private static function unsetGlobals()
-	{
-		foreach ($GLOBALS as $key => $value) {
-			if ($key !== 'GLOBALS') {
-				unset($GLOBALS[$key]);
-			}
-		}
-	}
-
-	public function fatalErrorHandler()
+	public function shutdownFunction()
 	{
 		if ($this->complete === true) {
 			return;
@@ -145,16 +133,31 @@ class Test
 		$constants = self::getConstants();
 		$calls = self::getMethodCalls();
 		$coverage = $this->getCodeCoverage();
-		$errors = $this->getErrors();
+		$errors = $this->errors;
+		$fatalError = $this->getLastError();
 
-		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $coverage);
+		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage);
 	}
 
-	public function nonFatalErrorHandler($level, $message, $file, $line)
+	private function registerErrorHandler()
 	{
-		list($file, $line) = self::getSource($file, $line);
+		$callable = array($this, 'errorHandler');
 
-		$this->errors[] = array($level, $message, $file, $line);
+		set_error_handler($callable);
+	}
+
+	public function errorHandler($level, $message, $file, $line)
+	{
+		$this->errors[] = self::getErrorValue($level, $message, $file, $line);
+	}
+
+	private static function unsetGlobals()
+	{
+		foreach ($GLOBALS as $key => $value) {
+			if ($key !== 'GLOBALS') {
+				unset($GLOBALS[$key]);
+			}
+		}
 	}
 
 	private function startCodeCoverage()
@@ -221,17 +224,6 @@ class Test
 		return xdebug_get_code_coverage();
 	}
 
-	private function getErrors()
-	{
-		$error = $this->getLastError();
-
-		if ($error !== null) {
-			$this->errors[] = $error;
-		}
-
-		return $this->errors;
-	}
-
 	private static function getLastError()
 	{
 		$error = error_get_last();
@@ -240,10 +232,17 @@ class Test
 			return null;
 		}
 
-		$level = $error['type'];
-		$message = $error['message'];
+		return self::getErrorValue(
+			$error['type'],
+			$error['message'],
+			$error['file'],
+			$error['line']
+		);
+	}
 
-		list($file, $line) = self::getSource($error['file'], $error['line']);
+	private static function getErrorValue($level, $message, $file, $line)
+	{
+		list($file, $line) = self::getSource($file, $line);
 
 		return array($level, $message, $file, $line);
 	}
@@ -263,7 +262,7 @@ class Test
 
 	private static function isEvaluatedCode($input, &$file, &$line)
 	{
-		$pattern = '~^((?:/[^/]+)+)\(([0-9]+)\) : eval\(\)\'d code$~';
+		$pattern = '~^((?:[a-z]+://)?(?:/[^/]+)+)\(([0-9]+)\) : eval\(\)\'d code$~';
 
 		if (preg_match($pattern, $input, $match) !== 1) {
 			return false;

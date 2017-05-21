@@ -168,6 +168,11 @@ class Displayer
 		list($id, $class, $properties) = $object;
 
 		$number = self::getNumber($this->objects, $id);
+
+		if (count($properties) === 0) {
+			return "object#{$number}('{$class}')";
+		}
+
 		$propertiesList = $this->getPropertiesList($properties);
 
 		return "object#{$number}('{$class}', {$propertiesList})";

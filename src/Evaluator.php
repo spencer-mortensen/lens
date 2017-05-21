@@ -99,6 +99,9 @@ class Evaluator
 				$callsPhp = var_export(json_encode($calls), true);
 				$mockPhp = "\\TestPhp\\Agent::setExpected({$callsPhp});";
 			}
+
+			// TODO: this constant name is duplicated elsewhere:
+			unset($output['results']['constants']['TESTPHP_TESTS_DIRECTORY']);
 		}
 
 		return $output;
@@ -112,7 +115,10 @@ class Evaluator
 			$this->mergeCoverage($output['coverage']);
 		}
 
-		unset($output['coverage']);
+		unset(
+			$output['coverage'],
+			$output['results']['constants']['TESTPHP_TESTS_DIRECTORY']
+		);
 
 		return $output;
 	}

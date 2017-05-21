@@ -34,8 +34,6 @@ class Command
 	{
 		$this->executable = realpath($GLOBALS['argv'][0]);
 
-		set_exception_handler(array($this, 'exceptionHandler'));
-
 		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage', 'version'));
 
 		if (isset($options['mode'])) {
@@ -54,7 +52,6 @@ class Command
 	private function getTest($code, $enableCoverage)
 	{
 		$test = new Test($code, $enableCoverage);
-
 		$test->run();
 	}
 
@@ -135,17 +132,5 @@ class Command
 		}
 
 		return null;
-	}
-
-	/**
-	 * @param \Exception|\Throwable $exception
-	 */
-	public function exceptionHandler($exception)
-	{
-		$code = $exception->getCode();
-		$message = $exception->getMessage();
-
-		file_put_contents('php://stderr', "Error {$code}: {$message}\n");
-		exit($code);
 	}
 }

@@ -33,19 +33,27 @@ class Console
 		$failedTests = array();
 		$brokenTests = array();
 
+		$relativeTestsDirectory = self::getRelativePath($currentDirectory, $testsDirectory);
+
 		foreach ($suites as $suite) {
 			foreach ($suite['cases'] as $case) {
-				if (self::isBrokenTest($case['cause'], $case['effect'])) {
-					$brokenTests[] = self::getTest($suite['file'], $suite['fixture'], $case);
-				} elseif (self::isPassingTest($case['cause']['results'], $case['effect']['results'])) {
+				if (self::isBrokenTest($case['effect'])) {
+					$brokenTests[] = self::getBrokenTest($relativeTestsDirectory, $suite['file'], $case);
+					continue;
+				}
+
+				$actual = self::flatten($case['cause']['results']);
+				$expected = self::flatten($case['effect']['results']);
+				self::diff($actual, $expected);
+
+				if (self::isPassingTest($actual, $expected)) {
 					++$passedTestsCount;
 				} else {
-					$failedTests[] = self::getTest($suite['file'], $suite['fixture'], $case);
+					// TODO: prevent the "$actual['results'] === null" situation
+					$failedTests[] = self::getFailedTest($relativeTestsDirectory, $suite['file'], $case, $actual, $expected);
 				}
 			}
 		}
-
-		$relativeTestsDirectory = self::getRelativePath($currentDirectory, $testsDirectory);
 
 		$output = array();
 
@@ -54,405 +62,90 @@ class Console
 		}
 
 		if (0 < count($failedTests)) {
-			$output[] = self::showFailedTests($relativeTestsDirectory, $failedTests);
+			$output[] = self::showTests('FAILED', $failedTests);
 		}
 
 		if (0 < count($brokenTests)) {
-			$output[] = self::showBrokenTests($relativeTestsDirectory, $brokenTests);
+			$output[] = self::showTests('BROKEN', $brokenTests);
 		}
 
 		return implode("\n\n", $output) . "\n";
 	}
 
-	private static function getRelativePath($currentPath, $targetPath)
+	private static function isBrokenTest(array $effect)
 	{
-		$currentTrail = self::getTrail($currentPath);
-		$targetTrail = self::getTrail($targetPath);
-
-		$n = min(count($currentTrail), count($targetTrail));
-
-		for ($i = 0; ($i < $n) && ($currentTrail[$i] === $targetTrail[$i]); ++$i);
-
-		$relativeDirectory = str_repeat('../', count($currentTrail) - $i);
-
-		if (0 < count($targetTrail)) {
-			$relativeDirectory .= implode('/', array_slice($targetTrail, $i)) . '/';
-		}
-
-		return $relativeDirectory;
+		return ($effect['exit'] !== 0) || isset($effect['results']['fatalError']);
 	}
 
-	private static function getTrail($path)
+	private static function getBrokenTest($testsDirectory, $file, $test)
 	{
-		if (strlen($path) === 0) {
-			return array();
-		}
+		$text = self::indent($test['text'], '   ');
 
-		return explode('/', $path);
+		$issues = self::getBrokenTestIssues($test['effect']['results'], $test['effect']['exit']);
+		$reference = self::getReference($testsDirectory, $file, $test['line']);
+
+		return "{$text}\n\n   // Issues\n{$issues}\n\n{$reference}";
 	}
 
-	private static function isBrokenTest($cause, $effect)
-	{
-		return ($cause['exit'] !== 0)
-			|| ($effect['exit'] !== 0)
-			|| !isset($cause['results'], $effect['results']);
-	}
-
-	private static function isPassingTest($cause, $effect)
-	{
-		$comparer = new Comparer();
-
-		return $comparer->isSameArray($cause['variables'], $effect['variables'])
-			&& $comparer->isSameArray($cause['globals'], $effect['globals'])
-			&& $comparer->isSameArray($cause['constants'], $effect['constants'])
-			&& $comparer->isSame($cause['output'], $effect['output'])
-			&& $comparer->isSameArray($cause['calls'], $effect['calls']) // TODO: expect calls to be pre-sorted in a canonical order
-			&& $comparer->isSame($cause['exception'], $effect['exception'])
-			&& $comparer->isSameArray($cause['errors'], $effect['errors']); // TODO: consider file and line numbers
-	}
-
-	private static function getTest($file, $fixture, $case)
-	{
-		return array(
-			'file' => $file,
-			'line' => $case['line'],
-			'fixture' => $fixture,
-			'cause' => $case['cause'],
-			'effect' => $case['effect']
-		);
-	}
-
-	private static function showPassedTests($count)
-	{
-		return "Passed tests: {$count}";
-	}
-
-	private static function showFailedTests($testsDirectory, array $tests)
-	{
-		$output = array(
-			self::getTestsSectionTitle('FAILED', count($tests))
-		);
-
-		foreach ($tests as $test) {
-			$output[] = self::showTest($testsDirectory, $test);
-		}
-
-		return implode("\n\n", $output);
-	}
-
-	private static function showBrokenTests($testsDirectory, array $tests)
-	{
-		$output = array(
-			self::getTestsSectionTitle('BROKEN', count($tests))
-		);
-
-		foreach ($tests as $test) {
-			$output[] = self::showTest($testsDirectory, $test);
-		}
-
-		return implode("\n\n", $output);
-	}
-
-	private static function getTestsSectionTitle($label, $count)
-	{
-		$output = "{$label} TEST";
-
-		if (1 < $count) {
-			$output .= 'S';
-		}
-
-		$output .= ':';
-
-		return $output;
-	}
-
-	private static function showTest($testsDirectory, array $test)
-	{
-		$code = self::getCode($test['cause']['code']);
-
-		$file = $testsDirectory . $test['file'];
-		$line = $test['line'];
-
-		$comparer = new Comparer();
-		$displayer = new Displayer();
-		$table = new Table();
-		$table->addRow('Actual', 'Expected');
-
-		$cause = $test['cause']['results'];
-		$effect = $test['effect']['results'];
-
-		self::showErrors($cause['errors'], $effect['errors'], $comparer, $displayer, $table);
-		self::showException($cause['exception'], $effect['exception'], $comparer, $displayer, $table);
-		self::showOutput($cause['output'], $effect['output'], $displayer, $table);
-		self::showVariables($cause['variables'], $effect['variables'], $comparer, $displayer, $table);
-		self::showGlobals($cause['globals'], $effect['globals'], $comparer, $displayer, $table);
-		self::showConstants($cause['constants'], $effect['constants'], $comparer, $displayer, $table);
-		self::showCalls($cause, $effect, $comparer, $displayer, $table);
-
-		$resultsText = $table->getText();
-		$filePosition = self::getFilePosition($file, $line);
-
-		return self::indent($code, '   ') . "\n\n" .
-			self::indent($resultsText, ' ') . "\n" .
-			self::indent("See it: {$filePosition}", '   ');
-	}
-
-	private static function getCode($code)
-	{
-		return "// Test\n{$code}";
-	}
-
-	private static function showErrors(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)
-	{
-		$causeIndexed = self::index($cause);
-		$effectIndexed = self::index($effect);
-
-		$indices = array_keys(array_merge($effectIndexed, $causeIndexed));
-
-		foreach ($indices as $index) {
-			if (self::isSame($index, $cause, $effect, $comparer)) {
-				continue;
-			}
-
-			$causeOutput = self::getErrorText($causeIndexed, $index, $displayer);
-			$effectOutput = self::getErrorText($effectIndexed, $index, $displayer);
-
-			$table->addRow($causeOutput, $effectOutput);
-		}
-	}
-
-	private static function index($input)
+	private static function getBrokenTestIssues($results, $exit)
 	{
 		$output = array();
 
-		foreach ($input as $key => $value) {
-			$jsonValue = json_encode($value);
-			$output[$jsonValue] = $value;
-		}
-
-		return $output;
-	}
-
-	private static function getErrorText(array $values, $key, Displayer $displayer)
-	{
-		if (!array_key_exists($key, $values)) {
-			return null;
-		}
-
-		list($level, $message, $file, $line) = current($values[$key]);
-
-		$nameText = self::getErrorLevelName($level);
-
-		// TODO: here
-		if (is_string($file)) {
-			// TODO: replace the "getcwd" function call
-			$file = rtrim(self::getRelativePath(getcwd(), $file), '/');
-		}
-
-		$fileText = self::getFilePosition($file, $line);
-		$messageText = $displayer->display($message);
-
-		return "{$nameText}: {$fileText}: {$messageText}";
-	}
-
-	private static function getErrorLevelName($level)
-	{
-		switch ($level)
-		{
-			case 1: return 'E_ERROR';
-			case 2: return 'E_WARNING';
-			case 4: return 'E_PARSE';
-			case 8: return 'E_NOTICE';
-			case 16: return 'E_CORE_ERROR';
-			case 32: return 'E_CORE_WARNING';
-			case 64: return 'E_COMPILE_ERROR';
-			case 128: return 'E_COMPILE_WARNING';
-			case 256: return 'E_USER_ERROR';
-			case 512: return 'E_USER_WARNING';
-			case 1024: return 'E_USER_NOTICE';
-			case 2048: return 'E_STRICT';
-			case 4096: return 'E_RECOVERABLE_ERROR';
-			case 8192: return 'E_DEPRECATED';
-			case 16384: return 'E_USER_DEPRECATED';
-			case 32767: return 'E_ALL';
-			default: return '';
-		}
-	}
-
-	private static function showException($cause, $effect, Comparer $comparer, Displayer $displayer, Table $table)
-	{
-		if ($comparer->isSame($cause, $effect)) {
-			return;
-		}
-
-		$causeOutput = self::getExceptionText($cause, $displayer);
-		$effectOutput = self::getExceptionText($effect, $displayer);
-
-		$table->addRow($causeOutput, $effectOutput);
-	}
-
-	private static function getExceptionText($object, Displayer $displayer)
-	{
-		if (!is_array($object)) {
-			return null;
-		}
-
-		unset($object[Archivist::TYPE_OBJECT][2]['file']);
-		unset($object[Archivist::TYPE_OBJECT][2]['line']);
-		unset($object[Archivist::TYPE_OBJECT][2]['xdebug_message']);
-
-		return 'throw ' . $displayer->display($object) . ';';
-	}
-
-	private static function showOutput($cause, $effect, Displayer $displayer, Table $table)
-	{
-		if ($cause === $effect) {
-			return;
-		}
-
-		$causeOutput = self::getEchoText($cause, $displayer);
-		$effectOutput = self::getEchoText($effect, $displayer);
-
-		$table->addRow($causeOutput, $effectOutput);
-	}
-
-	private static function getEchoText($text, Displayer $displayer)
-	{
-		if ($text === '') {
-			return null;
-		}
-
-		$value = $displayer->display($text);
-
-		// TODO: word wrap elsewhere
-		$delimiter = substr($value, 0, 1);
-		$innerValue = substr($value, 1, -1);
-		$value = $delimiter . wordwrap($innerValue, 72, "{$delimiter},\n     {$delimiter}", true) . $delimiter;
-
-		return "echo {$value};";
-	}
-
-	private static function showVariables(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)
-	{
-		$names = array_keys(array_merge($cause, $effect));
-		sort($names, SORT_NATURAL);
-
-		foreach ($names as $name) {
-			if (self::isSame($name, $cause, $effect, $comparer)) {
-				continue;
-			}
-
-			$causeOutput = self::getVariableText($cause, $name, $displayer);
-			$effectOutput = self::getVariableText($effect, $name, $displayer);
-
-			$table->addRow($causeOutput, $effectOutput);
-		}
-	}
-
-	private static function isSame($key, array $a, array $b, Comparer $comparer)
-	{
-		return array_key_exists($key, $a) &&
-			array_key_exists($key, $b) &&
-			$comparer->isSame($a[$key], $b[$key]);
-	}
-
-	private static function getVariableText(array $variables, $name, Displayer $displayer)
-	{
-		if (!array_key_exists($name, $variables)) {
-			return null;
-		}
-
-		$value = $displayer->display($variables[$name]);
-
-		return "\${$name} = {$value};";
-	}
-
-	private static function showGlobals(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)
-	{
-		$names = array_keys(array_merge($cause, $effect));
-		sort($names, SORT_NATURAL);
-
-		foreach ($names as $name) {
-			if (self::isSame($name, $cause, $effect, $comparer)) {
-				continue;
-			}
-
-			$causeOutput = self::getGlobalText($cause, $name, $displayer);
-			$effectOutput = self::getGlobalText($effect, $name, $displayer);
-
-			$table->addRow($causeOutput, $effectOutput);
-		}
-	}
-
-	private static function getGlobalText(array $variables, $name, Displayer $displayer)
-	{
-		if (!array_key_exists($name, $variables)) {
-			return null;
-		}
-
-		$value = $displayer->display($variables[$name]);
-
-		return "\$GLOBALS['{$name}'] = {$value};";
-	}
-
-	private static function showConstants(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)
-	{
-		$names = array_keys(array_merge($cause, $effect));
-		sort($names, SORT_NATURAL);
-
-		foreach ($names as $name) {
-			if (self::isSame($name, $cause, $effect, $comparer)) {
-				continue;
-			}
-
-			$causeOutput = self::getConstantText($cause, $name, $displayer);
-			$effectOutput = self::getConstantText($effect, $name, $displayer);
-
-			$table->addRow($causeOutput, $effectOutput);
-		}
-	}
-
-	private static function getConstantText(array $constants, $name, Displayer $displayer)
-	{
-		if (!array_key_exists($name, $constants)) {
-			return null;
-		}
-
-		$value = $displayer->display($constants[$name]);
-
-		return "define('{$name}', {$value});\n";
-	}
-
-	private static function getFilePosition($file, $line)
-	{
 		$displayer = new Displayer();
 
-		if (is_string($file)) {
-			$fileText = $displayer->display($file);
-		} else {
-			$fileText = null;
+		self::flattenError($results['fatalError'], $displayer);
+		self::flattenExit($exit, $displayer);
+
+		if ($results['fatalError'] !== null) {
+			$output[] = ' + ' . $results['fatalError'];
 		}
 
-		$lineText = (string)$line;
+		if ($exit !== null) {
+			$output[] = ' + ' . $exit;
+		}
 
-		return "{$fileText} (line {$lineText})";
+		return implode("\n", $output);
 	}
 
-	private static function showCalls(array $cause, array $effect, Comparer $comparer, Displayer $displayer, Table $table)
+	private static function flattenExit(&$exit, Displayer $displayer)
 	{
-		$causeNames = self::getObjectNames($cause['variables']);
-		$effectNames = self::getObjectNames($effect['variables']);
-
-		for ($i = 0, $n = max(count($cause), count($effect)); $i < $n; ++$i) {
-			if (self::isSame($i, $cause['calls'], $effect['calls'], $comparer)) {
-				continue;
-			}
-
-			$causeOutput = self::getCallText($cause['calls'], $i, $causeNames, $displayer);
-			$effectOutput = self::getCallText($effect['calls'], $i, $effectNames, $displayer);
-
-			$table->addRow($causeOutput, $effectOutput);
+		if ($exit === 0) {
+			$exit = null;
 		}
+
+		$exit = self::getExitText($displayer->display($exit));
+	}
+
+	private static function getExitText($value)
+	{
+		return "exit({$value});";
+	}
+
+	private static function getReference($testsDirectory, $file, $line)
+	{
+		$filePosition = self::getFilePosition($testsDirectory . $file, $line);
+		return self::indent("See it: {$filePosition}", '   ');
+	}
+
+	private static function flatten($results)
+	{
+		if (!is_array($results)) {
+			return null;
+		}
+
+		$displayer = new Displayer();
+		$objectNames = self::getObjectNames($results['variables']);
+
+		self::flattenVariables($results['variables'], $displayer);
+		self::flattenGlobals($results['globals'], $displayer);
+		self::flattenConstants($results['constants'], $displayer);
+		self::flattenOutput($results['output'], $displayer);
+		self::flattenCalls($results['calls'], $objectNames, $displayer);
+		self::flattenException($results['exception'], $displayer);
+		self::flattenErrors($results['errors'], $displayer);
+		self::flattenError($results['fatalError'], $displayer);
+
+		return $results;
 	}
 
 	private static function getObjectNames(array $variables)
@@ -478,13 +171,66 @@ class Console
 		return $names;
 	}
 
-	private static function getCallText(array $calls, $key, array $names, Displayer $displayer)
+	private static function flattenVariables(array &$variables, Displayer $displayer)
 	{
-		if (!array_key_exists($key, $calls)) {
-			return null;
+		foreach ($variables as $name => &$value) {
+			$value = self::getVariableText($name, $displayer->display($value));
 		}
+	}
 
-		list($callableArchive, $argumentsArchive, $resultArchive) = current($calls[$key]);
+	private static function getVariableText($name, $value)
+	{
+		return "\${$name} = {$value};";
+	}
+
+	private static function flattenGlobals(array &$variables, Displayer $displayer)
+	{
+		foreach ($variables as $name => &$value) {
+			$value = self::getGlobalText($name, $displayer->display($value));
+		}
+	}
+
+	private static function getGlobalText($name, $value)
+	{
+		return "\$GLOBALS['{$name}'] = {$value};";
+	}
+
+	private static function flattenConstants(array &$constants, Displayer $displayer)
+	{
+		foreach ($constants as $name => &$value) {
+			$value = self::getConstantText($name, $displayer->display($value));
+		}
+	}
+
+	private static function getConstantText($name, $value)
+	{
+		return "define('{$name}', {$value});";
+	}
+
+	private static function flattenOutput(&$value, Displayer $displayer)
+	{
+		if ($value === '') {
+			$value = null;
+		} else {
+			$value = self::getOutputText($displayer->display($value));
+		}
+	}
+
+	private static function getOutputText($value)
+	{
+		return "echo {$value};";
+	}
+
+	private static function flattenCalls(array &$calls, array $objectNames, Displayer $displayer)
+	{
+		foreach ($calls as &$call) {
+			$call = self::getCallText($call, $objectNames, $displayer);
+		}
+	}
+
+	private static function getCallText(array $call, array $names, Displayer $displayer)
+	{
+		list($callableArchive, $argumentsArchive, $resultArchive) = current($call);
 		list($objectArchive, $method) = current($callableArchive);
 
 		$objectText = self::getObjectText($objectArchive, $names, $displayer);
@@ -531,6 +277,262 @@ class Console
 
 		$resultText = $displayer->display($resultArchive);
 		return " // {$resultText}";
+	}
+
+	private static function flattenException(&$exception, Displayer $displayer)
+	{
+		if ($exception === null) {
+			return;
+		}
+
+		$object = &$exception[Archivist::TYPE_OBJECT];
+
+		unset(
+			$object[2]['file'],
+			$object[2]['line'],
+			$object[2]['trace'],
+			$object[2]['xdebug_message']
+		);
+
+		$exception = self::getExceptionText($displayer->display($exception));
+	}
+
+	private static function getExceptionText($value)
+	{
+		return "throw {$value};";
+	}
+
+	private static function flattenErrors(array &$errors, Displayer $displayer)
+	{
+		foreach ($errors as &$error) {
+			self::flattenError($error, $displayer);
+		}
+	}
+
+	private static function flattenError(&$error, Displayer $displayer)
+	{
+		if ($error === null) {
+			return;
+		}
+
+		// TODO: replace this "getcwd" function call
+		$currentDirectory = getcwd();
+
+		list($level, $message, $file, $line) = current($error);
+
+		$nameText = self::getErrorLevelName($level);
+
+		$output = "{$nameText}: ";
+
+		if (is_string($file)) {
+			$file = rtrim(self::getRelativePath($currentDirectory, $file), '/');
+			$fileText = self::getFilePosition($file, $line);
+
+			$output .= "{$fileText}: ";
+		}
+
+		$output .= $displayer->display($message);
+
+		$error = $output;
+	}
+
+	private static function getErrorLevelName($level)
+	{
+		switch ($level)
+		{
+			case E_ERROR: return 'E_ERROR';
+			case E_WARNING: return 'E_WARNING';
+			case E_PARSE: return 'E_PARSE';
+			case E_NOTICE: return 'E_NOTICE';
+			case E_CORE_ERROR: return 'E_CORE_ERROR';
+			case E_CORE_WARNING: return 'E_CORE_WARNING';
+			case E_COMPILE_ERROR: return 'E_COMPILE_ERROR';
+			case E_COMPILE_WARNING: return 'E_COMPILE_WARNING';
+			case E_USER_ERROR: return 'E_USER_ERROR';
+			case E_USER_WARNING: return 'E_USER_WARNING';
+			case E_USER_NOTICE: return 'E_USER_NOTICE';
+			case E_STRICT: return 'E_STRICT';
+			case E_RECOVERABLE_ERROR: return 'E_RECOVERABLE_ERROR';
+			case E_DEPRECATED: return 'E_DEPRECATED';
+			case E_USER_DEPRECATED: return 'E_USER_DEPRECATED';
+			case E_ALL: return 'E_ALL';
+			default: return null;
+		}
+	}
+
+	private static function getRelativePath($currentPath, $targetPath)
+	{
+		$currentTrail = self::getTrail($currentPath);
+		$targetTrail = self::getTrail($targetPath);
+
+		$n = min(count($currentTrail), count($targetTrail));
+
+		for ($i = 0; ($i < $n) && ($currentTrail[$i] === $targetTrail[$i]); ++$i);
+
+		$relativeDirectory = str_repeat('../', count($currentTrail) - $i);
+
+		if (0 < count($targetTrail)) {
+			$relativeDirectory .= implode('/', array_slice($targetTrail, $i)) . '/';
+		}
+
+		return $relativeDirectory;
+	}
+
+	private static function getTrail($path)
+	{
+		if (strlen($path) === 0) {
+			return array();
+		}
+
+		return explode('/', $path);
+	}
+
+	private static function diff(&$a, &$b)
+	{
+		self::diffMap($a['variables'], $b['variables']);
+		self::diffMap($a['globals'], $b['globals']);
+		self::diffMap($a['constants'], $b['constants']);
+		self::diffValue($a['output'], $b['output']);
+		self::diffMap($a['calls'], $b['calls']);
+		self::diffValue($a['exception'], $b['exception']);
+		self::diffMap($a['errors'], $b['errors']);
+		self::diffValue($a['fatalError'], $b['fatalError']);
+	}
+
+	private static function diffMap(&$a, &$b)
+	{
+		$x = array_intersect_assoc($a, $b);
+		$a = array_diff_key($a, $x);
+		$b = array_diff_key($b, $x);
+	}
+
+	private static function diffValue(&$a, &$b)
+	{
+		if ($a === $b) {
+			$a = $b = null;
+		}
+	}
+
+	private static function isPassingTest(&$cause, &$effect)
+	{
+		return $cause === $effect;
+	}
+
+	private static function getFailedTest($testsDirectory, $file, $test, $causeResults, $effectResults)
+	{
+		$text = self::indent($test['text'], '   ');
+
+		$issues = self::getIssues($effectResults, $causeResults);
+
+		$file = $testsDirectory . $file;
+		$line = $test['line'];
+
+		// TODO: use the "getReference" function
+		$filePosition = self::getFilePosition($file, $line);
+		$seeIt = self::indent("See it: {$filePosition}", '   ');
+
+		return "{$text}\n\n   // Issues\n{$issues}\n\n{$seeIt}";
+	}
+
+	private static function getIssues($a, $b)
+	{
+		$output = array();
+
+		self::getDifferencesValue($a['fatalError'], $b['fatalError'], $output);
+		self::getDifferencesMap($a['errors'], $b['errors'], $output);
+		self::getDifferencesValue($a['exception'], $b['exception'], $output);
+		self::getDifferencesValue($a['output'], $b['output'], $output);
+		self::getDifferencesMap($a['calls'], $b['calls'], $output);
+		self::getDifferencesMap($a['constants'], $b['constants'], $output);
+		self::getDifferencesMap($a['globals'], $b['globals'], $output);
+		self::getDifferencesMap($a['variables'], $b['variables'], $output);
+
+		return implode("\n", $output);
+	}
+
+	private static function getDifferencesMap($a, $b, &$output)
+	{
+		$keys = self::getKeys($a, $b);
+
+		foreach ($keys as $key) {
+			if (array_key_exists($key, $b)) {
+				$output[] = ' + ' . $b[$key];
+			}
+
+			if (array_key_exists($key, $a)) {
+				$output[] = ' - ' . $a[$key];
+			}
+		}
+	}
+
+	private static function getKeys(array $a, array $b)
+	{
+		$keys = array();
+
+		foreach ($a as $key => $value) {
+			$keys[$key] = $key;
+		}
+
+		foreach ($b as $key => $value) {
+			$keys[$key] = $key;
+		}
+
+		sort($keys, SORT_NATURAL);
+
+		return $keys;
+	}
+
+	private static function getDifferencesValue($a, $b, &$output)
+	{
+		if ($b !== null) {
+			$output[] = ' + ' . $b;
+		}
+
+		if ($a !== null) {
+			$output[] = ' - ' . $a;
+		}
+	}
+
+	private static function showPassedTests($count)
+	{
+		return "Passed tests: {$count}";
+	}
+
+	private static function showTests($title, array $tests)
+	{
+		$title = self::getTestsSectionTitle($title, count($tests));
+
+		array_unshift($tests, $title);
+
+		return implode("\n\n", $tests);
+	}
+
+	private static function getTestsSectionTitle($label, $count)
+	{
+		$output = "{$label} TEST";
+
+		if (1 < $count) {
+			$output .= 'S';
+		}
+
+		$output .= ':';
+
+		return $output;
+	}
+
+	private static function getFilePosition($file, $line)
+	{
+		$displayer = new Displayer();
+
+		if (is_string($file)) {
+			$fileText = $displayer->display($file);
+		} else {
+			$fileText = null;
+		}
+
+		$lineText = (string)$line;
+
+		return "{$fileText} (line {$lineText})";
 	}
 
 	private static function indent($text, $padding)

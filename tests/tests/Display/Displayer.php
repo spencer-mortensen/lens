@@ -104,6 +104,7 @@ $x = "array('a' => 'A', 'b' => 'B')";
 // Expected
 // $x = 'object(#1:stdClass)';
 
+
 // Test
 // $x = $displayer->display(fopen('php://stdout', 'r'));
 

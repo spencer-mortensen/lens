@@ -45,6 +45,8 @@ class Runner
 		$this->evaluator = $evaluator;
 		$this->console = $console;
 		$this->web = $web;
+
+		set_exception_handler(array($this, 'exceptionHandler'));
 	}
 
 	public function run($codeDirectory, $testsDirectory, $currentDirectory)
@@ -62,5 +64,17 @@ class Runner
 
 		echo $this->console->summarize($testsTestsDirectory, $currentDirectory, $results['tests']);
 		$this->web->coverage($codeDirectory, $coverageDirectory, $results['coverage']);
+	}
+
+	/**
+	 * @param \Exception|\Throwable $exception
+	 */
+	public function exceptionHandler($exception)
+	{
+		$code = $exception->getCode();
+		$message = $exception->getMessage();
+
+		file_put_contents('php://stderr', "Error {$code}: {$message}\n");
+		exit($code);
 	}
 }

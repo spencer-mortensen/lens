@@ -153,14 +153,19 @@ class Browser
 
 	private static function getCase(array $lines, &$i, &$case)
 	{
+		$iBegin = $i;
+
 		if (!self::getTest($lines, $i, $begin, $testCode) ||
 			!self::getExpected($lines, $i, $expectedCode)
 		) {
 			return false;
 		}
 
+		$text = "// Test\n" . trim(implode("\n", array_slice($lines, $iBegin, $i - $iBegin)));
+
 		$case = array(
 			'line' => $begin,
+			'text' => $text,
 			'cause' => array(
 				'code' => $testCode
 			),
