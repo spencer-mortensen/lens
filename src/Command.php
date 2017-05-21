@@ -66,7 +66,7 @@ class Command
 
 	private function getVersion()
 	{
-		echo "testphp 0.0.2\n";
+		echo "testphp 0.0.5\n";
 		exit(0);
 	}
 
