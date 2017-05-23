@@ -384,34 +384,12 @@ spl_autoload_register(
 			return;
 		}
 
-		$slash = strrpos($path, '\\');
-		$namespace = substr($path, 0, $slash);
-		$class = substr($path, $slash + 1);
+		$parentClass = substr($path, $mockPrefixLength);
 
-		$mockTemplate = <<<'EOS'
-namespace %s;
+		$mockBuilder = new \TestPhp\MockBuilder($mockPrefix, $parentClass);
+		$mockCode = $mockBuilder->getMock();
 
-class %s {
-	public function __construct()
-	{
-		$callable = array($this, __FUNCTION__);
-		$arguments = func_get_args();
-
-		\TestPhp\Agent::recall($callable, $arguments);
-	}
-
-	public function __call($name, $arguments)
-	{
-		$callable = array($this, $name);
-
-		return \TestPhp\Agent::recall($callable, $arguments);
-	}
-}
-EOS;
-
-		$code = sprintf($mockTemplate, $namespace, $class);
-
-		eval($code);
+		eval($mockCode);
 	}
 );
 EOT;
