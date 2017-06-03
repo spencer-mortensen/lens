@@ -73,7 +73,8 @@ class Command
 	private function getRunner($code, $tests)
 	{
 		$filesystem = new Filesystem();
-		$browser = new Browser($filesystem);
+		$parser = new Parser();
+		$browser = new Browser($filesystem, $parser);
 		$evaluator = new Evaluator($filesystem, $this->executable);
 		$console = new Console();
 		$web = new Web($filesystem);
@@ -83,7 +84,7 @@ class Command
 		$testsDirectory = self::getTestsDirectory($tests, $currentDirectory);
 		$codeDirectory = self::getCodeDirectory($code, $testsDirectory, $currentDirectory);
 
-		$runner->run($codeDirectory, $testsDirectory, $currentDirectory);
+		$runner->run($codeDirectory, $testsDirectory);
 	}
 
 	private static function getCurrentDirectory()

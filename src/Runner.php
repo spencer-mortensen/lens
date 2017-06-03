@@ -49,7 +49,7 @@ class Runner
 		set_exception_handler(array($this, 'exceptionHandler'));
 	}
 
-	public function run($codeDirectory, $testsDirectory, $currentDirectory)
+	public function run($codeDirectory, $testsDirectory)
 	{
         // TODO: require a valid tests directory
         // TODO: see if the corresponding "coverage" directory can be safely overwritten
@@ -62,7 +62,7 @@ class Runner
 		$tests = $this->browser->browse($testsTestsDirectory);
 		$results = $this->evaluator->evaluate($tests, $testsDirectory, $codeDirectory);
 
-		echo $this->console->summarize($testsTestsDirectory, $currentDirectory, $results['tests']);
+		echo $this->console->summarize($results['suites']);
 		$this->web->coverage($codeDirectory, $coverageDirectory, $results['coverage']);
 	}
 

@@ -30,12 +30,16 @@ class Browser
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Parser */
+	private $parser;
+
 	/** @var array */
 	private $tests;
 
-	public function __construct(Filesystem $filesystem)
+	public function __construct(Filesystem $filesystem, Parser $parser)
 	{
 		$this->filesystem = $filesystem;
+		$this->parser = $parser;
 		$this->tests = array();
 	}
 
@@ -78,164 +82,15 @@ class Browser
 			throw Exception::invalidTestFile($absolutePath);
 		}
 
-		$lines = explode("\n", "\n{$contents}");
-		unset($lines[0]);
-
-		$i = 1;
-
-		if (self::getSuite($lines, $i, $relativePath, $suite)) {
-			$this->tests[] = $suite;
+		// TODO: provide more useful exceptions:
+		if (!$this->parser->parse($contents, $fixture, $tests)) {
+			throw Exception::invalidTestFile($absolutePath);
 		}
 
-		return true;
-	}
-
-	private static function getSuite(array $lines, &$i, $file, &$suite)
-	{
-		if (!self::getPhpTag($lines, $i) ||
-			!self::getFixture($lines, $i, $fixture) ||
-			!self::getCases($lines, $i, $cases)
-		) {
-			return false;
-		}
-
-		$suite = array(
-			'file' => $file,
+		$this->tests[] = array(
+			'file' => $relativePath,
 			'fixture' => $fixture,
-			'cases' => $cases
+			'tests' => $tests
 		);
-
-		return true;
-	}
-
-	private static function getPhpTag(array $lines, &$i)
-	{
-		if (isset($lines[$i]) && ($lines[$i] === '<?php')) {
-			++$i;
-			return true;
-		}
-
-		return false;
-	}
-
-	private static function getCases($lines, &$i, &$cases)
-	{
-		$cases = array();
-
-		while (self::getCase($lines, $i, $case)) {
-			$cases[] = $case;
-		};
-
-		return 0 < count($cases);
-	}
-
-	private static function getFixture(array $lines, &$i, &$fixture)
-	{
-		$end = count($lines);
-		$fixture = '';
-
-		for (; $i <= $end; ++$i) {
-			if (self::isTestLabel($lines[$i])) {
-				$fixture = trim($fixture);
-
-				if (strlen($fixture) === 0) {
-					$fixture = null;
-				}
-
-				return true;
-			}
-
-			$fixture .= $lines[$i] . "\n";
-		}
-
-		return false;
-	}
-
-	private static function getCase(array $lines, &$i, &$case)
-	{
-		$iBegin = $i;
-
-		if (!self::getTest($lines, $i, $begin, $testCode) ||
-			!self::getExpected($lines, $i, $expectedCode)
-		) {
-			return false;
-		}
-
-		$text = "// Test\n" . trim(implode("\n", array_slice($lines, $iBegin, $i - $iBegin)));
-
-		$case = array(
-			'line' => $begin,
-			'text' => $text,
-			'cause' => array(
-				'code' => $testCode
-			),
-			'effect' => array(
-				'code' => $expectedCode
-			)
-		);
-
-		return true;
-	}
-
-	private static function getTest(array $lines, &$i, &$begin, &$code)
-	{
-		$end = count($lines);
-
-		if (($end < $i) || !self::isTestLabel($lines[$i])) {
-			return false;
-		}
-
-		$begin = $i;
-		$code = '';
-
-		for (++$i; $i <= $end; ++$i) {
-			if (self::isExpectedLabel($lines[$i])) {
-				$code = trim($code);
-				return true;
-			}
-
-			$code .= $lines[$i] . "\n";
-		}
-
-		return false;
-	}
-
-	private static function getExpected(array $lines, &$i, &$code)
-	{
-		$end = count($lines);
-
-		if (($end < $i) || !self::isExpectedLabel($lines[$i])) {
-			return false;
-		}
-
-		$code = '';
-
-		for (++$i; $i <= $end; ++$i) {
-			if (self::isTestLabel($lines[$i])) {
-				break;
-			}
-
-			$code .= $lines[$i] . "\n";
-		}
-
-		$code = self::prepareMockCalls(trim($code));
-		return true;
-	}
-
-	private static function prepareMockCalls($code)
-	{
-		$pattern = '~->([a-zA-Z_0-9]+)\((.*)\);\s+//\s+(.*)$~m';
-
-		return preg_replace($pattern, '->$1(array($2), $3);', $code);
-	}
-
-	private static function isTestLabel($line)
-	{
-		return $line === '// Test';
-	}
-
-	private static function isExpectedLabel($line)
-	{
-		return $line === '// Expected';
 	}
 }

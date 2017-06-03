@@ -27,31 +27,16 @@ namespace TestPhp;
 
 class Console
 {
-	public function summarize($testsDirectory, $currentDirectory, array $suites)
+	private static $maxWidth = 96;
+
+	public function summarize(array $suites)
 	{
 		$passedTestsCount = 0;
 		$failedTests = array();
-		$brokenTests = array();
-
-		$relativeTestsDirectory = self::getRelativePath($currentDirectory, $testsDirectory);
 
 		foreach ($suites as $suite) {
-			foreach ($suite['cases'] as $case) {
-				if (self::isBrokenTest($case['effect'])) {
-					$brokenTests[] = self::getBrokenTest($relativeTestsDirectory, $suite['file'], $case);
-					continue;
-				}
-
-				$actual = self::flatten($case['cause']['results']);
-				$expected = self::flatten($case['effect']['results']);
-				self::diff($actual, $expected);
-
-				if (self::isPassingTest($actual, $expected)) {
-					++$passedTestsCount;
-				} else {
-					// TODO: prevent the "$actual['results'] === null" situation
-					$failedTests[] = self::getFailedTest($relativeTestsDirectory, $suite['file'], $case, $actual, $expected);
-				}
+			foreach ($suite['tests'] as $test) {
+				self::summarizeTest($test, $passedTestsCount, $failedTests);
 			}
 		}
 
@@ -62,33 +47,47 @@ class Console
 		}
 
 		if (0 < count($failedTests)) {
-			$output[] = self::showTests('FAILED', $failedTests);
+			$output[] = self::showFailedTests($failedTests);
 		}
 
-		if (0 < count($brokenTests)) {
-			$output[] = self::showTests('BROKEN', $brokenTests);
+		return implode("\n", $output) . "\n";
+	}
+
+	private static function summarizeTest(array $test, &$passedTestsCount, array &$failedTests)
+	{
+		$subject = $test['subject'];
+
+		foreach ($test['cases'] as $case) {
+			if (self::isBrokenTestCase($case['expected'])) {
+				$failedTests[] = array($subject, $case['input'], $case['output'], self::getBrokenIssues($case['expected']));
+				continue;
+			}
+
+			self::ignoreTestVariables($case['expected']['results']['variables'], $case['actual']['results']['variables']);
+
+			$expected = self::flatten($case['expected']['results']);
+			$actual = self::flatten($case['actual']['results']);
+
+			self::diff($expected, $actual);
+
+			if (self::isPassingTest($expected, $actual)) {
+				++$passedTestsCount;
+			} else {
+				$failedTests[] = array($subject, $case['input'], $case['output'], self::getFailedIssues($expected, $actual));
+			}
 		}
-
-		return implode("\n\n", $output) . "\n";
 	}
 
-	private static function isBrokenTest(array $effect)
+	private static function isBrokenTestCase(array $expected)
 	{
-		return ($effect['exit'] !== 0) || isset($effect['results']['fatalError']);
+		return ($expected['exit'] !== 0) || isset($expected['results']['fatalError']);
 	}
 
-	private static function getBrokenTest($testsDirectory, $file, $test)
+	private static function getBrokenIssues(array $expected)
 	{
-		$text = self::indent($test['text'], '   ');
+		$results = $expected['results'];
+		$exit = $expected['exit'];
 
-		$issues = self::getBrokenTestIssues($test['effect']['results'], $test['effect']['exit']);
-		$reference = self::getReference($testsDirectory, $file, $test['line']);
-
-		return "{$text}\n\n   // Issues\n{$issues}\n\n{$reference}";
-	}
-
-	private static function getBrokenTestIssues($results, $exit)
-	{
 		$output = array();
 
 		$displayer = new Displayer();
@@ -97,34 +96,40 @@ class Console
 		self::flattenExit($exit, $displayer);
 
 		if ($results['fatalError'] !== null) {
-			$output[] = ' + ' . $results['fatalError'];
+			$output[] = self::getDifferenceText('+', $results['fatalError']);
 		}
 
 		if ($exit !== null) {
-			$output[] = ' + ' . $exit;
+			$output[] = self::getDifferenceText('+', $exit);
 		}
 
 		return implode("\n", $output);
 	}
 
-	private static function flattenExit(&$exit, Displayer $displayer)
+	private static function getTest($subject, $input, $output, $issues)
 	{
-		if ($exit === 0) {
-			$exit = null;
+		$text = "// Test\n{$subject}\n\n";
+
+		if ($input !== null) {
+			$text .= "// Input\n{$input}\n\n";
 		}
 
-		$exit = self::getExitText($displayer->display($exit));
+		$text .= "// Output\n{$output}\n\n";
+
+		$text .= "// Issues\n";
+
+		return self::wrap($text, '   ', '      ') . $issues;
 	}
 
-	private static function getExitText($value)
+	private static function ignoreTestVariables(array &$expected, array &$actual)
 	{
-		return "exit({$value});";
-	}
+		$names = array_keys($actual);
 
-	private static function getReference($testsDirectory, $file, $line)
-	{
-		$filePosition = self::getFilePosition($testsDirectory . $file, $line);
-		return self::indent("See it: {$filePosition}", '   ');
+		foreach ($names as $name) {
+			if (!array_key_exists($name, $expected)) {
+				unset($actual[$name]);
+			}
+		}
 	}
 
 	private static function flatten($results)
@@ -360,6 +365,20 @@ class Console
 		}
 	}
 
+	private static function flattenExit(&$exit, Displayer $displayer)
+	{
+		if ($exit === 0) {
+			$exit = null;
+		}
+
+		$exit = self::getExitText($displayer->display($exit));
+	}
+
+	private static function getExitText($value)
+	{
+		return "exit({$value});";
+	}
+
 	private static function getRelativePath($currentPath, $targetPath)
 	{
 		$currentTrail = self::getTrail($currentPath);
@@ -413,28 +432,12 @@ class Console
 		}
 	}
 
-	private static function isPassingTest(&$cause, &$effect)
+	private static function isPassingTest($expected, $actual)
 	{
-		return $cause === $effect;
+		return $expected === $actual;
 	}
 
-	private static function getFailedTest($testsDirectory, $file, $test, $causeResults, $effectResults)
-	{
-		$text = self::indent($test['text'], '   ');
-
-		$issues = self::getIssues($effectResults, $causeResults);
-
-		$file = $testsDirectory . $file;
-		$line = $test['line'];
-
-		// TODO: use the "getReference" function
-		$filePosition = self::getFilePosition($file, $line);
-		$seeIt = self::indent("See it: {$filePosition}", '   ');
-
-		return "{$text}\n\n   // Issues\n{$issues}\n\n{$seeIt}";
-	}
-
-	private static function getIssues($a, $b)
+	private static function getFailedIssues(array $a, array $b)
 	{
 		$output = array();
 
@@ -456,11 +459,11 @@ class Console
 
 		foreach ($keys as $key) {
 			if (array_key_exists($key, $a)) {
-				$output[] = ' - ' . $a[$key];
+				$output[] = self::getDifferenceText('-', $a[$key]);
 			}
 
 			if (array_key_exists($key, $b)) {
-				$output[] = ' + ' . $b[$key];
+				$output[] = self::getDifferenceText('+', $b[$key]);
 			}
 		}
 	}
@@ -485,12 +488,31 @@ class Console
 	private static function getDifferencesValue($a, $b, &$output)
 	{
 		if ($a !== null) {
-			$output[] = ' - ' . $a;
+			$output[] = self::getDifferenceText('-', $a);
 		}
 
 		if ($b !== null) {
-			$output[] = ' + ' . $b;
+			$output[] = self::getDifferenceText('+', $b);
 		}
+	}
+
+	private static function getDifferenceText($label, $input)
+	{
+		return " {$label} " . self::wrap($input, '', '      ');
+	}
+
+	private static function wrap($string, $outerPadding, $innerPadding)
+	{
+		$lines = explode("\n", $string);
+
+		foreach ($lines as &$line) {
+			if (0 < strlen($line)) {
+				$chunks = str_split($line, self::$maxWidth);
+				$line = $outerPadding . implode("\n{$innerPadding}", $chunks);
+			}
+		}
+
+		return implode("\n", $lines);
 	}
 
 	private static function showPassedTests($count)
@@ -498,24 +520,25 @@ class Console
 		return "Passed tests: {$count}";
 	}
 
-	private static function showTests($title, array $tests)
+	private static function showFailedTests(array $tests)
 	{
-		$title = self::getTestsSectionTitle($title, count($tests));
+		$text = self::getTestsSectionTitle('Failed', count($tests)) . "\n\n";
 
-		array_unshift($tests, $title);
+		list($subject, $input, $output, $issues) = current($tests);
+		$text .= self::getTest($subject, $input, $output, $issues) . "\n";
 
-		return implode("\n\n", $tests);
+		return $text;
 	}
 
 	private static function getTestsSectionTitle($label, $count)
 	{
-		$output = "{$label} TEST";
+		$output = "{$label} test";
 
 		if (1 < $count) {
-			$output .= 'S';
+			$output .= 's';
 		}
 
-		$output .= ':';
+		$output .= ": {$count}";
 
 		return $output;
 	}

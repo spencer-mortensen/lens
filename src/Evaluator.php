@@ -54,7 +54,7 @@ class Evaluator
 		$this->executable = $executable;
 	}
 
-	public function evaluate(array $tests, $testsDirectory, $codeDirectory)
+	public function evaluate(array $suites, $testsDirectory, $codeDirectory)
 	{
 		$this->testsDirectory = $testsDirectory;
 		$this->codeDirectory = $codeDirectory;
@@ -63,29 +63,41 @@ class Evaluator
 		$this->code = array();
 		$this->status = array();
 
-		foreach ($tests as &$suite) {
-			list($causeFixture, $effectFixture, $preamble) = $this->getFixtures($suite['fixture']);
+		foreach ($suites as &$suite) {
+			list($preambleExpected, $preambleActual, $fixture) = $this->getFixtures($suite['fixture']);
+			unset($suite['fixture']);
 
-			foreach ($suite['cases'] as &$case) {
-				$this->evaluateCase($causeFixture, $effectFixture, $preamble, $case);
+			foreach ($suite['tests'] as &$test) {
+				$subject = $test['subject'];
+
+				foreach ($test['cases'] as &$case) {
+					$case = $this->evaluateCase($preambleExpected, $preambleActual, $fixture, $subject, $case);
+				}
 			}
 		}
 
 		$coverage = $this->getCodeCoverage();
 
 		return array(
-			'tests' => $tests,
+			'suites' => $suites,
 			'coverage' => $coverage
 		);
 	}
 
-	private function evaluateCase($causeFixture, $effectFixture, $preamble, array &$case)
+	private function evaluateCase($expectedPreamble, $actualPreamble, $fixture, $subject, $case)
 	{
-		$effectCode = self::combine($effectFixture, $preamble, $case['effect']['code']);
-		$case['effect'] = array_merge($case['effect'], $this->evaluateEffect($effectCode, $mockPhp));
+		$expectedCode = self::combine($expectedPreamble, $fixture, $case['input'], $case['output']);
+		$expectedResults = $this->evaluateExpectedCode($expectedCode, $mock);
 
-		$causeCode = self::combine($causeFixture, $mockPhp, $preamble, $case['cause']['code']);
-		$case['cause'] = array_merge($case['cause'], $this->evaluateCause($causeCode));
+		$actualCode = self::combine($actualPreamble, $mock, $fixture, $case['input'], $subject);
+		$resultsActual = $this->evaluateActualCode($actualCode);
+
+		return array(
+			'input' => $case['input'],
+			'output' => $case['output'],
+			'expected' => $expectedResults,
+			'actual' => $resultsActual
+		);
 	}
 
 	private static function combine()
@@ -93,7 +105,7 @@ class Evaluator
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private function evaluateEffect($code, &$mockPhp)
+	private function evaluateExpectedCode($code, &$mockPhp)
 	{
 		$output = $this->run($code, false);
 
@@ -112,7 +124,7 @@ class Evaluator
 		return $output;
 	}
 
-	private function evaluateCause($code)
+	private function evaluateActualCode($code)
 	{
 		$output = $this->run($code, $this->isCoverageEnabled);
 
@@ -307,18 +319,18 @@ class Evaluator
 	private function getFixtures($fixture)
 	{
 		$preamble = $fixture;
-		$namespace = $this->getNamespace($preamble);
-		$constant = $this->getConstant($preamble);
-		list($causeMock, $effectMock) = $this->getMocks($preamble);
+		$namespace = $this->extractNamespaceCode($preamble);
+		$constant = $this->getConstantCode($preamble);
+		list($expectedMock, $actualMock) = $this->getMocks($preamble);
 
 		return array(
-			self::combine($namespace, $constant, $causeMock),
-			self::combine($namespace, $constant, $effectMock),
+			self::combine($namespace, $constant, $expectedMock),
+			self::combine($namespace, $constant, $actualMock),
 			$preamble
 		);
 	}
 
-	private function getNamespace(&$code)
+	private function extractNamespaceCode(&$code)
 	{
 		$namespacePattern = '~^\s*namespace\h+[^\n\r]+~';
 
@@ -330,7 +342,7 @@ class Evaluator
 		return $match[0][0];
 	}
 
-	private function getConstant($code)
+	private function getConstantCode($code)
 	{
 		$constant = 'TESTPHP_TESTS_DIRECTORY';
 
@@ -361,8 +373,8 @@ class Evaluator
 		}
 
 		return array(
-			$this->getCauseAutoloader(),
-			$this->getEffectAutoloader()
+			$this->getAutoloaderExpected(),
+			$this->getAutoloaderActual()
 		);
 	}
 
@@ -371,7 +383,7 @@ class Evaluator
 		return is_integer(strpos($code, 'use TestPhp\\Mock\\'));
 	}
 
-	private static function getCauseAutoloader()
+	private static function getAutoloaderActual()
 	{
 		return <<<'EOT'
 spl_autoload_register(
@@ -395,7 +407,7 @@ spl_autoload_register(
 EOT;
 	}
 
-	private static function getEffectAutoloader()
+	private static function getAutoloaderExpected()
 	{
 		return <<<'EOT'
 spl_autoload_register(
