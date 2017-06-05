@@ -3,23 +3,23 @@
 /**
  * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of TestPHP.
+ * This file is part of testphp.
  *
- * TestPHP is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
+ * Testphp is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * TestPHP is distributed in the hope that it will be useful,
+ * Testphp is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with TestPHP. If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with testphp. If not, see <http://www.gnu.org/licenses/>.
  *
- * @author Spencer Mortensen <spencer@spencermortensen.com>
- * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL-3.0
+ * @author Spencer Mortensen <spencer@testphp.org>
+ * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
  * @copyright 2017 Spencer Mortensen
  */
 
@@ -118,7 +118,7 @@ class Console
 
 		$text .= "// Issues\n";
 
-		return self::wrap($text, '   ', '      ') . $issues;
+		return self::wrap($text, '   ', '   ') . $issues;
 	}
 
 	private static function ignoreTestVariables(array &$expected, array &$actual)
@@ -498,7 +498,7 @@ class Console
 
 	private static function getDifferenceText($label, $input)
 	{
-		return " {$label} " . self::wrap($input, '', '      ');
+		return " {$label} " . self::wrap($input, '', '   ');
 	}
 
 	private static function wrap($string, $outerPadding, $innerPadding)
@@ -522,21 +522,17 @@ class Console
 
 	private static function showFailedTests(array $tests)
 	{
-		$text = self::getTestsSectionTitle('Failed', count($tests)) . "\n\n";
+		$count = count($tests);
 
 		list($subject, $input, $output, $issues) = current($tests);
-		$text .= self::getTest($subject, $input, $output, $issues) . "\n";
+		$testBody = self::getTest($subject, $input, $output, $issues);
 
-		return $text;
+		return "Failed tests: {$count}\n\n{$testBody}";
 	}
 
 	private static function getTestsSectionTitle($label, $count)
 	{
-		$output = "{$label} test";
-
-		if (1 < $count) {
-			$output .= 's';
-		}
+		$output = "{$label} tests: {$count}";
 
 		$output .= ": {$count}";
 
