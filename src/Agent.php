@@ -57,13 +57,13 @@ abstract class Agent
 		}
 	}
 
-	public static function recall(array $callable, array $arguments)
+	public static function replay(array $callable, array $arguments)
 	{
 		$result = self::getResult($callable);
 
 		self::record($callable, $arguments, $result);
 
-		return $result;
+		return self::perform($result);
 	}
 
 	private static function getResult(array $callable)
@@ -78,13 +78,13 @@ abstract class Agent
 		}
 
 		if ($expectedObjectId === null) {
-			return null;
+			return array(0, null);
 		}
 
 		$call = array_shift(self::$calls[$expectedObjectId]);
 
 		if ($call === null) {
-			return null;
+			return array(0, null);
 		}
 
 		$result = array_pop($call);
@@ -159,11 +159,24 @@ abstract class Agent
 		return null;
 	}
 
-	public static function record(array $callable, array $arguments, $result)
+	public static function record(array $callable, array $arguments, array $result)
 	{
 		self::$actual[] = array($callable, $arguments, $result);
 
 		return $result;
+	}
+
+	private static function perform(array $result)
+	{
+		list($action, $value) = $result;
+
+		if ($action === 1) {
+			echo json_encode($value);
+			exit;
+			throw $value;
+		}
+
+		return $value;
 	}
 
 	public static function getCalls()

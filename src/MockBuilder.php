@@ -36,6 +36,9 @@ class MockBuilder
 	/** @var string */
 	private $childClass;
 
+	/** @var boolean */
+	private $isReplayMock;
+
 	public function __construct($mockPrefix, $absoluteParentClass)
 	{
 		$absoluteChildClass = "{$mockPrefix}{$absoluteParentClass}";
@@ -46,8 +49,10 @@ class MockBuilder
 		$this->childClass = substr($absoluteChildClass, $slash + 1);
 	}
 
-	public function getMock()
+	public function getMock($isReplayMock)
 	{
+		$this->isReplayMock = $isReplayMock;
+
 		$mockMethods = $this->getMockMethods();
 
 		return <<<EOS
@@ -63,12 +68,10 @@ EOS;
 	private function getMockMethods()
 	{
 		$mockMethods = array(
-			'__construct' => self::getMockMethod('__construct', '')
+			'__construct' => $this->getMockMethod('__construct', '')
 		);
 
 		$this->addMockMethods($mockMethods);
-
-		$mockMethods['__call'] = self::getMockCallMethod();
 
 		return implode("\n\n", $mockMethods);
 	}
@@ -87,33 +90,48 @@ EOS;
 			$name = $method->getName();
 			$mockParameters = self::getMockParameters($method);
 
-			$mockMethods[$name] = self::getMockMethod($name, $mockParameters);
+			$mockMethods[$name] = $this->getMockMethod($name, $mockParameters);
 		}
 	}
 
-	private static function getMockCallMethod()
+	private function getMockMethod($name, $parameters)
 	{
-		return <<<EOS
-	public function __call(\$name, \$arguments)
-	{
-		\$callable = array(\$this, \$name);
+		if ($this->isReplayMock) {
+			return self::getReplayMockMethod($name, $parameters);
+		}
 
-		return \TestPhp\Agent::recall(\$callable, \$arguments);
+		return self::getRecordMockMethod($name, $parameters);
+	}
+
+	private static function getReplayMockMethod($name, $parameters)
+	{
+		$code = <<<'EOS'
+	public function %s(%s)
+	{
+		$callable = array($this, __FUNCTION__);
+		$arguments = func_get_args();
+
+		return \TestPhp\Agent::replay($callable, $arguments);
 	}
 EOS;
+
+		return sprintf($code, $name, $parameters);
 	}
 
-	private static function getMockMethod($name, $parameters)
+	private static function getRecordMockMethod($name, $parameters)
 	{
-		return <<<EOS
-	public function {$name}({$parameters})
+		$code = <<<'EOS'
+	public function %s(%s)
 	{
-		\$callable = array(\$this, __FUNCTION__);
-		\$arguments = func_get_args();
+		$callable = array($this, __FUNCTION__);
+		$arguments = func_get_args();
+		$result = array(0, null);
 
-		return \TestPhp\Agent::recall(\$callable, \$arguments);
+		return \TestPhp\Agent::record($callable, $arguments, $result);
 	}
 EOS;
+
+		return sprintf($code, $name, $parameters);
 	}
 
 	private static function getMockParameters(\ReflectionMethod $method)

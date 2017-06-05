@@ -243,7 +243,7 @@ class Console
 		$arguments = current($argumentsArchive);
 		$argumentsText = self::getArgumentsText($arguments, $displayer);
 
-		$resultText = self::getResultText($resultArchive, $displayer);
+		$resultText = self::getResultComment($resultArchive, $displayer);
 
 		return "{$objectText}->{$method}({$argumentsText});{$resultText}";
 	}
@@ -274,14 +274,32 @@ class Console
 		return implode(', ', $output);
 	}
 
-	private static function getResultText($resultArchive, Displayer $displayer)
+	private static function getResultComment($resultArchive, Displayer $displayer)
 	{
-		if ($resultArchive === null) {
+		$text = self::getResultText($resultArchive, $displayer);
+
+		if ($text === null) {
 			return null;
 		}
 
-		$resultText = $displayer->display($resultArchive);
-		return " // {$resultText}";
+		return " // {$text}";
+	}
+
+	private static function getResultText($resultArchive, Displayer $displayer)
+	{
+		list($action, $valueArchive) = current($resultArchive);
+
+		if ($action === 1) {
+			$valueText = $displayer->display($valueArchive);
+			return "throw {$valueText};";
+		}
+
+		if ($valueArchive === null) {
+			return null;
+		}
+
+		$valueText = $displayer->display($valueArchive);
+		return "return {$valueText};";
 	}
 
 	private static function flattenException(&$exception, Displayer $displayer)

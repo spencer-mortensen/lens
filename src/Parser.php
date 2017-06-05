@@ -98,6 +98,12 @@ class Parser
 			&& $this->getCases($cases);
 	}
 
+	private function getSection($label, &$code)
+	{
+		return $this->getLabel($label)
+			&& $this->getCode($code);
+	}
+
 	private function getCases(&$cases)
 	{
 		$cases = array();
@@ -114,26 +120,9 @@ class Parser
 
 	private function getCase(&$input, &$output)
 	{
-		// TODO: get line number:
 		$this->getSection('Input', $input);
 
-		// TODO: prepare mock calls:
 		return $this->getSection('Output', $output);
-	}
-
-	/*
-	private static function prepareMockCalls($code)
-	{
-		$pattern = '~->([a-zA-Z_0-9]+)\((.*)\);\s+//\s+(.*)$~m';
-
-		return preg_replace($pattern, '->$1(array($2), $3);', $code);
-	}
-	*/
-
-	private function getSection($label, &$code)
-	{
-		return $this->getLabel($label)
-			&& $this->getCode($code);
 	}
 
 	private function getLabel($label)

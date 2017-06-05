@@ -86,7 +86,8 @@ class Evaluator
 
 	private function evaluateCase($expectedPreamble, $actualPreamble, $fixture, $subject, $case)
 	{
-		$expectedCode = self::combine($expectedPreamble, $fixture, $case['input'], $case['output']);
+		$expectedOutputCode = self::prepareExpectedMockCalls($case['output']);
+		$expectedCode = self::combine($expectedPreamble, $fixture, $case['input'], $expectedOutputCode);
 		$expectedResults = $this->evaluateExpectedCode($expectedCode, $mock);
 
 		$actualCode = self::combine($actualPreamble, $mock, $fixture, $case['input'], $subject);
@@ -98,6 +99,36 @@ class Evaluator
 			'expected' => $expectedResults,
 			'actual' => $resultsActual
 		);
+	}
+
+	private static function prepareExpectedMockCalls($code)
+	{
+		$expression = '^\s*(\$[a-zA-Z_0-9]+)->([a-zA-Z_0-9]+)\((.*)\);\s+//\s+(return|throw)\s+(.*);$';
+		$pattern = self::getPattern($expression, 'm');
+
+		return preg_replace_callback($pattern, 'self::getExpectedMockCall', $code);
+	}
+
+	protected static function getExpectedMockCall(array $match)
+	{
+		list(, $object, $method, $argumentList, $resultAction, $resultValue) = $match;
+
+		$methodName = var_export($method, true);
+		$callable = "array({$object}, {$methodName})";
+
+		$arguments = "array({$argumentList})";
+
+		$resultType = (integer)($resultAction === 'throw');
+		$result = "array({$resultType}, {$resultValue})";
+
+		return "\\TestPhp\\Agent::record({$callable}, {$arguments}, {$result});";
+	}
+
+	private static function getPattern($expression, $flags)
+	{
+		$delimiter = "\x03";
+
+		return "{$delimiter}{$expression}{$delimiter}{$flags}";
 	}
 
 	private static function combine()
@@ -373,8 +404,8 @@ class Evaluator
 		}
 
 		return array(
-			$this->getAutoloaderExpected(),
-			$this->getAutoloaderActual()
+			self::getAutoloader(false),
+			self::getAutoloader(true)
 		);
 	}
 
@@ -383,9 +414,11 @@ class Evaluator
 		return is_integer(strpos($code, 'use TestPhp\\Mock\\'));
 	}
 
-	private static function getAutoloaderActual()
+	private static function getAutoloader($isReplayMock)
 	{
-		return <<<'EOT'
+		$mockType = var_export($isReplayMock, true);
+
+		$code = <<<'EOT'
 spl_autoload_register(
 	function ($path)
 	{
@@ -399,65 +432,13 @@ spl_autoload_register(
 		$parentClass = substr($path, $mockPrefixLength);
 
 		$mockBuilder = new \TestPhp\MockBuilder($mockPrefix, $parentClass);
-		$mockCode = $mockBuilder->getMock();
+		$mockCode = $mockBuilder->getMock(%s);
 
 		eval($mockCode);
 	}
 );
 EOT;
-	}
 
-	private static function getAutoloaderExpected()
-	{
-		return <<<'EOT'
-spl_autoload_register(
-	function ($path)
-	{
-		$mockPrefix = 'TestPhp\\Mock\\';
-		$mockPrefixLength = strlen($mockPrefix);
-
-		if (strncmp($path, $mockPrefix, $mockPrefixLength) !== 0) {
-			return;
-		}
-
-		$slash = strrpos($path, '\\');
-		$namespace = substr($path, 0, $slash);
-		$class = substr($path, $slash + 1);
-
-		$mockTemplate = <<<'EOS'
-namespace %s;
-		
-class %s {
-	public function __construct()
-	{
-		$callable = array($this, __FUNCTION__);
-		$arguments = func_get_args();
-		$result = null;
-		
-		\TestPhp\Agent::record($callable, $arguments, $result);
-	}
-		
-	public function __call($name, $input)
-	{
-		$callable = array($this, $name);
-
-		if (is_array($input) && (count($input) === 2)) {
-			list($arguments, $result) = $input;
-		} else {
-			$arguments = $input;
-			$result = null;
-		}
-
-		return \TestPhp\Agent::record($callable, $arguments, $result);
-	}
-}
-EOS;
-
-		$code = sprintf($mockTemplate, $namespace, $class);
-
-		eval($code);
-	}
-);
-EOT;
+		return sprintf($code, $mockType);
 	}
 }
