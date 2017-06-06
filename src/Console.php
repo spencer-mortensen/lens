@@ -63,11 +63,10 @@ class Console
 				continue;
 			}
 
-			self::ignoreTestVariables($case['expected']['results']['variables'], $case['actual']['results']['variables']);
-
 			$expected = self::flatten($case['expected']['results']);
 			$actual = self::flatten($case['actual']['results']);
 
+			self::ignoreTestVariables($case['expected']['results']['variables'], $case['actual']['results']['variables']);
 			self::diff($expected, $actual);
 
 			if (self::isPassingTest($expected, $actual)) {
