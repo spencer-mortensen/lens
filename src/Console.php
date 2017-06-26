@@ -25,6 +25,9 @@
 
 namespace TestPhp;
 
+use TestPhp\Archivist\Archives\Archive;
+use TestPhp\Archivist\Archives\ObjectArchive;
+
 class Console
 {
 	private static $maxWidth = 96;
@@ -59,20 +62,20 @@ class Console
 
 		foreach ($test['cases'] as $case) {
 			if (self::isBrokenTestCase($case['expected'])) {
-				$failedTests[] = array($subject, $case['input'], $case['output'], self::getBrokenIssues($case['expected']));
+				$failedTests[] = array($subject, $case['text'], self::getBrokenIssues($case['expected']));
 				continue;
 			}
 
 			$expected = self::flatten($case['expected']['results']);
 			$actual = self::flatten($case['actual']['results']);
 
-			self::ignoreTestVariables($case['expected']['results']['variables'], $case['actual']['results']['variables']);
+			self::ignoreTestVariables($expected['variables'], $actual['variables']);
 			self::diff($expected, $actual);
 
 			if (self::isPassingTest($expected, $actual)) {
 				++$passedTestsCount;
 			} else {
-				$failedTests[] = array($subject, $case['input'], $case['output'], self::getFailedIssues($expected, $actual));
+				$failedTests[] = array($subject, $case['text'], self::getFailedIssues($expected, $actual));
 			}
 		}
 	}
@@ -105,17 +108,11 @@ class Console
 		return implode("\n", $output);
 	}
 
-	private static function getTest($subject, $input, $output, $issues)
+	private static function getTest($subject, $body, $issues)
 	{
-		$text = "// Test\n{$subject}\n\n";
-
-		if ($input !== null) {
-			$text .= "// Input\n{$input}\n\n";
-		}
-
-		$text .= "// Output\n{$output}\n\n";
-
-		$text .= "// Issues\n";
+		$text = "// Test\n{$subject}\n\n" .
+			"{$body}\n\n" .
+			"// Issues\n";
 
 		return self::wrap($text, '   ', '   ') . $issues;
 	}
@@ -157,19 +154,10 @@ class Console
 		$names = array();
 
 		foreach ($variables as $name => $archive) {
-			if (!is_array($archive)) {
-				continue;
+			if (is_object($archive) && ($archive->getArchiveType() === Archive::TYPE_OBJECT)) {
+				$id = $archive->getId();
+				$names[$id] = $name;
 			}
-
-			list($type, $value) = each($archive);
-
-			if ($type !== Archivist::TYPE_OBJECT) {
-				continue;
-			}
-
-			$id = $value[0];
-
-			$names[$id] = $name;
 		}
 
 		return $names;
@@ -234,71 +222,39 @@ class Console
 
 	private static function getCallText(array $call, array $names, Displayer $displayer)
 	{
-		list($callableArchive, $argumentsArchive, $resultArchive) = current($call);
-		list($objectArchive, $method) = current($callableArchive);
+		list($callableArchive, $argumentsArchive) = $call;
+		list($objectArchive, $method) = $callableArchive;
 
 		$objectText = self::getObjectText($objectArchive, $names, $displayer);
+		$argumentsText = self::getArgumentsText($argumentsArchive, $displayer);
 
-		$arguments = current($argumentsArchive);
-		$argumentsText = self::getArgumentsText($arguments, $displayer);
-
-		$resultText = self::getResultComment($resultArchive, $displayer);
-
-		return "{$objectText}->{$method}({$argumentsText});{$resultText}";
+		return "{$objectText}->{$method}({$argumentsText});";
 	}
 
-	private static function getObjectText(array $object, array $names, Displayer $displayer)
+	private static function getObjectText(ObjectArchive $objectArchive, array $names, Displayer $displayer)
 	{
-		list($id) = current($object);
+		$id = $objectArchive->getId();
 
 		if (isset($names[$id])) {
 			return "\${$names[$id]}";
 		}
 
-		return $displayer->display($object);
+		return $displayer->display($objectArchive);
 	}
 
-	private static function getArgumentsText(array $arguments, Displayer $displayer)
+	private static function getArgumentsText(array $argumentsArchive, Displayer $displayer)
 	{
-		if (count($arguments) === 0) {
+		if (count($argumentsArchive) === 0) {
 			return '';
 		}
 
 		$output = array();
 
-		foreach ($arguments as $argumentValue) {
-			$output[] = $displayer->display($argumentValue);
+		foreach ($argumentsArchive as $argumentValueArchive) {
+			$output[] = $displayer->display($argumentValueArchive);
 		}
 
 		return implode(', ', $output);
-	}
-
-	private static function getResultComment($resultArchive, Displayer $displayer)
-	{
-		$text = self::getResultText($resultArchive, $displayer);
-
-		if ($text === null) {
-			return null;
-		}
-
-		return " // {$text}";
-	}
-
-	private static function getResultText($resultArchive, Displayer $displayer)
-	{
-		list($action, $valueArchive) = current($resultArchive);
-
-		if ($action === 1) {
-			$valueText = $displayer->display($valueArchive);
-			return "throw {$valueText};";
-		}
-
-		if ($valueArchive === null) {
-			return null;
-		}
-
-		$valueText = $displayer->display($valueArchive);
-		return "return {$valueText};";
 	}
 
 	private static function flattenException(&$exception, Displayer $displayer)
@@ -307,14 +263,17 @@ class Console
 			return;
 		}
 
-		$object = &$exception[Archivist::TYPE_OBJECT];
+		/** @var ObjectArchive $exception */
+		$properties = $exception->getProperties();
 
 		unset(
-			$object[2]['file'],
-			$object[2]['line'],
-			$object[2]['trace'],
-			$object[2]['xdebug_message']
+			$properties['file'],
+			$properties['line'],
+			$properties['trace'],
+			$properties['xdebug_message']
 		);
+
+		$exception->setProperties($properties);
 
 		$exception = self::getExceptionText($displayer->display($exception));
 	}
@@ -340,7 +299,7 @@ class Console
 		// TODO: replace this "getcwd" function call
 		$currentDirectory = getcwd();
 
-		list($level, $message, $file, $line) = current($error);
+		list($level, $message, $file, $line) = $error;
 
 		$nameText = self::getErrorLevelName($level);
 
@@ -541,19 +500,10 @@ class Console
 	{
 		$count = count($tests);
 
-		list($subject, $input, $output, $issues) = current($tests);
-		$testBody = self::getTest($subject, $input, $output, $issues);
+		list($subject, $body, $issues) = current($tests);
+		$testBody = self::getTest($subject, $body, $issues);
 
 		return "Failed tests: {$count}\n\n{$testBody}";
-	}
-
-	private static function getTestsSectionTitle($label, $count)
-	{
-		$output = "{$label} tests: {$count}";
-
-		$output .= ": {$count}";
-
-		return $output;
 	}
 
 	private static function getFilePosition($file, $line)
@@ -569,11 +519,5 @@ class Console
 		$lineText = (string)$line;
 
 		return "{$fileText} (line {$lineText})";
-	}
-
-	private static function indent($text, $padding)
-	{
-		// TODO: check this:
-		return $padding . str_replace("\n", "\n" . $padding, $text);
 	}
 }

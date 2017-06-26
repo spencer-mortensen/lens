@@ -59,13 +59,22 @@ class Parser
 	private function getSuite(&$fixture, &$tests)
 	{
 		return $this->getPhpTag()
-			&& $this->getCode($fixture)
+			&& $this->getFixture($fixture)
 			&& $this->getTests($tests);
 	}
 
 	private function getPhpTag()
 	{
 		return $this->read("<\\?php\n+");
+	}
+
+	private function getFixture(&$fixture)
+	{
+		$this->getCode($fixture);
+
+		$fixture = $this->useMockNamespace($fixture);
+
+		return true;
 	}
 
 	private function getCode(&$code)
@@ -76,6 +85,13 @@ class Parser
 		}
 
 		return true;
+	}
+
+	private function useMockNamespace($code)
+	{
+		$pattern = self::getPattern('^use\\s+([^;]+);\\s*// Mock$', 'm');
+
+		return preg_replace($pattern, 'use TestPhp\\Mock\\\\$1;', $code);
 	}
 
 	private function getTests(&$tests)
@@ -104,12 +120,18 @@ class Parser
 			&& $this->getCode($code);
 	}
 
+	private function getLabel($label)
+	{
+		return $this->read("// {$label}(?:\n+|\$)");
+	}
+
 	private function getCases(&$cases)
 	{
 		$cases = array();
 
-		while ($this->getCase($input, $output)) {
+		while ($this->getCase($text, $input, $output)) {
 			$cases[] = array(
+				'text' => $text,
 				'input' => $input,
 				'output' => $output
 			);
@@ -118,16 +140,55 @@ class Parser
 		return 0 < count($cases);
 	}
 
-	private function getCase(&$input, &$output)
+	private function getCase(&$text, &$input, &$output)
 	{
 		$this->getSection('Input', $input);
 
-		return $this->getSection('Output', $output);
+		if (!$this->getSection('Output', $output)) {
+			return false;
+		}
+
+		$text = self::getText($input, $output);
+		$output = $this->useMockCalls($output);
+
+		return true;
 	}
 
-	private function getLabel($label)
+	private static function getText($input, $output)
 	{
-		return $this->read("// {$label}(?:\n+|\$)");
+		$text = '';
+
+		if ($input !== null) {
+			$text .= "// Input\n{$input}\n\n";
+		}
+
+		$text .= "// Output\n{$output}";
+
+		return $text;
+	}
+
+	private function useMockCalls($code)
+	{
+		$expression = '^\\s*(\\$.+?)->(.+?)\\((.*?)\\);\\s*// (return|throw)\\s+(.*);$';
+
+		$pattern = self::getPattern($expression, 'm');
+
+		return preg_replace_callback($pattern, 'self::getMockCall', $code);
+	}
+
+	protected static function getMockCall(array $match)
+	{
+		list(, $object, $method, $argumentList, $resultAction, $resultValue) = $match;
+
+		$methodName = var_export($method, true);
+		$callable = "array({$object}, {$methodName})";
+
+		$arguments = "array({$argumentList})";
+
+		$resultType = (integer)($resultAction === 'throw');
+		$result = "array({$resultType}, {$resultValue})";
+
+		return "\\TestPhp\\Agent::call({$callable}, {$arguments}, {$result});";
 	}
 
 	private function read($expression, &$output = null)

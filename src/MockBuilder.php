@@ -36,9 +36,6 @@ class MockBuilder
 	/** @var string */
 	private $childClass;
 
-	/** @var boolean */
-	private $isReplayMock;
-
 	public function __construct($mockPrefix, $absoluteParentClass)
 	{
 		$absoluteChildClass = "{$mockPrefix}{$absoluteParentClass}";
@@ -49,10 +46,8 @@ class MockBuilder
 		$this->childClass = substr($absoluteChildClass, $slash + 1);
 	}
 
-	public function getMock($isReplayMock)
+	public function getMock()
 	{
-		$this->isReplayMock = $isReplayMock;
-
 		$mockMethods = $this->getMockMethods();
 
 		return <<<EOS
@@ -68,7 +63,7 @@ EOS;
 	private function getMockMethods()
 	{
 		$mockMethods = array(
-			'__construct' => $this->getMockMethod('__construct', '')
+			'__construct' => self::getMockMethod('__construct', '')
 		);
 
 		$this->addMockMethods($mockMethods);
@@ -89,45 +84,21 @@ EOS;
 
 			$name = $method->getName();
 			$mockParameters = self::getMockParameters($method);
+			$mockMethod = self::getMockMethod($name, $mockParameters);
 
-			$mockMethods[$name] = $this->getMockMethod($name, $mockParameters);
+			$mockMethods[$name] = $mockMethod;
 		}
 	}
 
 	private function getMockMethod($name, $parameters)
 	{
-		if ($this->isReplayMock) {
-			return self::getReplayMockMethod($name, $parameters);
-		}
-
-		return self::getRecordMockMethod($name, $parameters);
-	}
-
-	private static function getReplayMockMethod($name, $parameters)
-	{
 		$code = <<<'EOS'
 	public function %s(%s)
 	{
 		$callable = array($this, __FUNCTION__);
 		$arguments = func_get_args();
 
-		return \TestPhp\Agent::replay($callable, $arguments);
-	}
-EOS;
-
-		return sprintf($code, $name, $parameters);
-	}
-
-	private static function getRecordMockMethod($name, $parameters)
-	{
-		$code = <<<'EOS'
-	public function %s(%s)
-	{
-		$callable = array($this, __FUNCTION__);
-		$arguments = func_get_args();
-		$result = array(0, null);
-
-		return \TestPhp\Agent::record($callable, $arguments, $result);
+		return \TestPhp\Agent::call($callable, $arguments);
 	}
 EOS;
 

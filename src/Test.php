@@ -64,52 +64,40 @@ class Test
 			unset($, $variables['']);
 		}
 
+		ksort($variables, SORT_NATURAL);
 		$coverage = $this->getCodeCoverage();
 		$output = ob_get_clean();
 		$globals = self::getGlobals();
 		$constants = self::getConstants();
 		$calls = self::getMethodCalls();
+		$script = self::getScript();
 		$errors = $this->errors;
 		$fatalError = null;
 
-		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage);
+		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $script, $coverage);
 	}
 
-	private function send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage)
+	private function send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $script, $coverage)
 	{
 		$results = array(
-			'variables' => self::getUnorderedListArchive($variables),
-			'globals' => self::getUnorderedListArchive($globals),
-			'constants' => self::getUnorderedListArchive($constants),
-			'output' => Archivist::archive($output),
-			'calls' => self::getOrderedListArchive($calls),
-			'exception' => Archivist::archive($exception),
-			'errors' => self::getOrderedListArchive($errors),
-			'fatalError' => Archivist::archive($fatalError)
+			'variables' => $variables,
+			'globals' => $globals,
+			'constants' => $constants,
+			'output' => $output,
+			'calls' => $calls,
+			'exception' => $exception,
+			'errors' => $errors,
+			'fatalError' => $fatalError
 		);
 
-		$output = array($results, $coverage);
+		$output = array(
+			Archivist\Archivist::archive($results),
+			$script,
+			$coverage
+		);
 
-		echo json_encode($output);
+		echo serialize($output);
 		$this->complete = true;
-	}
-
-	private static function getUnorderedListArchive(array $input)
-	{
-		ksort($input, SORT_NATURAL);
-
-		return self::getOrderedListArchive($input);
-	}
-
-	private static function getOrderedListArchive(array $input)
-	{
-		$output = array();
-
-		foreach ($input as $key => $value) {
-			$output[$key] = Archivist::archive($value);
-		}
-
-		return $output;
 	}
 
 	private function registerShutdownFunction()
@@ -132,11 +120,12 @@ class Test
 		$globals = self::getGlobals();
 		$constants = self::getConstants();
 		$calls = self::getMethodCalls();
+		$script = self::getScript();
 		$coverage = $this->getCodeCoverage();
 		$errors = $this->errors;
 		$fatalError = $this->getLastError();
 
-		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $coverage);
+		$this->send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $script, $coverage);
 	}
 
 	private function registerErrorHandler()
@@ -177,6 +166,7 @@ class Test
 			}
 		}
 
+		ksort($globals, SORT_NATURAL);
 		return $globals;
 	}
 
@@ -206,12 +196,18 @@ class Test
 			return array();
 		}
 
+		ksort($userConstants, SORT_NATURAL);
 		return $userConstants;
 	}
 
 	private static function getMethodCalls()
 	{
 		return Agent::getCalls();
+	}
+
+	private static function getScript()
+	{
+		return Agent::getScript();
 	}
 
 	private function getCodeCoverage()

@@ -25,6 +25,10 @@
 
 namespace TestPhp;
 
+use TestPhp\Archivist\Archives\Archive;
+use TestPhp\Archivist\Archives\ObjectArchive;
+use TestPhp\Archivist\Archives\ResourceArchive;
+
 class Displayer
 {
 	/** @var array */
@@ -39,35 +43,40 @@ class Displayer
 		$this->resources = array();
 	}
 
-	public function display($token)
+	public function display($archive)
 	{
-		if (!is_array($token)) {
-			$type = gettype($token);
-			return $this->showPrimitive($type, $token);
+		if (is_object($archive)) {
+			return $this->showComplex($archive);
 		}
 
-		list($type, $value) = each($token);
-		return $this->showComplex($type, $value);
+		return $this->showPrimitive($archive);
 	}
 
-	private function showPrimitive($type, $value)
+	private function showPrimitive($value)
 	{
+		$type = gettype($value);
+
 		switch ($type) {
 			default: return $this->showNull();
 			case 'boolean': return $this->showBoolean($value);
 			case 'integer': return $this->showInteger($value);
 			case 'double': return $this->showFloat($value);
 			case 'string': return $this->showString($value);
+			case 'array': return $this->showArray($value);
 		}
 	}
 
-	private function showComplex($type, $value)
+	private function showComplex(Archive $value)
 	{
-		switch ($type) {
-			default: return $this->showArray($value);
-			case Archivist::TYPE_OBJECT: return $this->showObject($value);
-			case Archivist::TYPE_RESOURCE: return $this->showResource($value);
+		$type = $value->getArchiveType();
+
+		/** @var ResourceArchive $value */
+		if ($type === Archive::TYPE_RESOURCE) {
+			return $this->showResource($value);
 		}
+
+		/** @var ObjectArchive $value */
+		return $this->showObject($value);
 	}
 
 	private function showNull()
@@ -163,19 +172,25 @@ class Displayer
 		return "array({$body})";
 	}
 
-	private function showObject(array $object)
+	private function showResource(ResourceArchive $resource)
 	{
-		list($id, $class, $properties) = $object;
+		$type = $resource->getType();
 
-		$number = self::getNumber($this->objects, $id);
+		return "resource({$type})";
+	}
+
+	private function showObject(ObjectArchive $object)
+	{
+		$class = $object->getClass();
+		$properties = $object->getProperties();
 
 		if (count($properties) === 0) {
-			return "object#{$number}('{$class}')";
+			return "object('{$class}')";
 		}
 
 		$propertiesList = $this->getPropertiesList($properties);
 
-		return "object#{$number}('{$class}', {$propertiesList})";
+		return "object('{$class}', {$propertiesList})";
 	}
 
 	private function getPropertiesList(array $properties)
@@ -187,25 +202,5 @@ class Displayer
 		}
 
 		return '{' . implode(', ', $rows) . '}';
-	}
-
-	private function showResource(array $resource)
-	{
-		list($id, $type) = $resource;
-
-		$number = self::getNumber($this->resources, $id);
-
-		return "resource#{$number}({$type})";
-	}
-
-	private static function getNumber(&$numbers, $id)
-	{
-		$number = &$numbers[$id];
-
-		if (!isset($number)) {
-			$number = count($numbers);
-		}
-
-		return $number;
 	}
 }

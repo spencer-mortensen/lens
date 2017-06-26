@@ -64,14 +64,14 @@ class Evaluator
 		$this->status = array();
 
 		foreach ($suites as &$suite) {
-			list($preambleExpected, $preambleActual, $fixture) = $this->getFixtures($suite['fixture']);
+			list($preamble, $fixture) = $this->getFixtures($suite['fixture']);
 			unset($suite['fixture']);
 
 			foreach ($suite['tests'] as &$test) {
 				$subject = $test['subject'];
 
 				foreach ($test['cases'] as &$case) {
-					$case = $this->evaluateCase($preambleExpected, $preambleActual, $fixture, $subject, $case);
+					$case = $this->evaluateCase($preamble, $fixture, $subject, $case);
 				}
 			}
 		}
@@ -84,16 +84,17 @@ class Evaluator
 		);
 	}
 
-	private function evaluateCase($expectedPreamble, $actualPreamble, $fixture, $subject, $case)
+	private function evaluateCase($preamble, $fixture, $subject, $case)
 	{
-		$expectedOutputCode = self::prepareExpectedMockCalls($case['output']);
-		$expectedCode = self::combine($expectedPreamble, $fixture, $case['input'], $expectedOutputCode);
+		$expectedOutputCode = $case['output'];
+		$expectedCode = self::combine($preamble, $fixture, $case['input'], $expectedOutputCode);
 		$expectedResults = $this->evaluateExpectedCode($expectedCode, $mock);
 
-		$actualCode = self::combine($actualPreamble, $mock, $fixture, $case['input'], $subject);
+		$actualCode = self::combine($preamble, $mock, $fixture, $case['input'], $subject);
 		$resultsActual = $this->evaluateActualCode($actualCode);
 
 		return array(
+			'text' => $case['text'],
 			'input' => $case['input'],
 			'output' => $case['output'],
 			'expected' => $expectedResults,
@@ -101,56 +102,26 @@ class Evaluator
 		);
 	}
 
-	private static function prepareExpectedMockCalls($code)
-	{
-		$expression = '^\s*(\$[a-zA-Z_0-9]+)->([a-zA-Z_0-9]+)\((.*)\);\s+//\s+(return|throw)\s+(.*);$';
-		$pattern = self::getPattern($expression, 'm');
-
-		return preg_replace_callback($pattern, 'self::getExpectedMockCall', $code);
-	}
-
-	protected static function getExpectedMockCall(array $match)
-	{
-		list(, $object, $method, $argumentList, $resultAction, $resultValue) = $match;
-
-		$methodName = var_export($method, true);
-		$callable = "array({$object}, {$methodName})";
-
-		$arguments = "array({$argumentList})";
-
-		$resultType = (integer)($resultAction === 'throw');
-		$result = "array({$resultType}, {$resultValue})";
-
-		return "\\TestPhp\\Agent::record({$callable}, {$arguments}, {$result});";
-	}
-
-	private static function getPattern($expression, $flags)
-	{
-		$delimiter = "\x03";
-
-		return "{$delimiter}{$expression}{$delimiter}{$flags}";
-	}
-
 	private static function combine()
 	{
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private function evaluateExpectedCode($code, &$mockPhp)
+	private function evaluateExpectedCode($code, &$scriptPhp)
 	{
 		$output = $this->run($code, false);
 
-		if (isset($output['results'])) {
-			$calls = $output['results']['calls'];
+		if (isset($output['script'])) {
+			$script = $output['script'];
 
-			if (0 < count($calls)) {
-				$callsPhp = var_export(json_encode($calls), true);
-				$mockPhp = "\\TestPhp\\Agent::setExpected({$callsPhp});";
+			if (0 < count($script)) {
+				$scriptArgumentPhp = var_export(serialize($script), true);
+				$scriptPhp = "\\TestPhp\\Agent::setScript({$scriptArgumentPhp});";
 			}
-
-			// TODO: this constant name is duplicated elsewhere:
-			unset($output['results']['constants']['TESTPHP_TESTS_DIRECTORY']);
 		}
+
+		// TODO: this constant name is duplicated elsewhere:
+		unset($output['results']['constants']['TESTPHP_TESTS_DIRECTORY']);
 
 		return $output;
 	}
@@ -183,11 +154,11 @@ class Evaluator
 
 		// TODO: abstract this away:
 		exec($command, $output, $exitCode);
-
 		$stdout = implode("\n", $output);
-		list($results, $coverage) = json_decode($stdout, true);
+		list($results, $script, $coverage) = @unserialize($stdout);
 
 		$output = array(
+			'script' => $script,
 			'results' => $results,
 			'exit' => $exitCode
 		);
@@ -352,11 +323,11 @@ class Evaluator
 		$preamble = $fixture;
 		$namespace = $this->extractNamespaceCode($preamble);
 		$constant = $this->getConstantCode($preamble);
-		list($expectedMock, $actualMock) = $this->getMocks($preamble);
+		$coreAutoloader = $this->getCoreAutoloader();
+		$mocks = $this->getMockCode($preamble);
 
 		return array(
-			self::combine($namespace, $constant, $expectedMock),
-			self::combine($namespace, $constant, $actualMock),
+			self::combine($namespace, $constant, $coreAutoloader, $mocks),
 			$preamble
 		);
 	}
@@ -397,16 +368,13 @@ class Evaluator
 		return "define({$nameCode}, {$valueCode});";
 	}
 
-	private function getMocks($code)
+	private function getMockCode($code)
 	{
 		if (!self::usesMock($code)) {
 			return null;
 		}
 
-		return array(
-			self::getAutoloader(false),
-			self::getAutoloader(true)
-		);
+		return self::getMockAutoloader();
 	}
 
 	private static function usesMock($code)
@@ -414,11 +382,32 @@ class Evaluator
 		return is_integer(strpos($code, 'use TestPhp\\Mock\\'));
 	}
 
-	private static function getAutoloader($isReplayMock)
+	private static function getCoreAutoloader()
 	{
-		$mockType = var_export($isReplayMock, true);
+		return <<<'EOS'
+spl_autoload_register(
+	function ($class) {
+		$namespacePrefix = 'TestPhp\\';
+		$namespacePrefixLength = strlen($namespacePrefix);
 
-		$code = <<<'EOT'
+		if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
+			return;
+		}
+
+		$relativeClassName = substr($class, $namespacePrefixLength);
+		$filePath = dirname(__DIR__) . '/src/' . strtr($relativeClassName, '\\', '/') . '.php';
+
+		if (is_file($filePath)) {
+			include $filePath;
+		}
+	}
+);
+EOS;
+	}
+
+	private static function getMockAutoloader()
+	{
+		return <<<'EOS'
 spl_autoload_register(
 	function ($path)
 	{
@@ -432,13 +421,11 @@ spl_autoload_register(
 		$parentClass = substr($path, $mockPrefixLength);
 
 		$mockBuilder = new \TestPhp\MockBuilder($mockPrefix, $parentClass);
-		$mockCode = $mockBuilder->getMock(%s);
+		$mockCode = $mockBuilder->getMock();
 
 		eval($mockCode);
 	}
 );
-EOT;
-
-		return sprintf($code, $mockType);
+EOS;
 	}
 }
