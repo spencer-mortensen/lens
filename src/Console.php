@@ -98,11 +98,11 @@ class Console
 		self::flattenExit($exit, $displayer);
 
 		if ($results['fatalError'] !== null) {
-			$output[] = self::getDifferenceText('+', $results['fatalError']);
+			$output[] = self::getDifferenceText('-', $results['fatalError']);
 		}
 
 		if ($exit !== null) {
-			$output[] = self::getDifferenceText('+', $exit);
+			$output[] = self::getDifferenceText('-', $exit);
 		}
 
 		return implode("\n", $output);
@@ -267,10 +267,10 @@ class Console
 		$properties = $exception->getProperties();
 
 		unset(
-			$properties['file'],
-			$properties['line'],
-			$properties['trace'],
-			$properties['xdebug_message']
+			$properties['Exception']['file'],
+			$properties['Exception']['line'],
+			$properties['Exception']['trace'],
+			$properties['Exception']['xdebug_message']
 		);
 
 		$exception->setProperties($properties);
