@@ -188,19 +188,8 @@ class Displayer
 			return "object('{$class}')";
 		}
 
-		$propertiesList = $this->getPropertiesList($properties);
+		$propertiesList = $this->showArray($properties);
 
 		return "object('{$class}', {$propertiesList})";
-	}
-
-	private function getPropertiesList(array $properties)
-	{
-		$rows = array();
-
-		foreach ($properties as $name => $value) {
-			$rows[] = $this->display($name) . ': ' . $this->display($value);
-		}
-
-		return '{' . implode(', ', $rows) . '}';
 	}
 }

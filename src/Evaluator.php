@@ -30,6 +30,9 @@ class Evaluator
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Shell */
+	private $shell;
+
 	/** @var string */
 	private $executable;
 
@@ -48,9 +51,10 @@ class Evaluator
 	/** @var array */
 	private $status;
 
-	public function __construct(Filesystem $filesystem, $executable)
+	public function __construct(Filesystem $filesystem, Shell $shell, $executable)
 	{
 		$this->filesystem = $filesystem;
+		$this->shell = $shell;
 		$this->executable = $executable;
 	}
 
@@ -120,9 +124,6 @@ class Evaluator
 			}
 		}
 
-		// TODO: this constant name is duplicated elsewhere:
-		unset($output['results']['constants']['TESTPHP_TESTS_DIRECTORY']);
-
 		return $output;
 	}
 
@@ -134,40 +135,48 @@ class Evaluator
 			$this->mergeCoverage($output['coverage']);
 		}
 
-		unset(
-			$output['coverage'],
-			$output['results']['constants']['TESTPHP_TESTS_DIRECTORY']
-		);
+		unset($output['coverage']);
 
 		return $output;
 	}
 
 	private function run($sourceCode, $enableCodeCoverage)
 	{
-		$arguments = "--mode='test' --code=" . escapeshellarg($sourceCode);
+		$command = $this->executable .
+			" --mode='test'" .
+			" --code=" . escapeshellarg($sourceCode);
 
 		if ($enableCodeCoverage) {
-			$arguments .= " --coverage";
+			$command .= " --coverage";
 		}
 
-		$command = "{$this->executable} {$arguments} 2>/dev/null";
+		$this->shell->run($command, $stdout, $stderr, $exit);
 
-		// TODO: abstract this away:
-		exec($command, $output, $exitCode);
-		$stdout = implode("\n", $output);
-		list($results, $script, $coverage) = @unserialize($stdout);
+		list($state, $script, $coverage) = @unserialize($stdout);
 
-		$output = array(
+		if ($state === null) {
+			$state = array(
+				'variables' => array(),
+				'globals' => array(),
+				'constants' => array(),
+				'output' => '',
+				'calls' => array(),
+				'exception' => null,
+				'errors' => array(),
+				'fatalError' => null
+			);
+		}
+
+		$state['stderr'] = $stderr;
+		$state['exit'] = $exit;
+
+		unset($state['constants']['TESTPHP_TESTS_DIRECTORY']);
+
+		return array(
+			'state' => $state,
 			'script' => $script,
-			'results' => $results,
-			'exit' => $exitCode
+			'coverage' => $coverage
 		);
-
-		if ($enableCodeCoverage) {
-			$output['coverage'] = $coverage;
-		}
-
-		return $output;
 	}
 
 	private function mergeCoverage(array $coverage)
@@ -270,7 +279,7 @@ class Evaluator
 		$command = "{$this->executable} {$arguments} 2>/dev/null";
 
 		// TODO: abstract this away:
-		exec($command, $output, $exitCode);
+		exec($command, $output, $exit);
 
 		$stdout = implode("\n", $output);
 		$results = json_decode($stdout, true);

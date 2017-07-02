@@ -61,92 +61,149 @@ class Console
 		$subject = $test['subject'];
 
 		foreach ($test['cases'] as $case) {
-			if (self::isBrokenTestCase($case['expected'])) {
-				$failedTests[] = array($subject, $case['text'], self::getBrokenIssues($case['expected']));
-				continue;
-			}
+			$expected = $case['expected']['state'];
+			$actual = $case['actual']['state'];
 
-			$expected = self::flatten($case['expected']['results']);
-			$actual = self::flatten($case['actual']['results']);
-
-			self::ignoreTestVariables($expected['variables'], $actual['variables']);
-			self::diff($expected, $actual);
-
-			if (self::isPassingTest($expected, $actual)) {
-				++$passedTestsCount;
+			if (
+				self::isBroken($expected, '-', $issues) ||
+				self::isBroken($actual, '+', $issues) ||
+				self::isDifferent($expected, $actual, $issues)
+			) {
+				$failedTests[] = array($subject, $case['text'], $issues);
 			} else {
-				$failedTests[] = array($subject, $case['text'], self::getFailedIssues($expected, $actual));
+				++$passedTestsCount;
 			}
 		}
 	}
 
-	private static function isBrokenTestCase(array $expected)
+	private static function isBroken(array $state, $label, &$issues)
 	{
-		return ($expected['exit'] !== 0) || isset($expected['results']['fatalError']);
+		if ($state['exit'] !== 255) {
+			return false;
+		}
+
+		$state = self::flatten($state);
+
+		if ($state['fatalError'] !== null) {
+			$issues = self::getDifferenceText($label, $state['fatalError']);
+		} elseif ($state['stderr'] !== null) {
+			$issues = self::getDifferenceText($label, $state['stderr']);
+		} else {
+			$issues = self::getDifferenceText($label, $state['exit']);
+		}
+
+		return true;
 	}
 
-	private static function getBrokenIssues(array $expected)
+	private static function isDifferent(array $a, array $b, &$issues)
 	{
-		$results = $expected['results'];
-		$exit = $expected['exit'];
+		$a = self::flatten($a);
+		$b = self::flatten($b);
+
+		self::ignoreTestVariables($a['variables'], $b['variables']);
+		self::diff($a, $b);
+
+		if ($a === $b) {
+			return false;
+		}
 
 		$output = array();
 
-		$displayer = new Displayer();
+		self::getDifferencesValue($a['exit'], $b['exit'], $output);
+		self::getDifferencesValue($a['stderr'], $b['stderr'], $output);
+		self::getDifferencesValue($a['fatalError'], $b['fatalError'], $output);
+		self::getDifferencesMap($a['errors'], $b['errors'], $output);
+		self::getDifferencesValue($a['exception'], $b['exception'], $output);
+		self::getDifferencesMap($a['calls'], $b['calls'], $output);
+		self::getDifferencesValue($a['output'], $b['output'], $output);
+		self::getDifferencesMap($a['constants'], $b['constants'], $output);
+		self::getDifferencesMap($a['globals'], $b['globals'], $output);
+		self::getDifferencesMap($a['variables'], $b['variables'], $output);
 
-		self::flattenError($results['fatalError'], $displayer);
-		self::flattenExit($exit, $displayer);
+		$issues = implode("\n", $output);
 
-		if ($results['fatalError'] !== null) {
-			$output[] = self::getDifferenceText('-', $results['fatalError']);
-		}
-
-		if ($exit !== null) {
-			$output[] = self::getDifferenceText('-', $exit);
-		}
-
-		return implode("\n", $output);
+		return true;
 	}
 
-	private static function getTest($subject, $body, $issues)
+	private static function getDifferencesMap($a, $b, &$output)
 	{
-		$text = "// Test\n{$subject}\n\n" .
-			"{$body}\n\n" .
-			"// Issues\n";
+		$keys = self::getKeys($a, $b);
 
-		return self::wrap($text, '   ', '   ') . $issues;
-	}
+		foreach ($keys as $key) {
+			if (array_key_exists($key, $a)) {
+				$output[] = self::getDifferenceText('-', $a[$key]);
+			}
 
-	private static function ignoreTestVariables(array &$expected, array &$actual)
-	{
-		$names = array_keys($actual);
-
-		foreach ($names as $name) {
-			if (!array_key_exists($name, $expected)) {
-				unset($actual[$name]);
+			if (array_key_exists($key, $b)) {
+				$output[] = self::getDifferenceText('+', $b[$key]);
 			}
 		}
 	}
 
-	private static function flatten($results)
+	private static function getKeys(array $a, array $b)
 	{
-		if (!is_array($results)) {
-			return null;
+		$keys = array();
+
+		foreach ($a as $key => $value) {
+			$keys[$key] = $key;
 		}
 
+		foreach ($b as $key => $value) {
+			$keys[$key] = $key;
+		}
+
+		sort($keys, SORT_NATURAL);
+
+		return $keys;
+	}
+
+	private static function getDifferencesValue($a, $b, &$output)
+	{
+		if ($a !== null) {
+			$output[] = self::getDifferenceText('-', $a);
+		}
+
+		if ($b !== null) {
+			$output[] = self::getDifferenceText('+', $b);
+		}
+	}
+
+	private static function getDifferenceText($label, $input)
+	{
+		return " {$label} " . self::wrap($input, '', '   ');
+	}
+
+	private static function wrap($string, $outerPadding, $innerPadding)
+	{
+		$lines = explode("\n", $string);
+
+		foreach ($lines as &$line) {
+			if (0 < strlen($line)) {
+				$chunks = str_split($line, self::$maxWidth);
+				$line = $outerPadding . implode("\n{$innerPadding}", $chunks);
+			}
+		}
+
+		return implode("\n", $lines);
+	}
+
+	private static function flatten(array $state)
+	{
 		$displayer = new Displayer();
-		$objectNames = self::getObjectNames($results['variables']);
+		$objectNames = self::getObjectNames($state['variables']);
 
-		self::flattenVariables($results['variables'], $displayer);
-		self::flattenGlobals($results['globals'], $displayer);
-		self::flattenConstants($results['constants'], $displayer);
-		self::flattenOutput($results['output'], $displayer);
-		self::flattenCalls($results['calls'], $objectNames, $displayer);
-		self::flattenException($results['exception'], $displayer);
-		self::flattenErrors($results['errors'], $displayer);
-		self::flattenError($results['fatalError'], $displayer);
+		self::flattenVariables($state['variables'], $displayer);
+		self::flattenGlobals($state['globals'], $displayer);
+		self::flattenConstants($state['constants'], $displayer);
+		self::flattenOutput($state['output'], $displayer);
+		self::flattenCalls($state['calls'], $objectNames, $displayer);
+		self::flattenException($state['exception'], $displayer);
+		self::flattenErrors($state['errors'], $displayer);
+		self::flattenError($state['fatalError'], $displayer);
+		self::flattenStderr($state['stderr'], $displayer);
+		self::flattenExit($state['exit'], $displayer);
 
-		return $results;
+		return $state;
 	}
 
 	private static function getObjectNames(array $variables)
@@ -269,6 +326,7 @@ class Console
 		unset(
 			$properties['Exception']['file'],
 			$properties['Exception']['line'],
+			$properties['Exception']['previous'],
 			$properties['Exception']['trace'],
 			$properties['Exception']['xdebug_message']
 		);
@@ -317,6 +375,28 @@ class Console
 		$error = $output;
 	}
 
+	private static function flattenStderr(&$stderr, Displayer $displayer)
+	{
+		if (strlen($stderr) === 0) {
+			$stderr = null;
+			return;
+		}
+
+		$valueText = $displayer->display($stderr);
+		$stderr = "fwrite(STDERR, {$valueText});";
+	}
+
+	private static function flattenExit(&$exit, Displayer $displayer)
+	{
+		if ($exit === 0) {
+			$exit = null;
+			return;
+		}
+
+		$valueText = $displayer->display($exit);
+		$exit = "exit({$valueText});";
+	}
+
 	private static function getErrorLevelName($level)
 	{
 		switch ($level)
@@ -339,20 +419,6 @@ class Console
 			case E_ALL: return 'E_ALL';
 			default: return null;
 		}
-	}
-
-	private static function flattenExit(&$exit, Displayer $displayer)
-	{
-		if ($exit === 0) {
-			$exit = null;
-		}
-
-		$exit = self::getExitText($displayer->display($exit));
-	}
-
-	private static function getExitText($value)
-	{
-		return "exit({$value});";
 	}
 
 	private static function getRelativePath($currentPath, $targetPath)
@@ -382,6 +448,17 @@ class Console
 		return explode('/', $path);
 	}
 
+	private static function ignoreTestVariables(array &$expected, array &$actual)
+	{
+		$names = array_keys($actual);
+
+		foreach ($names as $name) {
+			if (!array_key_exists($name, $expected)) {
+				unset($actual[$name]);
+			}
+		}
+	}
+
 	private static function diff(&$a, &$b)
 	{
 		self::diffMap($a['variables'], $b['variables']);
@@ -408,89 +485,6 @@ class Console
 		}
 	}
 
-	private static function isPassingTest($expected, $actual)
-	{
-		return $expected === $actual;
-	}
-
-	private static function getFailedIssues(array $a, array $b)
-	{
-		$output = array();
-
-		self::getDifferencesValue($a['fatalError'], $b['fatalError'], $output);
-		self::getDifferencesMap($a['errors'], $b['errors'], $output);
-		self::getDifferencesValue($a['exception'], $b['exception'], $output);
-		self::getDifferencesValue($a['output'], $b['output'], $output);
-		self::getDifferencesMap($a['calls'], $b['calls'], $output);
-		self::getDifferencesMap($a['constants'], $b['constants'], $output);
-		self::getDifferencesMap($a['globals'], $b['globals'], $output);
-		self::getDifferencesMap($a['variables'], $b['variables'], $output);
-
-		return implode("\n", $output);
-	}
-
-	private static function getDifferencesMap($a, $b, &$output)
-	{
-		$keys = self::getKeys($a, $b);
-
-		foreach ($keys as $key) {
-			if (array_key_exists($key, $a)) {
-				$output[] = self::getDifferenceText('-', $a[$key]);
-			}
-
-			if (array_key_exists($key, $b)) {
-				$output[] = self::getDifferenceText('+', $b[$key]);
-			}
-		}
-	}
-
-	private static function getKeys(array $a, array $b)
-	{
-		$keys = array();
-
-		foreach ($a as $key => $value) {
-			$keys[$key] = $key;
-		}
-
-		foreach ($b as $key => $value) {
-			$keys[$key] = $key;
-		}
-
-		sort($keys, SORT_NATURAL);
-
-		return $keys;
-	}
-
-	private static function getDifferencesValue($a, $b, &$output)
-	{
-		if ($a !== null) {
-			$output[] = self::getDifferenceText('-', $a);
-		}
-
-		if ($b !== null) {
-			$output[] = self::getDifferenceText('+', $b);
-		}
-	}
-
-	private static function getDifferenceText($label, $input)
-	{
-		return " {$label} " . self::wrap($input, '', '   ');
-	}
-
-	private static function wrap($string, $outerPadding, $innerPadding)
-	{
-		$lines = explode("\n", $string);
-
-		foreach ($lines as &$line) {
-			if (0 < strlen($line)) {
-				$chunks = str_split($line, self::$maxWidth);
-				$line = $outerPadding . implode("\n{$innerPadding}", $chunks);
-			}
-		}
-
-		return implode("\n", $lines);
-	}
-
 	private static function showPassedTests($count)
 	{
 		return "Passed tests: {$count}";
@@ -504,6 +498,15 @@ class Console
 		$testBody = self::getTest($subject, $body, $issues);
 
 		return "Failed tests: {$count}\n\n{$testBody}";
+	}
+
+	private static function getTest($subject, $body, $issues)
+	{
+		$text = "// Test\n{$subject}\n\n" .
+			"{$body}\n\n" .
+			"// Issues\n";
+
+		return self::wrap($text, '   ', '   ') . $issues;
 	}
 
 	private static function getFilePosition($file, $line)

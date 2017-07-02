@@ -75,7 +75,8 @@ class Command
 		$filesystem = new Filesystem();
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
-		$evaluator = new Evaluator($filesystem, $this->executable);
+		$shell = new Shell();
+		$evaluator = new Evaluator($filesystem, $shell, $this->executable);
 		$console = new Console();
 		$web = new Web($filesystem);
 		$runner = new Runner($browser, $evaluator, $console, $web);

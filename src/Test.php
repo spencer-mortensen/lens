@@ -51,8 +51,8 @@ class Test
 		$this->registerShutdownFunction();
 		$this->registerErrorHandler();
 		self::unsetGlobals();
-		ob_start();
 		$this->startCodeCoverage();
+		ob_start();
 
 		try {
 			eval($this->code);
@@ -64,9 +64,9 @@ class Test
 			unset($, $variables['']);
 		}
 
+		$output = ob_get_clean();
 		ksort($variables, SORT_NATURAL);
 		$coverage = $this->getCodeCoverage();
-		$output = ob_get_clean();
 		$globals = self::getGlobals();
 		$constants = self::getConstants();
 		$calls = self::getMethodCalls();
@@ -79,7 +79,7 @@ class Test
 
 	private function send($variables, $globals, $constants, $output, $calls, $exception, $errors, $fatalError, $script, $coverage)
 	{
-		$results = array(
+		$state = array(
 			'variables' => $variables,
 			'globals' => $globals,
 			'constants' => $constants,
@@ -90,11 +90,7 @@ class Test
 			'fatalError' => $fatalError
 		);
 
-		$output = array(
-			Archivist\Archivist::archive($results),
-			$script,
-			$coverage
-		);
+		$output = array(\TestPhp\Archivist\Archivist::archive($state), $script, $coverage);
 
 		echo serialize($output);
 		$this->complete = true;
@@ -202,12 +198,12 @@ class Test
 
 	private static function getMethodCalls()
 	{
-		return Agent::getCalls();
+		return \TestPhp\Agent::getCalls();
 	}
 
 	private static function getScript()
 	{
-		return Agent::getScript();
+		return \TestPhp\Agent::getScript();
 	}
 
 	private function getCodeCoverage()
@@ -223,6 +219,7 @@ class Test
 	private static function getLastError()
 	{
 		$error = error_get_last();
+		error_clear_last();
 
 		if (!is_array($error)) {
 			return null;
