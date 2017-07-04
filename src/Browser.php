@@ -52,6 +52,7 @@ class Browser
 
 	private function readDirectory($absolutePath, $relativePath)
 	{
+		// TODO: use the $filesystem:
 		$files = @scandir($absolutePath, SCANDIR_SORT_NONE);
 
 		if ($files === false) {
@@ -76,9 +77,9 @@ class Browser
 
 	private function readFile($absolutePath, $relativePath)
 	{
-		$contents = @file_get_contents($absolutePath);
+		$contents = $this->filesystem->read($absolutePath);
 
-		if (!is_string($contents)) {
+		if ($contents === null) {
 			throw Exception::invalidTestFile($absolutePath);
 		}
 

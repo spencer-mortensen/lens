@@ -184,12 +184,14 @@ class Displayer
 		$class = $object->getClass();
 		$properties = $object->getProperties();
 
+		$classValue = $this->showString($class);
+
 		if (count($properties) === 0) {
-			return "object('{$class}')";
+			return "object({$classValue})";
 		}
 
 		$propertiesList = $this->showArray($properties);
 
-		return "object('{$class}', {$propertiesList})";
+		return "object({$classValue}, {$propertiesList})";
 	}
 }

@@ -51,28 +51,34 @@ class ObjectArchive extends Archive
 
 	private static function archiveProperties($object)
 	{
-		$properties = array();
+		$output = array();
 
-		$reflectionClass = new ReflectionClass($object);
+		$class = new ReflectionClass($object);
 
 		do {
-			$class = $reflectionClass->getName();
-			$reflectionProperties = $reflectionClass->getProperties();
+			$className = $class->getName();
+			$properties = $class->getProperties();
 
-			/** @var ReflectionProperty $reflectionProperty */
-			foreach ($reflectionProperties as $reflectionProperty) {
-				$reflectionProperty->setAccessible(true);
+			/** @var ReflectionProperty $property */
+			foreach ($properties as $property) {
+				$declaringClass = $property->getDeclaringClass();
 
-				$name = $reflectionProperty->getName();
-				$value = $reflectionProperty->getValue($object);
+				if ($declaringClass->getName() !== $className) {
+					continue;
+				}
 
-				$properties[$class][$name] = Archivist::archive($value);
+				$property->setAccessible(true);
+
+				$propertyName = $property->getName();
+				$propertyValue = $property->getValue($object);
+
+				$output[$className][$propertyName] = Archivist::archive($propertyValue);
 			}
 
-			$reflectionClass = $reflectionClass->getParentClass();
-		} while ($reflectionClass !== false);
+			$class = $class->getParentClass();
+		} while ($class !== false);
 
-		return $properties;
+		return $output;
 	}
 
 	public function getId()

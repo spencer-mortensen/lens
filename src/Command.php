@@ -27,13 +27,8 @@ namespace TestPhp;
 
 class Command
 {
-	/** @var string */
-	private $executable;
-
 	public function __construct()
 	{
-		$this->executable = realpath($GLOBALS['argv'][0]);
-
 		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage', 'version'));
 
 		if (isset($options['mode'])) {
@@ -45,7 +40,8 @@ class Command
 		} elseif (isset($options['version'])) {
 			$this->getVersion();
 		} else {
-			$this->getRunner(@$options['src'], @$options['tests']);
+			$executable = realpath($GLOBALS['argv'][0]);
+			$this->getRunner($executable, @$options['src'], @$options['tests']);
 		}
 	}
 
@@ -70,13 +66,13 @@ class Command
 		exit(0);
 	}
 
-	private function getRunner($code, $tests)
+	private function getRunner($executable, $code, $tests)
 	{
 		$filesystem = new Filesystem();
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
 		$shell = new Shell();
-		$evaluator = new Evaluator($filesystem, $shell, $this->executable);
+		$evaluator = new Evaluator($filesystem, $shell, $executable);
 		$console = new Console();
 		$web = new Web($filesystem);
 		$runner = new Runner($browser, $evaluator, $console, $web);
