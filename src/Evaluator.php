@@ -170,7 +170,7 @@ class Evaluator
 		$state['stderr'] = $stderr;
 		$state['exit'] = $exit;
 
-		unset($state['constants']['TESTPHP_TESTS_DIRECTORY']);
+		unset($state['constants']['TESTPHP_DIRECTORY']);
 
 		return array(
 			'state' => $state,
@@ -355,7 +355,7 @@ class Evaluator
 
 	private function getConstantCode($code)
 	{
-		$constant = 'TESTPHP_TESTS_DIRECTORY';
+		$constant = 'TESTPHP_DIRECTORY';
 
 		if (!self::usesConstant($code, $constant)) {
 			return null;
