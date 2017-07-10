@@ -25,6 +25,8 @@
 
 namespace TestPhp;
 
+use TestPhp\Archivist\Archivist;
+
 class Test
 {
 	/** @var string */
@@ -90,7 +92,10 @@ class Test
 			'fatalError' => $fatalError
 		);
 
-		$output = array(\TestPhp\Archivist\Archivist::archive($state), $script, $coverage);
+		$archivist = new Archivist();
+		$archivedState = $archivist->archive($state);
+
+		$output = array($archivedState, $script, $coverage);
 
 		echo serialize($output);
 		$this->complete = true;
@@ -198,12 +203,12 @@ class Test
 
 	private static function getMethodCalls()
 	{
-		return \TestPhp\Agent::getCalls();
+		return Agent::getCalls();
 	}
 
 	private static function getScript()
 	{
-		return \TestPhp\Agent::getScript();
+		return Agent::getScript();
 	}
 
 	private function getCodeCoverage()

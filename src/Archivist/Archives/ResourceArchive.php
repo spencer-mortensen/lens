@@ -33,12 +33,12 @@ class ResourceArchive extends Archive
 	/** @var string */
 	private $type;
 
-	public function __construct($resource)
+	public function __construct($id, $type)
 	{
 		parent::__construct(Archive::TYPE_RESOURCE);
 
-		$this->id = (integer)$resource;
-		$this->type = get_resource_type($resource);
+		$this->id = $id;
+		$this->type = $type;
 	}
 
 	public function getId()

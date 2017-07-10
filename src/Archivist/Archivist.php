@@ -25,12 +25,22 @@
 
 namespace TestPhp\Archivist;
 
+use ReflectionClass;
+use ReflectionProperty;
 use TestPhp\Archivist\Archives\ObjectArchive;
 use TestPhp\Archivist\Archives\ResourceArchive;
 
 class Archivist
 {
-	public static function archive($value)
+	/** @var array */
+	private $archivedObjects;
+
+	public function __construct()
+	{
+		$this->archivedObjects = array();
+	}
+
+	public function &archive($value)
 	{
 		$type = gettype($value);
 
@@ -39,22 +49,80 @@ class Archivist
 				return $value;
 
 			case 'array':
-				return self::archiveArray($value);
+				return $this->archiveArray($value);
 
 			case 'object':
-				return new ObjectArchive($value);
+				return $this->archiveObject($value);
 
 			case 'resource':
-				return new ResourceArchive($value);
+				return $this->archiveResource($value);
 		}
 	}
 
-	private static function archiveArray(array $array)
+	private function &archiveArray(array $array)
 	{
 		foreach ($array as &$value) {
-			$value = self::archive($value);
+			$value = $this->archive($value);
 		}
 
 		return $array;
+	}
+
+	private function &archiveObject($object)
+	{
+		$id = spl_object_hash($object);
+		$isArchived = array_key_exists($id, $this->archivedObjects);
+
+		$archive = &$this->archivedObjects[$id];
+
+		if (!$isArchived) {
+			$class = get_class($object);
+			$properties = $this->archiveProperties($object);
+
+			$archive = new ObjectArchive($id, $class, $properties);
+		}
+
+		return $archive;
+	}
+
+	private function archiveProperties($object)
+	{
+		$output = array();
+
+		$class = new ReflectionClass($object);
+
+		do {
+			$className = $class->getName();
+			$properties = $class->getProperties();
+
+			/** @var ReflectionProperty $property */
+			foreach ($properties as $property) {
+				$declaringClass = $property->getDeclaringClass();
+
+				if ($declaringClass->getName() !== $className) {
+					continue;
+				}
+
+				$property->setAccessible(true);
+
+				$propertyName = $property->getName();
+				$propertyValue = $property->getValue($object);
+
+				$output[$className][$propertyName] = &$this->archive($propertyValue);
+			}
+
+			$class = $class->getParentClass();
+		} while ($class !== false);
+
+		return $output;
+	}
+
+	private function &archiveResource($resource)
+	{
+		$id = (integer)$resource;
+		$type = get_resource_type($resource);
+		$resource = new ResourceArchive($id, $type);
+
+		return $resource;
 	}
 }

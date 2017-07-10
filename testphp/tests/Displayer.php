@@ -104,7 +104,9 @@ $output = "array('a' => 'A', 'b' => 'B')";
 
 
 // Input
-$input = Archivist::archive(new \stdClass());
+$archivist = new Archivist();
+$input = $archivist->archive(new \stdClass());
+unset($archivist);
 
 // Output
 $output = 'object(\'stdClass\')';
@@ -112,7 +114,9 @@ unset($input);
 
 
 // Input
-$input = Archivist::archive(fopen('php://stdout', 'r'));
+$archivist = new Archivist();
+$input = $archivist->archive(fopen('php://stdout', 'r'));
+unset($archivist);
 
 // Output
 $output = 'resource(stream)';

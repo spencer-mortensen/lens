@@ -25,10 +25,6 @@
 
 namespace TestPhp\Archivist\Archives;
 
-use ReflectionClass;
-use ReflectionProperty;
-use TestPhp\Archivist\Archivist;
-
 class ObjectArchive extends Archive
 {
 	/** @var string */
@@ -40,45 +36,13 @@ class ObjectArchive extends Archive
 	/** @var array */
 	private $properties;
 
-	public function __construct($object)
+	public function __construct($id, $class, array $properties)
 	{
 		parent::__construct(Archive::TYPE_OBJECT);
 
-		$this->id = spl_object_hash($object);
-		$this->class = get_class($object);
-		$this->properties = self::archiveProperties($object);
-	}
-
-	private static function archiveProperties($object)
-	{
-		$output = array();
-
-		$class = new ReflectionClass($object);
-
-		do {
-			$className = $class->getName();
-			$properties = $class->getProperties();
-
-			/** @var ReflectionProperty $property */
-			foreach ($properties as $property) {
-				$declaringClass = $property->getDeclaringClass();
-
-				if ($declaringClass->getName() !== $className) {
-					continue;
-				}
-
-				$property->setAccessible(true);
-
-				$propertyName = $property->getName();
-				$propertyValue = $property->getValue($object);
-
-				$output[$className][$propertyName] = Archivist::archive($propertyValue);
-			}
-
-			$class = $class->getParentClass();
-		} while ($class !== false);
-
-		return $output;
+		$this->id = $id;
+		$this->class = $class;
+		$this->properties = $properties;
 	}
 
 	public function getId()
