@@ -34,21 +34,18 @@ class Command
 		$parser = new OptionsParser($GLOBALS['argv']);
 
 		/*
-		-abc
-		--output
-		--output=<file>
-
-		-o<file> # ambiguous
-		-o <file> # ambiguous
-		--output <file>  # ambiguous
+		// EXAMPLE:
+		testphp --version  # get the current version of testphp
 		*/
 
-		/*
-		// EXAMPLES:
-		testphp  # run all tests (based on the current working directory)
-		testphp tests/Archivist/ tests/Parser.php  # run just these tests
-		testphp --version  # get the current version of testphp
+		$parser->getLongFlag($options);
 
+		if (isset($options['version'])) {
+			return $this->getVersion();
+		}
+
+
+		/*
 		// INTERNAL COMMANDS (not intended for end users):
 		testphp --mode='test' --code='...'  # execute a test
 		testphp --mode='test' --code='...' --coverage  # execute a test (with code coverage enabled)
@@ -59,20 +56,24 @@ class Command
 
 		if (isset($options['mode'])) {
 			if ($options['mode'] === 'test') {
-				$this->getTest(@$options['code'], isset($options['coverage']));
-			} else {
-				$this->getCoverage(@$options['file']);
+				return $this->getTest(@$options['code'], isset($options['coverage']));
 			}
-		} elseif (isset($options['version'])) {
-			$this->getVersion();
-		} else {
-			$executable = $GLOBALS['argv'][0];
-			$paths = array();
 
-			while ($parser->getValue($paths));
-
-			$this->getRunner($executable, $paths);
+			return $this->getCoverage(@$options['file']);
 		}
+
+		/*
+		// EXAMPLES:
+		testphp  # run all tests (based on the current working directory)
+		testphp tests/Archivist/ tests/Parser.php  # run just these tests
+		*/
+
+		$executable = $GLOBALS['argv'][0];
+		$paths = array();
+
+		while ($parser->getValue($paths));
+
+		$this->getRunner($executable, $paths);
 	}
 
 	private function getTest($code, $enableCoverage)

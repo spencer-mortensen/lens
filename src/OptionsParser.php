@@ -25,6 +25,16 @@
 
 namespace TestPhp;
 
+/*
+	-abc
+	--output
+	--output=<file>
+
+	-o<file> # ambiguous
+	-o <file> # ambiguous
+	--output <file>  # ambiguous
+*/
+
 class OptionsParser
 {
 	/** @var array */
