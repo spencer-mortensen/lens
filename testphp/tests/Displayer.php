@@ -4,7 +4,7 @@ namespace TestPhp;
 
 use TestPhp\Archivist\Archivist;
 
-require TESTPHP_DIRECTORY . '/bootstrap.php';
+require TESTPHP . '/bootstrap.php';
 
 
 // Test

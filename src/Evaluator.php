@@ -27,6 +27,8 @@ namespace TestPhp;
 
 class Evaluator
 {
+	private static $testphpConstant = 'TESTPHP';
+
 	/** @var Filesystem */
 	private $filesystem;
 
@@ -34,13 +36,13 @@ class Evaluator
 	private $shell;
 
 	/** @var string */
+	private $testphpDirectory;
+
+	/** @var string */
+	private $srcDirectory;
+
+	/** @var string */
 	private $executable;
-
-	/** @var string */
-	private $testsDirectory;
-
-	/** @var string */
-	private $codeDirectory;
 
 	/** @var boolean */
 	private $isCoverageEnabled;
@@ -51,19 +53,19 @@ class Evaluator
 	/** @var array */
 	private $status;
 
-	public function __construct(Filesystem $filesystem, Shell $shell, $executable)
+	public function __construct(Filesystem $filesystem, Shell $shell)
 	{
 		$this->filesystem = $filesystem;
 		$this->shell = $shell;
-		$this->executable = $executable;
 	}
 
-	public function evaluate(array $suites, $testsDirectory, $codeDirectory)
+	public function evaluate(array $suites, $testphpDirectory, $srcDirectory, $executable)
 	{
-		$this->testsDirectory = $testsDirectory;
-		$this->codeDirectory = $codeDirectory;
+		$this->testphpDirectory = $testphpDirectory;
+		$this->srcDirectory = $srcDirectory;
+		$this->executable = $executable;
 
-		$this->isCoverageEnabled = function_exists('xdebug_get_code_coverage') && is_string($this->codeDirectory);
+		$this->isCoverageEnabled = function_exists('xdebug_get_code_coverage') && is_string($this->srcDirectory);
 		$this->code = array();
 		$this->status = array();
 
@@ -170,7 +172,7 @@ class Evaluator
 		$state['stderr'] = $stderr;
 		$state['exit'] = $exit;
 
-		unset($state['constants']['TESTPHP_DIRECTORY']);
+		unset($state['constants'][self::$testphpConstant]);
 
 		return array(
 			'state' => $state,
@@ -181,7 +183,7 @@ class Evaluator
 
 	private function mergeCoverage(array $coverage)
 	{
-		$length = strlen($this->codeDirectory);
+		$length = strlen($this->srcDirectory);
 
 		foreach ($coverage as $absolutePath => $lines) {
 			if (self::isEvaluatedCode($absolutePath)) {
@@ -189,7 +191,7 @@ class Evaluator
 			}
 
 			// Ignore files that are outside the source-code directory under scrutiny
-			if (strncmp($absolutePath, $this->codeDirectory, $length) !== 0) {
+			if (strncmp($absolutePath, $this->srcDirectory, $length) !== 0) {
 				continue;
 			}
 
@@ -216,14 +218,14 @@ class Evaluator
 			return null;
 		}
 
-		$contents = $this->filesystem->read($this->codeDirectory);
+		$contents = $this->filesystem->read($this->srcDirectory);
 		$this->getDirectoryCode('', $contents);
 
 		$files = array_keys($this->code);
 
 		foreach ($files as $file) {
 			if (!isset($this->status[$file])) {
-				$absoluteFile = "{$this->codeDirectory}/{$file}";
+				$absoluteFile = "{$this->srcDirectory}/{$file}";
 				$this->status[$file] = $this->getMissingCoverage($absoluteFile);
 			}
 		}
@@ -355,13 +357,11 @@ class Evaluator
 
 	private function getConstantCode($code)
 	{
-		$constant = 'TESTPHP_DIRECTORY';
-
-		if (!self::usesConstant($code, $constant)) {
+		if (!self::usesConstant($code, self::$testphpConstant)) {
 			return null;
 		}
 
-		return self::getConstantDeclaration($constant, $this->testsDirectory);
+		return self::getConstantDeclaration(self::$testphpConstant, $this->testphpDirectory);
 	}
 
 	private static function usesConstant($code, $name)

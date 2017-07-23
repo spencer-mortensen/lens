@@ -49,6 +49,7 @@ class Web
 
 	public function coverage($codeDirectory, $coverageDirectory, $coverage)
 	{
+		// TODO: generate a notice when ($codeDirectory === null)
 		$this->codeDirectory = $codeDirectory;
 		$this->coverageDirectory = $coverageDirectory;
 

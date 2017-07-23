@@ -6,7 +6,7 @@ use TestPhp\Archivist\Archivist;
 use TestPhp\Archivist\Archives\ObjectArchive;
 use TestPhp\Archivist\Archives\ResourceArchive;
 
-require TESTPHP_DIRECTORY . '/bootstrap.php';
+require TESTPHP . '/bootstrap.php';
 
 
 // Test

@@ -43,53 +43,48 @@ class Browser
 		$this->tests = array();
 	}
 
-	public function browse($directory)
+	public function browse(array $paths)
 	{
-		$this->readDirectory($directory, '');
+		foreach ($paths as $path) {
+			$contents = $this->filesystem->read($path);
+
+			if ($contents === null) {
+				throw Exception::invalidTestsPath($path);
+			}
+
+			$this->get($path, $contents);
+		}
 
 		return $this->tests;
 	}
 
-	private function readDirectory($absolutePath, $relativePath)
+	private function get($path, $contents)
 	{
-		// TODO: use the $filesystem:
-		$files = @scandir($absolutePath, SCANDIR_SORT_NONE);
-
-		if ($files === false) {
-			throw Exception::invalidTestsDirectory($absolutePath);
-		}
-
-		foreach ($files as $file) {
-			if (($file === '.') || ($file === '..')) {
-				continue;
-			}
-
-			$childAbsolutePath = "{$absolutePath}/{$file}";
-			$childRelativePath = ltrim("{$relativePath}/{$file}", '/');
-
-			if (is_dir($childAbsolutePath)) {
-				$this->readDirectory($childAbsolutePath, $childRelativePath);
-			} elseif (is_file($childAbsolutePath) && (substr($file, -4) === '.php')) {
-				$this->readFile($childAbsolutePath, $childRelativePath);
-			}
+		if (is_array($contents)) {
+			$this->getDirectory($path, $contents);
+		} else {
+			$this->getFile($path, $contents);
 		}
 	}
 
-	private function readFile($absolutePath, $relativePath)
+	private function getDirectory($path, array $contents)
 	{
-		$contents = $this->filesystem->read($absolutePath);
+		foreach ($contents as $childName => $childContents) {
+			$childPath = "{$path}/{$childName}";
 
-		if ($contents === null) {
-			throw Exception::invalidTestFile($absolutePath);
+			$this->get($childPath, $childContents);
 		}
+	}
 
+	private function getFile($path, $contents)
+	{
 		// TODO: provide more useful exceptions:
 		if (!$this->parser->parse($contents, $fixture, $tests)) {
-			throw Exception::invalidTestFile($absolutePath);
+			throw Exception::invalidTestsFile($path);
 		}
 
 		$this->tests[] = array(
-			'file' => $relativePath,
+			'file' => $path, // TODO: this was a relative path
 			'fixture' => $fixture,
 			'tests' => $tests
 		);

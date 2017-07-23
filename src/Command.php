@@ -29,7 +29,33 @@ class Command
 {
 	public function __construct()
 	{
-		$options = getopt('', array('tests::', 'src::', 'mode::', 'code::', 'file::', 'coverage', 'version'));
+		$options = array();
+
+		$parser = new OptionsParser($GLOBALS['argv']);
+
+		/*
+		-abc
+		--output
+		--output=<file>
+
+		-o<file> # ambiguous
+		-o <file> # ambiguous
+		--output <file>  # ambiguous
+		*/
+
+		/*
+		// EXAMPLES:
+		testphp  # run all tests (based on the current working directory)
+		testphp tests/Archivist/ tests/Parser.php  # run just these tests
+		testphp --version  # get the current version of testphp
+
+		// INTERNAL COMMANDS (not intended for end users):
+		testphp --mode='test' --code='...'  # execute a test
+		testphp --mode='test' --code='...' --coverage  # execute a test (with code coverage enabled)
+		testphp --mode='test' --file='...  # get code coverage for source-code file
+		*/
+
+		while ($parser->getLongKeyValue($options));
 
 		if (isset($options['mode'])) {
 			if ($options['mode'] === 'test') {
@@ -40,8 +66,12 @@ class Command
 		} elseif (isset($options['version'])) {
 			$this->getVersion();
 		} else {
-			$executable = realpath($GLOBALS['argv'][0]);
-			$this->getRunner($executable, @$options['src'], @$options['tests']);
+			$executable = $GLOBALS['argv'][0];
+			$paths = array();
+
+			while ($parser->getValue($paths));
+
+			$this->getRunner($executable, $paths);
 		}
 	}
 
@@ -53,10 +83,11 @@ class Command
 
 	private function getCoverage($file)
 	{
+		// TODO: use the filesystem
 		$filePath = realpath($file);
+
 		// TODO: require a valid PHP source-code file
 		$coverage = new Coverage();
-
 		$coverage->run($filePath);
 	}
 
@@ -66,69 +97,17 @@ class Command
 		exit(0);
 	}
 
-	private function getRunner($executable, $code, $tests)
+	private function getRunner($executable, array $paths)
 	{
 		$filesystem = new Filesystem();
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
 		$shell = new Shell();
-		$evaluator = new Evaluator($filesystem, $shell, $executable);
+		$evaluator = new Evaluator($filesystem, $shell);
 		$console = new Console();
 		$web = new Web($filesystem);
-		$runner = new Runner($browser, $evaluator, $console, $web);
 
-		$currentDirectory = self::getCurrentDirectory();
-		$testsDirectory = self::getTestsDirectory($tests, $currentDirectory);
-		$codeDirectory = self::getCodeDirectory($code, $testsDirectory, $currentDirectory);
-
-		$runner->run($codeDirectory, $testsDirectory);
-	}
-
-	private static function getCurrentDirectory()
-	{
-		return self::getString(getcwd());
-	}
-
-	private static function getTestsDirectory($testsDirectory, $currentDirectory)
-	{
-		if ($testsDirectory !== null) {
-			return self::getString(realpath($testsDirectory));
-		}
-
-		if (substr($currentDirectory, -6) === '/tests') {
-			return substr($currentDirectory, 0, -6);
-		}
-
-		return $currentDirectory;
-	}
-
-	private static function getCodeDirectory($codeDirectory, $testsDirectory, $currentDirectory)
-	{
-		if ($codeDirectory !== null) {
-			return self::getString(realpath($codeDirectory));
-		}
-
-		$codeDirectory = $testsDirectory . '/src';
-
-		if (is_dir($codeDirectory)) {
-			return $codeDirectory;
-		}
-
-		$codeDirectory = dirname($testsDirectory) . '/src';
-
-		if (is_dir($codeDirectory)) {
-			return $codeDirectory;
-		}
-
-		return null;
-	}
-
-	private static function getString($value)
-	{
-		if (is_string($value)) {
-			return $value;
-		}
-
-		return null;
+		$runner = new Runner($filesystem, $browser, $evaluator, $console, $web);
+		$runner->run($executable, $paths);
 	}
 }

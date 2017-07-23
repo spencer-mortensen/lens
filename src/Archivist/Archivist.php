@@ -40,7 +40,7 @@ class Archivist
 		$this->archivedObjects = array();
 	}
 
-	public function &archive($value)
+	public function archive($value)
 	{
 		$type = gettype($value);
 
@@ -59,7 +59,7 @@ class Archivist
 		}
 	}
 
-	private function &archiveArray(array $array)
+	private function archiveArray(array $array)
 	{
 		foreach ($array as &$value) {
 			$value = $this->archive($value);
@@ -68,19 +68,23 @@ class Archivist
 		return $array;
 	}
 
-	private function &archiveObject($object)
+	private function archiveObject($object)
 	{
 		$id = spl_object_hash($object);
-		$isArchived = array_key_exists($id, $this->archivedObjects);
 
 		$archive = &$this->archivedObjects[$id];
 
-		if (!$isArchived) {
-			$class = get_class($object);
-			$properties = $this->archiveProperties($object);
-
-			$archive = new ObjectArchive($id, $class, $properties);
+		if (isset($archive)) {
+			return $archive;
 		}
+
+		$class = get_class($object);
+		$properties = array();
+
+		$archive = new ObjectArchive($id, $class, $properties);
+
+		$properties = $this->archiveProperties($object);
+		$archive->setProperties($properties);
 
 		return $archive;
 	}
@@ -108,7 +112,7 @@ class Archivist
 				$propertyName = $property->getName();
 				$propertyValue = $property->getValue($object);
 
-				$output[$className][$propertyName] = &$this->archive($propertyValue);
+				$output[$className][$propertyName] = $this->archive($propertyValue);
 			}
 
 			$class = $class->getParentClass();
@@ -117,12 +121,10 @@ class Archivist
 		return $output;
 	}
 
-	private function &archiveResource($resource)
+	private function archiveResource($resource)
 	{
 		$id = (integer)$resource;
 		$type = get_resource_type($resource);
-		$resource = new ResourceArchive($id, $type);
-
-		return $resource;
+		return new ResourceArchive($id, $type);
 	}
 }

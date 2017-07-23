@@ -27,69 +27,246 @@ namespace TestPhp;
 
 class Exception extends \Exception
 {
-	const INVALID_TESTS_DIRECTORY = 1;
-	const INVALID_TEST_FILE = 2;
+	/** @var string */
+	private static $testphpExecutable = 'testphp';
 
-	/** @var mixed */
+	/** @var string */
+	private static $testphpGuideUrl = 'http://testphp.org/guide/';
+
+	/** @var string */
+	private static $testphpIssuesUrl = 'https://github.com/Spencer-Mortensen/TestPhp/issues';
+
+	const CODE_INTERNAL = 0;
+	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;
+	const CODE_INVALID_SETTINGS_FILE = 2;
+	const CODE_INVALID_SRC_DIRECTORY = 3;
+	const CODE_INVALID_TESTS_PATH = 4;
+	const CODE_INVALID_TESTS_FILE = 5;
+
+	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
+	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
+	const SEVERITY_ERROR = 3; // Definitely abnormal, and human intervention is required (e.g. a programming error)
+
+	/** @var integer */
+	private $severity;
+
+	/** @var null|array */
+	private $help;
+
+	/** @var null|array */
 	private $data;
 
 	/**
-	 * @param int $code
-	 * @param mixed $data
-	 * @param string|null $message
+	 * @param integer $code
+	 * @param integer $severity
+	 * @param string $message
+	 * @param null|array $help
+	 * @param null|array $data
 	 */
-	public function __construct($code, $data = null, $message = null)
+	public function __construct($code, $severity, $message, array $help = null, array $data = null)
 	{
 		parent::__construct($message, $code);
 
+		$this->severity = $severity;
+		$this->help = $help;
 		$this->data = $data;
 	}
 
 	/**
-	 * @return mixed
+	 * @return integer
+	 */
+	public function getSeverity()
+	{
+		return $this->severity;
+	}
+
+	/**
+	 * @return null|array
+	 */
+	public function getHelp()
+	{
+		return $this->help;
+	}
+
+	/**
+	 * @return null|array
 	 */
 	public function getData()
 	{
 		return $this->data;
 	}
 
-	public static function invalidTestsDirectory($testsDirectory)
+	public static function error($errorLevel, $errorMessage, $file, $line)
 	{
-		$data = array(
-			'directory' => $testsDirectory
+		$code = self::CODE_INTERNAL;
+
+		$severity = self::getSeverityFromErrorLevel($errorLevel);
+
+		$message = "Testphp encountered an unexpected issue.";
+
+		$help = array(
+			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$testphpIssuesUrl
 		);
 
-		$displayer = new Displayer();
+		$data = array(
+			'code' => $code,
+			'message' => $errorMessage,
+			'file' => $file,
+			'line' => $line,
+			'level' => $errorLevel
+		);
 
-		if (!is_string($testsDirectory) || (strlen($testsDirectory) === 0)) {
-			$testsDirectoryValue = self::getValueDescription($testsDirectory);
-			$message = "Expected a path to a tests directory, but received {$testsDirectoryValue} instead";
-		} elseif (!file_exists($testsDirectory)) {
-			$testsDirectoryValue = $displayer->display($testsDirectory);
-			$message = "Expected a path to a tests directory, but there is no directory at {$testsDirectoryValue}";
-		} elseif (!is_dir($testsDirectory)) {
-			$testsDirectoryValue = $displayer->display($testsDirectory);
-			$message = "Expected a path to a tests directory, but {$testsDirectoryValue} is not a directory";
-		} elseif (!is_readable($testsDirectory)) {
-			$testsDirectoryValue = $displayer->display($testsDirectory);
-			$message = "Expected a path to a tests directory, but {$testsDirectoryValue} is not readable";
-		} else {
-			$message = "Expected a valid path to a tests directory";
-		}
-
-		return new self(self::INVALID_TESTS_DIRECTORY, $data, $message);
+		return new self($code, $severity, $message, $help, $data);
 	}
 
-	public static function invalidTestFile($testFile)
+	public static function unknownTestsDirectory()
 	{
-		$data = array(
-			'file' => $testFile
+		$code = self::CODE_UNKNOWN_TESTS_DIRECTORY;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = 'Unable to find the tests directory.';
+
+		$help = array(
+			"Do you have a tests directory? If not, you should check out this short guide to get started:\n" . self::$testphpGuideUrl,
+			"Is your tests directory called \"tests\"? You need to use that name exactly, without any spelling or capitalization differences.",
+			"Is your tests directory directly under your project directory, or in a testphp directory that is directly under your project directory? Testphp will find your tests directory only if it's pretty near the surface.",
+			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$testphpExecutable . " ~/MyProject/tests"
 		);
 
-		// TODO: improve this error message:
-		$message = 'The test file could not be read';
+		$data = null;
 
-		return new self(self::INVALID_TEST_FILE, $data, $message);
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	public static function invalidSettingsFile($path, $errorMessage = null)
+	{
+		$code = self::CODE_INVALID_SETTINGS_FILE;
+
+		$severity = self::SEVERITY_WARNING;
+
+		$message = "The settings file isn't a valid INI file.";
+
+		$help = array(
+			"Here's an overview of the INI file format:\n" .
+			"https://en.wikipedia.org/wiki/INI_file"
+		);
+
+		$data = array(
+			'file' => $path
+		);
+
+		if (isset($errorMessage)) {
+			$data['error'] = $errorMessage;
+		}
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	public static function invalidSrcDirectory($path)
+	{
+		$code = self::CODE_INVALID_SRC_DIRECTORY;
+
+		$severity = self::SEVERITY_NOTICE;
+
+		// TODO: this should check for a directory (not a path)
+		// TODO: this should mention the configuration file
+		$message = self::getInvalidPathMessage($path, 'a src directory path');
+
+		$help = null;
+
+		$data = array(
+			'path' => $path
+		);
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	public static function invalidTestsPath($path)
+	{
+		$code = self::CODE_INVALID_TESTS_PATH;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = self::getInvalidPathMessage($path, 'a tests file or directory');
+
+		$help = null;
+
+		$data = array(
+			'path' => $path
+		);
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	public static function invalidTestsFile($path)
+	{
+		$code = self::CODE_INVALID_TESTS_FILE;
+
+		$severity = self::SEVERITY_ERROR;
+
+		// TODO: display all quotations in double quotes:
+		$pathValue = var_export($path, true);
+		// TODO: improve this error message:
+		$message = "The test file {$pathValue} has invalid syntax.";
+
+		$help = null;
+
+		$data = array(
+			'file' => $path
+		);
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	private static function getSeverityFromErrorLevel($level)
+	{
+		switch ($level) {
+			case E_STRICT:
+			case E_DEPRECATED:
+			case E_USER_DEPRECATED:
+			case E_NOTICE:
+			case E_USER_NOTICE:
+				return self::SEVERITY_NOTICE;
+
+			case E_WARNING:
+			case E_CORE_WARNING:
+			case E_COMPILE_WARNING:
+			case E_USER_WARNING:
+			case E_RECOVERABLE_ERROR:
+				return self::SEVERITY_WARNING;
+
+			default:
+				return self::SEVERITY_ERROR;
+		}
+	}
+
+	private static function getInvalidPathMessage($path, $description)
+	{
+		// TODO: display all quotations in double quotes:
+		$displayer = new Displayer();
+
+		if (!is_string($path) || (strlen($path) === 0)) {
+			$testsDirectoryValue = self::getValueDescription($path);
+			return "Expected a path to {$description}, but received {$testsDirectoryValue} instead";
+		}
+
+		if (!file_exists($path)) {
+			$testsDirectoryValue = $displayer->display($path);
+			return "Expected a path to {$description}, but there doesn't seem to be anything at {$testsDirectoryValue}";
+		}
+
+		if (!is_dir($path) && !is_file($path)) {
+			$testsDirectoryValue = $displayer->display($path);
+			return "Expected a path to {$description}, but {$testsDirectoryValue} is not a file or a directory";
+		}
+
+		if (!is_readable($path)) {
+			$testsDirectoryValue = $displayer->display($path);
+			return "Expected a path to {$description}, but {$testsDirectoryValue} is not readable";
+		}
+
+		return "Expected a valid path to {$description}";
 	}
 
 	private static function getValueDescription($value)
