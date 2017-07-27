@@ -41,9 +41,10 @@ class Command
 		$parser->getLongFlag($options);
 
 		if (isset($options['version'])) {
-			return $this->getVersion();
-		}
+			$this->getVersion();
 
+			return;
+		}
 
 		/*
 		// INTERNAL COMMANDS (not intended for end users):
@@ -56,10 +57,12 @@ class Command
 
 		if (isset($options['mode'])) {
 			if ($options['mode'] === 'test') {
-				return $this->getTest(@$options['code'], isset($options['coverage']));
+				$this->getTest(@$options['code'], isset($options['coverage']));
+			} else {
+				$this->getCoverage(@$options['file']);
 			}
 
-			return $this->getCoverage(@$options['file']);
+			return;
 		}
 
 		/*

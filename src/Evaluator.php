@@ -277,16 +277,16 @@ class Evaluator
 
 	private function getMissingCoverage($filePath)
 	{
-		$arguments = "--mode='coverage' --file=" . escapeshellarg($filePath);
-		$command = "{$this->executable} {$arguments} 2>/dev/null";
+		$command = $this->executable .
+			" --mode='coverage'" .
+			" --file=" . escapeshellarg($filePath);
 
-		// TODO: abstract this away:
-		exec($command, $output, $exit);
+		$this->shell->run($command, $stdout, $stderr, $exit);
 
-		$stdout = implode("\n", $output);
 		$results = json_decode($stdout, true);
 
 		if (!is_array($results)) {
+			// TODO: throw exception:
 			return null;
 		}
 

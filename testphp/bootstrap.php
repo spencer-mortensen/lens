@@ -1,24 +1,31 @@
 <?php
 
-spl_autoload_register(
-	function ($class)
-	{
-		$namespace = 'TestPhp';
-		$libraryDirectory = dirname(__DIR__) . '/src';
+$classes = array(
+	'TestPhp' => dirname(__DIR__) . '/src'
+);
 
-		$namespacePrefix = $namespace . '\\';
+$autoload = function(array $map)
+{
+	foreach ($map as $namespacePrefix => $libraryPath) {
+		$namespacePrefix .= '\\';
 		$namespacePrefixLength = strlen($namespacePrefix);
 
-		if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
-			return;
-		}
+		$autoloader = function ($class) use ($namespacePrefix, $namespacePrefixLength, $libraryPath) {
+			if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
+				return;
+			}
 
-		$relativeClassName = substr($class, $namespacePrefixLength);
-		$relativeFilePath = strtr($relativeClassName, '\\', '/') . '.php';
-		$absoluteFilePath = "{$libraryDirectory}/{$relativeFilePath}";
+			$relativeClassName = substr($class, $namespacePrefixLength);
+			$relativeFilePath = strtr($relativeClassName, '\\', '/') . '.php';
+			$absoluteFilePath = "{$libraryPath}/{$relativeFilePath}";
 
-		if (is_file($absoluteFilePath)) {
-			include $absoluteFilePath;
-		}
+			if (is_file($absoluteFilePath)) {
+				include $absoluteFilePath;
+			}
+		};
+
+		spl_autoload_register($autoloader);
 	}
-);
+};
+
+$autoload($classes);
