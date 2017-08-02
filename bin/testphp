@@ -6,24 +6,18 @@ namespace TestPhp;
 spl_autoload_register(
 	function ($class)
 	{
-		$namespace = 'TestPhp';
-		$libraryDirectory = dirname(__DIR__) . '/src';
-
-		$namespacePrefix = $namespace . '\\';
-		$namespacePrefixLength = strlen($namespacePrefix);
-
-		if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
+		if (strncmp($class, 'TestPhp\\', 8) !== 0) {
 			return;
 		}
 
-		$relativeClassName = substr($class, $namespacePrefixLength);
+		$relativeClassName = substr($class, 8);
 		$relativeFilePath = strtr($relativeClassName, '\\', '/') . '.php';
-		$absoluteFilePath = "{$libraryDirectory}/{$relativeFilePath}";
+		$absoluteFilePath = dirname(__DIR__) . "/src/{$relativeFilePath}";
 
 		if (is_file($absoluteFilePath)) {
 			include $absoluteFilePath;
 		}
-	}
+	};
 );
 
 new Command();
