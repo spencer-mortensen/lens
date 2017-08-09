@@ -17,7 +17,7 @@ spl_autoload_register(
 		if (is_file($absoluteFilePath)) {
 			include $absoluteFilePath;
 		}
-	};
+	}
 );
 
 new Command();
