@@ -107,9 +107,29 @@ class Runner
 	}
 
 	/**
-	 * @param Exception $exception
+	 * @param \Throwable $exception
 	 */
-	public function exceptionHandler(Exception $exception)
+	public function exceptionHandler($exception)
+	{
+		$code = $exception->getCode();
+
+		try {
+			throw $exception;
+		} catch (Exception $throwable) {
+			// Already an Exception object
+		} catch (\Throwable $throwable) {
+			$exception = Exception::exception($throwable);
+		} catch (\Exception $throwable) {
+			$exception = Exception::exception($throwable);
+		}
+
+		$stderr = $this->getStderrText($exception);
+
+		file_put_contents('php://stderr', "{$stderr}\n\n");
+		exit($code);
+	}
+
+	private function getStderrText(Exception $exception)
 	{
 		$code = $exception->getCode();
 		$severity = $exception->getSeverity();
@@ -117,18 +137,17 @@ class Runner
 		$help = $exception->getHelp();
 		$data = $exception->getData();
 
-		$stderr = self::getSeverityText($severity) . " {$code}: {$message}";
+		$output = self::getSeverityText($severity) . " {$code}: {$message}";
 
 		if (0 < count($help)) {
-			$stderr .= "\n\nTROUBLESHOOTING\n\n" . $this->getHelpText($help);
+			$output .= "\n\nTROUBLESHOOTING\n\n" . $this->getHelpText($help);
 		}
 
 		if (0 < count($data)) {
-			$stderr .= "\n\nINFORMATION\n\n" . $this->getDataText($data);
+			$output .= "\n\nINFORMATION\n\n" . $this->getDataText($data);
 		}
 
-		file_put_contents('php://stderr', "{$stderr}\n\n");
-		exit($code);
+		return $output;
 	}
 
 	private static function getSeverityText($severity)

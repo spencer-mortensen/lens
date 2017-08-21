@@ -331,6 +331,14 @@ class Console
 			$properties['Exception']['xdebug_message']
 		);
 
+		unset(
+			$properties['Error']['file'],
+			$properties['Error']['line'],
+			$properties['Error']['previous'],
+			$properties['Error']['trace'],
+			$properties['Error']['xdebug_message']
+		);
+
 		$exception->setProperties($properties);
 
 		$exception = self::getExceptionText($displayer->display($exception));

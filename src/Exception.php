@@ -102,7 +102,7 @@ class Exception extends \Exception
 
 		$severity = self::getSeverityFromErrorLevel($errorLevel);
 
-		$message = "Testphp encountered an unexpected issue.";
+		$message = "Testphp encountered an unexpected error.";
 
 		$help = array(
 			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$testphpIssuesUrl
@@ -114,6 +114,39 @@ class Exception extends \Exception
 			'file' => $file,
 			'line' => $line,
 			'level' => $errorLevel
+		);
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	/**
+	 * @param \Throwable $throwable
+	 * @return Exception
+	 */
+	public static function exception($throwable)
+	{
+		$code = self::CODE_INTERNAL;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = "Testphp encountered an object that was thrown but never caught.";
+
+		$help = array(
+			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$testphpIssuesUrl
+		);
+
+		$archivist = new Archivist\Archivist();
+
+		$errorMessage = $throwable->getMessage();
+		$file = $throwable->getFile();
+		$line = $throwable->getLine();
+
+		$data = array(
+			'code' => $code,
+			'message' => $errorMessage,
+			'file' => $file,
+			'line' => $line,
+			'object' => $archivist->archive($throwable),
 		);
 
 		return new self($code, $severity, $message, $help, $data);
