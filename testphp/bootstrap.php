@@ -1,7 +1,8 @@
 <?php
 
 $classes = array(
-	'TestPhp' => dirname(__DIR__) . '/src'
+	'TestPhp' => dirname(__DIR__) . '/src',
+	'Example' => __DIR__ . '/src'
 );
 
 $autoload = function(array $map)

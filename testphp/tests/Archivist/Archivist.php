@@ -84,6 +84,7 @@ $input = array('a' => 'A', 'b' => 'B', 'Z');
 $output = array('a' => 'A', 'b' => 'B', 'Z');
 
 
+/*
 // Input
 $input = new \stdClass();
 
@@ -93,6 +94,20 @@ $output = new ObjectArchive(
 	get_class($input),
 	array()
 );
+*/
+
+
+/*
+// Input
+$input = new \Example\Archivist\Object\Loop();
+
+// Output
+$output = new ObjectArchive(
+	spl_object_hash($input),
+	'Example\\Archivist\\Object\\Loop',
+	array()
+);
+*/
 
 
 // Input
