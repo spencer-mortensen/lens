@@ -159,16 +159,15 @@ class Test
 
 	private static function getGlobals()
 	{
-		$globals = $GLOBALS;
+		$output = array();
 
-		foreach ($globals as $key => $value) {
-			if (self::isSuperGlobal($key)) {
-				unset($globals[$key]);
+		foreach ($GLOBALS as $key => $value) {
+			if (!self::isSuperGlobal($key)) {
+				$output[$key] = $value;
 			}
 		}
 
-		ksort($globals, SORT_NATURAL);
-		return $globals;
+		return $output;
 	}
 
 	private static function isSuperGlobal($name)
