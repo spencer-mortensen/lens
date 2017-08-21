@@ -78,6 +78,10 @@ class Browser
 
 	private function getFile($path, $contents)
 	{
+		if (!$this->isTestsFile($path)) {
+			return;
+		}
+
 		// TODO: provide more useful exceptions:
 		if (!$this->parser->parse($contents, $fixture, $tests)) {
 			throw Exception::invalidTestsFile($path);
@@ -88,5 +92,10 @@ class Browser
 			'fixture' => $fixture,
 			'tests' => $tests
 		);
+	}
+
+	private function isTestsFile($path)
+	{
+		return substr($path, -4) === '.php';
 	}
 }
