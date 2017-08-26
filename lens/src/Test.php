@@ -2,7 +2,7 @@
 
 namespace Example;
 
-use TestPhp\Archivist\Archivist;
+use Lens\Archivist\Archivist;
 
 function send(array $state, array $script = array(), array $coverage = null)
 {

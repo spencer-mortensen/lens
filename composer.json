@@ -1,21 +1,21 @@
 {
-    "name": "testphp/testphp",
+    "name": "lens/lens",
     "type": "library",
-    "description": "testphp is a PHP unit-testing framework that catches more issues, and with simpler tests",
+    "description": "Lens is a PHP unit-testing framework that catches more issues, and with simpler tests",
     "keywords": [
         "unit",
         "test",
         "testing",
         "PHP",
-        "testphp",
+        "lens",
         "phpunit"
     ],
-    "homepage": "http://testphp.org",
+    "homepage": "http://lens.guide",
     "license": "GPL-3.0",
     "authors": [
         {
             "name": "Spencer Mortensen",
-            "email": "spencer@testphp.org",
+            "email": "spencer@lens.guide",
             "homepage": "http://spencermortensen.com",
             "role": "Developer"
         }
@@ -24,11 +24,11 @@
         "php": ">=5.3.0"
     },
     "bin": [
-        "bin/testphp"
+        "bin/lens"
     ],
     "autoload": {
         "psr-4": {
-            "TestPhp\\": "src"
+            "Lens\\": "src"
         }
     }
 }

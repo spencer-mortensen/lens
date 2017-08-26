@@ -3,44 +3,40 @@
 /**
  * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of testphp.
+ * This file is part of Lens.
  *
- * Testphp is free software: you can redistribute it and/or modify
+ * Lens is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Testphp is distributed in the hope that it will be useful,
+ * Lens is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with testphp. If not, see <http://www.gnu.org/licenses/>.
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
  *
- * @author Spencer Mortensen <spencer@testphp.org>
+ * @author Spencer Mortensen <spencer@lens.guide>
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp;
+namespace Lens;
 
-use TestPhp\Archivist\Archives\Archive;
-use TestPhp\Archivist\Archives\ObjectArchive;
-use TestPhp\Archivist\Archives\ResourceArchive;
+use Lens\Archivist\Archives\Archive;
+use Lens\Archivist\Archives\ObjectArchive;
+use Lens\Archivist\Archives\ResourceArchive;
 
 class Displayer
 {
 	/** @var array */
-	private $objects;
+	private $objectNames;
 
-	/** @var array */
-	private $resources;
-
-	public function __construct()
+	public function __construct(array $objectNames = array())
 	{
-		$this->objects = array();
-		$this->resources = array();
+		$this->objectNames = $objectNames;
 	}
 
 	public function display($archive)
@@ -68,10 +64,8 @@ class Displayer
 
 	private function showComplex(Archive $value)
 	{
-		$type = $value->getArchiveType();
-
-		/** @var ResourceArchive $value */
-		if ($type === Archive::TYPE_RESOURCE) {
+		if ($value->isResourceArchive()) {
+			/** @var ResourceArchive $value */
 			return $this->showResource($value);
 		}
 
@@ -181,17 +175,47 @@ class Displayer
 
 	private function showObject(ObjectArchive $object)
 	{
+		$id = $object->getId();
+
+		if (isset($this->objectNames[$id])) {
+			return $this->showVariable($this->objectNames[$id]);
+		}
+
+		return $this->showObjectValue($object);
+	}
+
+	private function showVariable($name)
+	{
+		return "\${$name}";
+	}
+
+	private function showObjectValue(ObjectArchive $object)
+	{
 		$class = $object->getClass();
 		$properties = $object->getProperties();
 
 		$classValue = $this->showString($class);
 
 		if (count($properties) === 0) {
-			return "object({$classValue})";
+			$innerText = $classValue;
+		} else {
+			$innerText = $this->getClassPropertiesText($properties);
 		}
 
-		$propertiesList = $this->showArray($properties);
+		return "object({$innerText})";
+	}
 
-		return "object({$classValue}, {$propertiesList})";
+	private function getClassPropertiesText(array $input)
+	{
+		$output = array();
+
+		foreach ($input as $class => $properties) {
+			$classText = $this->showString($class);
+			$propertiesText = $this->showArray($properties);
+
+			$output[] = "{$classText}: {$propertiesText}";
+		}
+
+		return implode(", ", $output);
 	}
 }

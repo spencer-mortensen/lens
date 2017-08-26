@@ -3,38 +3,38 @@
 /**
  * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of testphp.
+ * This file is part of Lens.
  *
- * Testphp is free software: you can redistribute it and/or modify
+ * Lens is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Testphp is distributed in the hope that it will be useful,
+ * Lens is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with testphp. If not, see <http://www.gnu.org/licenses/>.
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
  *
- * @author Spencer Mortensen <spencer@testphp.org>
+ * @author Spencer Mortensen <spencer@lens.guide>
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp;
+namespace Lens;
 
 class Exception extends \Exception
 {
 	/** @var string */
-	private static $testphpExecutable = 'testphp';
+	private static $lensExecutable = 'lens';
 
 	/** @var string */
-	private static $testphpGuideUrl = 'http://testphp.org/guide/';
+	private static $lensGuideUrl = 'http://lens.guide/'; // TODO: use the "guide" anchor
 
 	/** @var string */
-	private static $testphpIssuesUrl = 'https://github.com/Spencer-Mortensen/TestPhp/issues';
+	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues'; // TODO: update this
 
 	const CODE_INTERNAL = 0;
 	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;
@@ -102,10 +102,10 @@ class Exception extends \Exception
 
 		$severity = self::getSeverityFromErrorLevel($errorLevel);
 
-		$message = "Testphp encountered an unexpected error.";
+		$message = "Lens encountered an unexpected error.";
 
 		$help = array(
-			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$testphpIssuesUrl
+			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
 		);
 
 		$data = array(
@@ -129,10 +129,10 @@ class Exception extends \Exception
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Testphp encountered an object that was thrown but never caught.";
+		$message = "Lens encountered an object that was thrown but never caught.";
 
 		$help = array(
-			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$testphpIssuesUrl
+			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
 		);
 
 		$archivist = new Archivist\Archivist();
@@ -161,10 +161,10 @@ class Exception extends \Exception
 		$message = 'Unable to find the tests directory.';
 
 		$help = array(
-			"Do you have a tests directory? If not, you should check out this short guide to get started:\n" . self::$testphpGuideUrl,
+			"Do you have a tests directory? If not, you should check out this short guide to get started:\n" . self::$lensGuideUrl,
 			"Is your tests directory called \"tests\"? You need to use that name exactly, without any spelling or capitalization differences.",
-			"Is your tests directory directly under your project directory, or in a testphp directory that is directly under your project directory? Testphp will find your tests directory only if it's pretty near the surface.",
-			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$testphpExecutable . " ~/MyProject/tests"
+			"Is your tests directory directly under your project directory, or in a Lens directory that is directly under your project directory? Lens will find your tests directory only if it's pretty near the surface.",
+			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/tests"
 		);
 
 		$data = null;

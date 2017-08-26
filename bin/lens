@@ -1,16 +1,16 @@
 #!/usr/bin/env php
 <?php
 
-namespace TestPhp;
+namespace Lens;
 
 spl_autoload_register(
 	function ($class)
 	{
-		if (strncmp($class, 'TestPhp\\', 8) !== 0) {
+		if (strncmp($class, 'Lens\\', 5) !== 0) {
 			return;
 		}
 
-		$relativeClassName = substr($class, 8);
+		$relativeClassName = substr($class, 5);
 		$relativeFilePath = strtr($relativeClassName, '\\', '/') . '.php';
 		$absoluteFilePath = dirname(__DIR__) . "/src/{$relativeFilePath}";
 

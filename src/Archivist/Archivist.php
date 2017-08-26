@@ -3,32 +3,32 @@
 /**
  * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of testphp.
+ * This file is part of Lens.
  *
- * Testphp is free software: you can redistribute it and/or modify
+ * Lens is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Testphp is distributed in the hope that it will be useful,
+ * Lens is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with testphp. If not, see <http://www.gnu.org/licenses/>.
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
  *
- * @author Spencer Mortensen <spencer@testphp.org>
+ * @author Spencer Mortensen <spencer@lens.guide>
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp\Archivist;
+namespace Lens\Archivist;
 
 use ReflectionClass;
 use ReflectionProperty;
-use TestPhp\Archivist\Archives\ObjectArchive;
-use TestPhp\Archivist\Archives\ResourceArchive;
+use Lens\Archivist\Archives\ObjectArchive;
+use Lens\Archivist\Archives\ResourceArchive;
 
 class Archivist
 {
@@ -108,8 +108,12 @@ class Archivist
 				}
 
 				$property->setAccessible(true);
-
 				$propertyName = $property->getName();
+
+				if (self::isUnwantedProperty($className, $propertyName)) {
+					continue;
+				}
+
 				$propertyValue = $property->getValue($object);
 
 				$output[$className][$propertyName] = $this->archive($propertyValue);
@@ -119,6 +123,20 @@ class Archivist
 		} while ($class !== false);
 
 		return $output;
+	}
+
+	private static function isUnwantedProperty($class, $property)
+	{
+		return (
+			($property === 'file') ||
+			($property === 'line') ||
+			($property === 'previous') ||
+			($property === 'trace') ||
+			($property === 'xdebug_message')
+		) && (
+			($class === 'Error') ||
+			($class === 'Exception')
+		);
 	}
 
 	private function archiveResource($resource)

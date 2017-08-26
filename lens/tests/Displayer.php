@@ -1,10 +1,10 @@
 <?php
 
-namespace TestPhp;
+namespace Lens;
 
-use TestPhp\Archivist\Archivist;
+use Lens\Archivist\Archivist;
 
-require TESTPHP . '/bootstrap.php';
+require LENS . '/bootstrap.php';
 
 
 // Test

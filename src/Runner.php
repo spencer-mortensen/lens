@@ -3,27 +3,29 @@
 /**
  * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of testphp.
+ * This file is part of Lens.
  *
- * Testphp is free software: you can redistribute it and/or modify
+ * Lens is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Testphp is distributed in the hope that it will be useful,
+ * Lens is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with testphp. If not, see <http://www.gnu.org/licenses/>.
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
  *
- * @author Spencer Mortensen <spencer@testphp.org>
+ * @author Spencer Mortensen <spencer@lens.guide>
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace TestPhp;
+namespace Lens;
+
+use Lens\Engine\Evaluator;
 
 class Runner
 {
@@ -57,7 +59,10 @@ class Runner
 	/** @var Displayer */
 	private $displayer;
 
-	public function __construct(Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web)
+	/** @var Logger */
+	private $logger;
+
+	public function __construct(Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web, Logger $logger)
 	{
 		$displayer = new Displayer();
 
@@ -67,9 +72,10 @@ class Runner
 		$this->console = $console;
 		$this->web = $web;
 		$this->displayer = $displayer;
+		$this->logger = $logger;
 	}
 
-	public function run($executable, array $paths)
+	public function run(array $paths)
 	{
 		set_error_handler(array($this, 'errorHandler'));
 		set_exception_handler(array($this, 'exceptionHandler'));
@@ -80,21 +86,27 @@ class Runner
 			throw Exception::unknownTestsDirectory();
 		}
 
-		$testphpDirectory = dirname($tests);
-		$testsDirectory = "{$testphpDirectory}/tests";
-		$coverageDirectory = "{$testphpDirectory}/coverage";
+		$lensDirectory = dirname($tests);
+		$testsDirectory = "{$lensDirectory}/tests";
+		$coverageDirectory = "{$lensDirectory}/coverage";
 
-		$settings = $this->getSettings($testphpDirectory);
-		$this->findSrc($settings, $testphpDirectory, $srcDirectory);
+		$settings = $this->getSettings($lensDirectory);
+		$this->findSrc($settings, $lensDirectory, $srcDirectory);
 
 		if (count($paths) === 0) {
 			$paths[] = $testsDirectory;
 		}
 
-		$tests = $this->browser->browse($paths);
-		$results = $this->evaluator->evaluate($tests, $testphpDirectory, $srcDirectory, $executable);
+		$suites = $this->browser->browse($testsDirectory, $paths);
 
-		echo $this->console->summarize($results['suites']);
+		$this->evaluator->prepare($lensDirectory);
+		$results = $this->evaluator->run($suites, $lensDirectory, $srcDirectory);
+
+		// TODO:
+		$resultsText = $this->console->summarize($results);
+		$this->logger->info($resultsText);
+		exit;
+
 		$this->web->coverage($srcDirectory, $coverageDirectory, $results['coverage']);
 
 		restore_exception_handler();
@@ -107,7 +119,7 @@ class Runner
 	}
 
 	/**
-	 * @param \Throwable $exception
+	 * @param \Throwable|\Exception $exception
 	 */
 	public function exceptionHandler($exception)
 	{
@@ -116,16 +128,15 @@ class Runner
 		try {
 			throw $exception;
 		} catch (Exception $throwable) {
-			// Already an Exception object
 		} catch (\Throwable $throwable) {
 			$exception = Exception::exception($throwable);
 		} catch (\Exception $throwable) {
 			$exception = Exception::exception($throwable);
 		}
 
-		$stderr = $this->getStderrText($exception);
+		$message = $this->getStderrText($exception);
+		$this->logger->critical($message);
 
-		file_put_contents('php://stderr', "{$stderr}\n\n");
 		exit($code);
 	}
 
@@ -297,20 +308,20 @@ class Runner
 		return true;
 	}
 
-	private function findSrc(array $settings, $testphp, &$srcDirectory)
+	private function findSrc(array $settings, $lens, &$srcDirectory)
 	{
 		// TODO: refactor this:
-		return $this->findSrcFromSetting($testphp, $settings['src'], $srcDirectory) ||
-			$this->findSrcFromTestphp($testphp, $srcDirectory);
+		return $this->findSrcFromSetting($lens, $settings['src'], $srcDirectory) ||
+			$this->findSrcFromLens($lens, $srcDirectory);
 	}
 
-	private function findSrcFromSetting($testphp, &$relativePath, &$output)
+	private function findSrcFromSetting($lens, &$relativePath, &$output)
 	{
 		if ($relativePath === null) {
 			return false;
 		}
 
-		$absolutePath = $this->filesystem->getAbsolutePath("{$testphp}/{$relativePath}");
+		$absolutePath = $this->filesystem->getAbsolutePath("{$lens}/{$relativePath}");
 
 		if ($absolutePath === null) {
 			throw Exception::invalidSrcDirectory($relativePath);
@@ -320,15 +331,15 @@ class Runner
 		return true;
 	}
 
-	private function findSrcFromTestphp($testphp, &$output)
+	private function findSrcFromLens($lens, &$output)
 	{
-		return $this->findChild($testphp, self::$srcDirectoryName, $output) ||
-			$this->findChild(dirname($testphp), self::$srcDirectoryName, $output);
+		return $this->findChild($lens, self::$srcDirectoryName, $output) ||
+			$this->findChild(dirname($lens), self::$srcDirectoryName, $output);
 	}
 
-	private function getSettings($testphp)
+	private function getSettings($lens)
 	{
-		$path = $testphp . '/' . self::$settingsFileName;
+		$path = $lens . '/' . self::$settingsFileName;
 		$contents = $this->filesystem->read($path);
 
 		if ($contents === null) {

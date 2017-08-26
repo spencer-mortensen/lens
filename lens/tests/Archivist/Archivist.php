@@ -1,12 +1,12 @@
 <?php
 
-namespace TestPhp;
+namespace Lens;
 
-use TestPhp\Archivist\Archivist;
-use TestPhp\Archivist\Archives\ObjectArchive;
-use TestPhp\Archivist\Archives\ResourceArchive;
+use Lens\Archivist\Archivist;
+use Lens\Archivist\Archives\ObjectArchive;
+use Lens\Archivist\Archives\ResourceArchive;
 
-require TESTPHP . '/bootstrap.php';
+require LENS . '/bootstrap.php';
 
 
 // Test
