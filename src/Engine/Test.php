@@ -25,159 +25,233 @@
 
 namespace Lens\Engine;
 
-class Test implements Job
-{
-	/** @var callable */
-	private $callable;
+use Exception;
+use Lens\Archivist\Archivist;
+use Throwable;
 
-	/** @var Code */
+class Test
+{
+	/** @var Archivist */
+	private $archivist;
+
+	/** @var boolean */
+	private $isTerminated;
+
+	/** @var string */
 	private $code;
 
+	/** @var callable */
+	private $onShutdown;
+
 	/** @var array */
-	private $output;
+	private $state;
 
-	const KEY_FIXTURE = 'fixture';
-	const KEY_EXPECTED = 'expected';
-	const KEY_ACTUAL = 'actual';
-
-	/** @var string */
-	private $contextPhp;
-
-	/** @var string */
-	private $fixturePhp;
-
-	/** @var string */
-	private $expectedPhp;
-
-	/** @var string */
-	private $actualPhp;
-
-	public function __construct($context, $fixture, $expected, $actual)
+	public function __construct()
 	{
-		$this->contextPhp = $context;
-		$this->fixturePhp = $fixture;
-		$this->expectedPhp = $expected;
-		$this->actualPhp = $actual;
-	}
+		$this->archivist = new Archivist();
 
-	public function run($callable)
-	{
-		$this->callable = $callable;
+		ini_set('display_errors', 'Off');
+		set_error_handler(array($this, 'errorHandler'));
+		register_shutdown_function(array($this, 'shutdownFunction'));
+		self::unsetGlobals();
 
-		$this->code = new Code();
-
-		$this->output = array(
-			self::KEY_FIXTURE => null,
-			self::KEY_EXPECTED => null,
-			self::KEY_ACTUAL => null
+		$this->isTerminated = false;
+		$this->state = array(
+			'output' => null,
+			'variables' => array(),
+			'globals' => null,
+			'constants' => null,
+			'exception' => null,
+			'errors' => null,
+			'calls' => null
 		);
-
-		$this->runFixturePhp();
 	}
 
-	public function onReadyFixture(array $results)
+	public function run($code, $onShutdown)
 	{
-		$this->output[self::KEY_FIXTURE] = self::getState($results);
-
-		if ($this->code->isBroken()) {
-			$this->sendResults();
+		if ($this->isTerminated()) {
 			return;
 		}
 
-		$expectedResults = $this->runExpectedPhp();
-		$this->output[self::KEY_EXPECTED] = self::getState($expectedResults);
+		$this->code = $code;
+		$this->onShutdown = $onShutdown;
 
-		$this->runActualPhp($expectedResults[1]);
+		$this->evaluateCode();
 	}
 
-	private function runFixturePhp()
+	private function evaluateCode()
 	{
-		$fixturePhp = self::combine($this->contextPhp, $this->fixturePhp);
+		$this->state['exception'] = null;
+		$this->state['errors'] = array();
 
-		$this->runInternal($fixturePhp, Code::MODE_PLAY, 'onReadyFixture');
+		extract($this->state['variables']);
+		ob_start();
+
+		try {
+			eval($this->code);
+		} catch (Throwable $LENS_EXCEPTION) {
+			$this->isTerminated = true;
+			$this->state['exception'] = $LENS_EXCEPTION;
+			unset($LENS_EXCEPTION);
+		} catch (Exception $LENS_EXCEPTION) {
+			$this->isTerminated = true;
+			$this->state['exception'] = $LENS_EXCEPTION;
+			unset($LENS_EXCEPTION);
+		}
+
+		$this->state['variables'] = get_defined_vars();
+		ksort($this->state['variables'], SORT_NATURAL);
+		$this->setGlobalState();
+
+		$this->onShutdown = null;
 	}
 
-	private function runExpectedPhp()
+	private function setGlobalState()
 	{
-		$agentPhp = self::getAgentStartRecordingPhp();
-		$expectedPhp = self::combine($this->contextPhp, $agentPhp, $this->expectedPhp);
-
-		return $this->runExternal($expectedPhp, Code::MODE_RECORD);
+		$this->state['output'] = self::getOutput();
+		$this->state['globals'] = self::getGlobals();
+		$this->state['constants'] = self::getConstants();
+		$this->state['calls'] = self::getCalls();
 	}
 
-	private function runActualPhp($script)
+	public function shutdownFunction()
 	{
-		$agentPhp = self::getAgentStartPlayingPhp($script);
-		$actualPhp = self::combine($this->contextPhp, $agentPhp, $this->actualPhp);
+		if ($this->onShutdown === null) {
+			return;
+		}
 
-		$this->runInternal($actualPhp, Code::MODE_PLAY, 'onReadyActual');
+		$this->isTerminated = true;
+
+		$this->state['variables'] = array();
+		$this->getLastError();
+		$this->setGlobalState();
+
+		call_user_func($this->onShutdown);
 	}
 
-	public function onReadyActual($results)
+	public function errorHandler($level, $message, $file, $line)
 	{
-		$this->output[self::KEY_ACTUAL] = self::getState($results);
-
-		// TODO: add code coverage
-
-		$this->sendResults();
+		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
 	}
 
-	private function runInternal($code, $mode, $method)
+	private static function getOutput()
 	{
-		$this->code->setCode($code);
-		$this->code->setMode($mode);
-		$this->code->run(array($this, $method));
-	}
+		$output = ob_get_clean();
 
-	private function runExternal($code, $mode)
-	{
-		$this->code->setCode($code);
-		$this->code->setMode($mode);
-
-		$processor = new Processor();
-		$processor->run($this->code, $results);
-		$processor->halt();
-
-		return $results;
-	}
-
-	private function sendResults()
-	{
-		call_user_func($this->callable, $this->output);
-	}
-
-	private static function getAgentStartRecordingPhp()
-	{
-		return "\\Lens\\Engine\\Agent::startRecording();";
-	}
-
-	private static function getAgentStartPlayingPhp($script)
-	{
-		if (!is_string($script)) {
+		if (strlen($output) === 0) {
 			return null;
 		}
 
-		$scriptArgumentCode = var_export($script, true);
-		return "\\Lens\\Engine\\Agent::startPlaying({$scriptArgumentCode});";
+		return $output;
 	}
 
-	private static function combine()
+	private static function unsetGlobals()
 	{
-		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
+		foreach ($GLOBALS as $key => $value) {
+			if ($key !== 'GLOBALS') {
+				unset($GLOBALS[$key]);
+			}
+		}
 	}
 
-	private static function getState($results)
+	private static function getGlobals()
 	{
-		if (!is_array($results)) {
-			return null;
+		$globals = array();
+
+		foreach ($GLOBALS as $key => $value) {
+			if (!self::isSuperGlobal($key)) {
+				$globals[$key] = $value;
+			}
 		}
 
-		$state = $results[0];
+		ksort($globals, SORT_NATURAL);
+		return $globals;
+	}
 
-		if (!is_array($state)) {
-			return null;
+	private static function isSuperGlobal($name)
+	{
+		$superglobals = array(
+			'GLOBALS' => true,
+			'_SERVER' => true,
+			'_GET' => true,
+			'_POST' => true,
+			'_FILES' => true,
+			'_COOKIE' => true,
+			'_SESSION' => true,
+			'_REQUEST' => true,
+			'_ENV' => true
+		);
+
+		return isset($superglobals[$name]);
+	}
+
+	private static function getConstants()
+	{
+		$constants = get_defined_constants(true);
+		$userConstants = &$constants['user'];
+
+		if (!is_array($userConstants)) {
+			return array();
 		}
 
-		return $state;
+		ksort($userConstants, SORT_NATURAL);
+		return $userConstants;
+	}
+
+	private static function getCalls()
+	{
+		return Agent::getCalls();
+	}
+
+	private function getLastError()
+	{
+		$error = error_get_last();
+		error_clear_last();
+
+		if (is_array($error)) {
+			$this->state['errors'][] = self::getErrorValue($error['type'], $error['message'], $error['file'], $error['line']);
+		}
+	}
+
+	private static function getErrorValue($level, $message, $file, $line)
+	{
+		list($file, $line) = self::getSource($file, $line);
+
+		return array($level, $message, $file, $line);
+	}
+
+	private static function getSource($errorFile, $errorLine)
+	{
+		if (!self::isEvaluatedCode($errorFile, $file, $line)) {
+			$file = $errorFile;
+			$line = $errorLine;
+		} elseif ($file === __FILE__) {
+			$file = null;
+			$line = $errorLine;
+		}
+
+		return array($file, $line);
+	}
+
+	private static function isEvaluatedCode($input, &$file, &$line)
+	{
+		$pattern = '~^((?:[a-z]+://)?(?:/[^/]+)+)\\(([0-9]+)\\) : eval\\(\\)\'d code$~';
+
+		if (preg_match($pattern, $input, $match) !== 1) {
+			return false;
+		}
+
+		list( , $file, $line) = $match;
+		return true;
+	}
+
+	public function isTerminated()
+	{
+		return $this->isTerminated;
+	}
+
+	public function getState()
+	{
+		return $this->archivist->archive($this->state);
 	}
 }

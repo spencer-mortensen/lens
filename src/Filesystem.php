@@ -51,6 +51,47 @@ class Filesystem
 		return $this->readFile($path);
 	}
 
+	public function listFiles($path)
+	{
+		$contents = array();
+
+		$this->listFilesInternal($path, '', $contents);
+
+		return $contents;
+	}
+
+	private function listFilesInternal($baseDirectory, $relativePath, array &$contents)
+	{
+		set_error_handler($this->errorHandler);
+
+		$absolutePath = rtrim("{$baseDirectory}/{$relativePath}", '/');
+
+		$files = scandir($absolutePath, SCANDIR_SORT_NONE);
+
+		if ($files === false) {
+			// TODO: throw exception
+			restore_error_handler();
+			return null;
+		}
+
+		foreach ($files as $file) {
+			if (($file === '.') || ($file === '..')) {
+				continue;
+			}
+
+			$childRelativePath = ltrim("{$relativePath}/{$file}", '/');
+			$childAbsolutePath = "{$baseDirectory}/{$childRelativePath}";
+
+			if (is_dir($childAbsolutePath)) {
+				$this->listFilesInternal($baseDirectory, $childRelativePath, $contents);
+			} else {
+				$contents[] = $childRelativePath;
+			}
+		}
+
+		restore_error_handler();
+	}
+
 	private function readDirectory($path)
 	{
 		set_error_handler($this->errorHandler);

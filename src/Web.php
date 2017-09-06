@@ -40,14 +40,14 @@ class Web
 	private $code;
 
 	/** @var array */
-	private $status;
+	private $coverage;
 
 	public function __construct(Filesystem $filesystem)
 	{
 		$this->filesystem = $filesystem;
 	}
 
-	public function coverage($codeDirectory, $coverageDirectory, $coverage)
+	public function coverage($codeDirectory, $coverageDirectory, $code, $coverage)
 	{
 		// TODO: generate a notice when ($codeDirectory === null)
 		$this->codeDirectory = $codeDirectory;
@@ -60,7 +60,7 @@ class Web
 		if ($coverage === null) {
 			$this->writeInstructions();
 		} else {
-			$this->writeCodeCoverage($coverage);
+			$this->writeCodeCoverage($code, $coverage);
 		}
 	}
 
@@ -155,14 +155,10 @@ class Web
 		return "<pre><code>{$codeHtml}</code></pre>";
 	}
 
-	private function writeCodeCoverage($coverage)
+	private function writeCodeCoverage(array $code, array $coverage)
 	{
-		if ($coverage === null) {
-			return;
-		}
-
-		$this->code = $coverage['code'];
-		$this->status = $coverage['status'];
+		$this->code = $code;
+		$this->coverage = $coverage;
 
 		$filePaths = array_keys($this->code);
 		$hierarchy = self::getRelativeHierarchy($filePaths);
@@ -347,7 +343,7 @@ class Web
 		$titleHtml = self::html5TextEncode($name);
 
 		$code = $this->code[$path];
-		$status = $this->status[$path];
+		$status = $this->coverage[$path];
 
 		$pass = count(array_filter($status));
 		$fail = count($status) - $pass;
@@ -419,7 +415,8 @@ class Web
 				$attribute = ' class="fail"';
 			}
 
-			$rows[] = "<tr{$attribute}><th>{$i}</th><td>{$lineHtml}</td></tr>";
+			$lineNumber = $i + 1;
+			$rows[] = "<tr{$attribute}><th>{$lineNumber}</th><td>{$lineHtml}</td></tr>";
 		}
 
 		$rowHtml = implode("\n", array_map(array('self', 'indent'), $rows));

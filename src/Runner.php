@@ -25,8 +25,6 @@
 
 namespace Lens;
 
-use Lens\Engine\Evaluator;
-
 class Runner
 {
 	/** @var string */
@@ -59,10 +57,7 @@ class Runner
 	/** @var Displayer */
 	private $displayer;
 
-	/** @var Logger */
-	private $logger;
-
-	public function __construct(Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web, Logger $logger)
+	public function __construct(Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web)
 	{
 		$displayer = new Displayer();
 
@@ -72,7 +67,6 @@ class Runner
 		$this->console = $console;
 		$this->web = $web;
 		$this->displayer = $displayer;
-		$this->logger = $logger;
 	}
 
 	public function run(array $paths)
@@ -98,16 +92,13 @@ class Runner
 		}
 
 		$suites = $this->browser->browse($testsDirectory, $paths);
+		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $suites);
 
-		$this->evaluator->prepare($lensDirectory);
-		$results = $this->evaluator->run($suites, $lensDirectory, $srcDirectory);
+		echo $this->console->summarize($suites);
 
-		// TODO:
-		$resultsText = $this->console->summarize($results);
-		$this->logger->info($resultsText);
-		exit;
-
-		$this->web->coverage($srcDirectory, $coverageDirectory, $results['coverage']);
+		if (isset($code, $coverage)) {
+			$this->web->coverage($srcDirectory, $coverageDirectory, $code, $coverage);
+		}
 
 		restore_exception_handler();
 		restore_error_handler();
@@ -135,7 +126,8 @@ class Runner
 		}
 
 		$message = $this->getStderrText($exception);
-		$this->logger->critical($message);
+
+		file_put_contents("php://stderr", "{$message}\n");
 
 		exit($code);
 	}

@@ -162,7 +162,7 @@ class Parser
 		$this->input = preg_replace($pattern, '', $this->input, -1, $count);
 	}
 
-	private static function getPattern($expression, $flags)
+	private static function getPattern($expression, $flags = '')
 	{
 		$delimiter = "\x03";
 

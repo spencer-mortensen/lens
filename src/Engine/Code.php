@@ -25,324 +25,160 @@
 
 namespace Lens\Engine;
 
-use Exception;
-use Lens\Archivist\Archivist;
-use Throwable;
-
-class Code implements Job
+class Code
 {
-	const MODE_RECORD = 1;
-	const MODE_PLAY = 2;
+	const LENS_CONSTANT_NAME = 'LENS';
 
-	/** @var Archivist */
-	private $archivist;
-
-	/** @var callable */
-	private $callable;
-
-	/** @var string */
-	private $code;
-
-	/** @var integer */
-	private $mode;
-
-	/** @var boolean */
-	private $isCoverageEnabled;
-
-	/** @var boolean */
-	private $isBroken;
-
-	/** @var boolean */
-	private $isRunning;
-
-	/** @var array */
-	private $state;
-
-	// Output written to STDOUT/STDERR (and the overall exit code) is not checked by Lens
-	public function __construct()
+	public function prepare($lensDirectory)
 	{
-		$this->archivist = new Archivist();
+		define(self::LENS_CONSTANT_NAME, $lensDirectory . '/');
 
-		ini_set('display_errors', 'Off');
-		set_error_handler(array($this, 'errorHandler'));
-		register_shutdown_function(array($this, 'shutdownFunction'));
-		self::unsetGlobals();
+		spl_autoload_register(
+			function ($class)
+			{
+				$mockPrefix = 'Lens\\Mock\\';
+				$mockPrefixLength = strlen($mockPrefix);
 
-		$this->isBroken = false;
-		$this->state = array(
-			'output' => null,
-			'variables' => array(),
-			'globals' => null,
-			'constants' => null,
-			'exception' => null,
-			'errors' => null,
-			'calls' => null
+				if (strncmp($class, $mockPrefix, $mockPrefixLength) !== 0) {
+					return;
+				}
+
+				$parentClass = substr($class, $mockPrefixLength);
+
+				$mockBuilder = new MockBuilder($mockPrefix, $parentClass);
+				$mockCode = $mockBuilder->getMock();
+
+				eval($mockCode);
+			}
 		);
 	}
 
-	public function setCode($code)
+	public function getExpectedPhp($fixture, $input, $output)
 	{
-		$this->code = $code;
+		$contextPhp = self::extractContextPhp($fixture);
+		$beforePhp = self::combine($contextPhp, $fixture, $input);
+		$afterPhp = self::combine($contextPhp, self::useMockCalls($output));
+
+		return array($beforePhp, $afterPhp);
 	}
 
-	public function setMode($mode)
+	public function getActualPhp($fixture, $input, $subject)
 	{
-		$this->mode = $mode;
-		$this->isCoverageEnabled = $this->isCoverageEnabled($this->mode);
+		$contextPhp = self::extractContextPhp($fixture);
+		$beforePhp = self::combine($contextPhp, $fixture, $input);
+		$afterPhp = self::combine($contextPhp, $subject);
+
+		return array($beforePhp, $afterPhp);
 	}
 
-	public function run($callable)
+	private static function extractContextPhp(&$fixturePhp)
 	{
-		$this->callable = $callable;
+		$namespacePhp = self::extractNamespacePhp($fixturePhp);
+		$usePhp = self::extractUsePhp($fixturePhp);
 
-		if ($this->isBroken) {
-			$results = null;
-		} else {
-			$results = $this->evaluateCode();
-		}
-
-		$this->sendResults($results);
+		return self::combine($namespacePhp, $usePhp);
 	}
 
-	public function isBroken()
+	private static function extractNamespacePhp(&$inputPhp)
 	{
-		return $this->isBroken;
-	}
+		$namespacePattern = self::getPattern('^\s*namespace\h+[^\n\r]+');
 
-	private function evaluateCode()
-	{
-		$this->state['exception'] = null;
-		$this->state['errors'] = array();
-		extract($this->state['variables']);
-		ob_start();
-
-		$this->isRunning = true;
-		$this->startCoverage();
-
-		try {
-			eval($this->code);
-		} catch (Throwable $LENS_EXCEPTION) {
-			$this->isBroken = true;
-			$this->state['exception'] = $LENS_EXCEPTION;
-			unset($LENS_EXCEPTION);
-		} catch (Exception $LENS_EXCEPTION) {
-			$this->isBroken = true;
-			$this->state['exception'] = $LENS_EXCEPTION;
-			unset($LENS_EXCEPTION);
-		}
-
-		$this->stopCoverage();
-		$this->isRunning = false;
-
-		$this->state['variables'] = get_defined_vars();
-		$this->getGlobalState();
-
-		return $this->getResults();
-	}
-
-	public function shutdownFunction()
-	{
-		if (!$this->isRunning) {
-			return;
-		}
-
-		$this->isBroken = true;
-
-		$this->stopCoverage();
-		$this->state['variables'] = array();
-		$this->getLastError();
-		$this->getGlobalState();
-
-		$results = $this->getResults();
-
-		$this->sendResults($results);
-	}
-
-	private function getGlobalState()
-	{
-		$this->state['output'] = self::getOutput();
-		$this->state['globals'] = self::getGlobals();
-		$this->state['constants'] = self::getConstants();
-		$this->state['calls'] = self::getCalls();
-	}
-
-	private function getResults()
-	{
-		ksort($this->state['variables'], SORT_NATURAL);
-		ksort($this->state['globals'], SORT_NATURAL);
-		ksort($this->state['constants'], SORT_NATURAL);
-
-		$archivedState = $this->archivist->archive($this->state);
-		$script = $this->getScript();
-		$coverage = $this->getCoverage();
-
-		return array($archivedState, $script, $coverage);
-	}
-
-	private function sendResults($results)
-	{
-		call_user_func($this->callable, $results);
-	}
-
-	public function errorHandler($level, $message, $file, $line)
-	{
-		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
-	}
-
-	private static function getOutput()
-	{
-		$output = ob_get_clean();
-
-		if (strlen($output) === 0) {
+		if (preg_match($namespacePattern, $inputPhp, $match, PREG_OFFSET_CAPTURE) !== 1) {
 			return null;
 		}
 
-		return $output;
+		$inputPhp = trim(substr($inputPhp, $match[0][1] + strlen($match[0][0])));
+		return trim($match[0][0]);
 	}
 
-	private static function unsetGlobals()
+	// TODO: this might corrupt multiline text strings:
+	private static function extractUsePhp(&$inputPhp)
 	{
-		foreach ($GLOBALS as $key => $value) {
-			if ($key !== 'GLOBALS') {
-				unset($GLOBALS[$key]);
-			}
-		}
-	}
+		$inputLines = self::getLines($inputPhp);
+		$outputLines = array();
 
-	private static function getGlobals()
-	{
-		$globals = array();
-
-		foreach ($GLOBALS as $key => $value) {
-			if (!self::isSuperGlobal($key)) {
-				$globals[$key] = $value;
+		foreach ($inputLines as $i => $line) {
+			if (self::getUsePhp($line, $usePhp)) {
+				unset($inputLines[$i]);
+				$outputLines[] = $usePhp;
 			}
 		}
 
-		return $globals;
+		$inputPhp = self::getTrimmedString($inputLines);
+		return self::getTrimmedString($outputLines);
 	}
 
-	private static function isSuperGlobal($name)
+	private static function getLines($code)
 	{
-		$superglobals = array(
-			'GLOBALS' => true,
-			'_SERVER' => true,
-			'_GET' => true,
-			'_POST' => true,
-			'_FILES' => true,
-			'_COOKIE' => true,
-			'_SESSION' => true,
-			'_REQUEST' => true,
-			'_ENV' => true
-		);
-
-		return isset($superglobals[$name]);
+		$pattern = self::getPattern('\\n|\\r', 'm');
+		return preg_split($pattern, trim($code));
 	}
 
-	private static function getConstants()
+	private static function getUsePhp($code, &$usePhp)
 	{
-		$constants = get_defined_constants(true);
-		$userConstants = &$constants['user'];
+		$pattern = self::getPattern('^\h*use\\h+([^\\h]+);\h*(// Mock)?\h*$');
 
-		if (!is_array($userConstants)) {
-			return array();
-		}
-
-		return $userConstants;
-	}
-
-	private static function getCalls()
-	{
-		return Agent::getCalls();
-	}
-
-	private function getScript()
-	{
-		if ($this->mode === self::MODE_RECORD) {
-			return Agent::getScript();
-		}
-
-		return null;
-	}
-
-	private function isCoverageEnabled($mode)
-	{
-		return ($mode === self::MODE_PLAY) && function_exists('xdebug_start_code_coverage');
-	}
-
-	private function startCoverage()
-	{
-		if ($this->isCoverageEnabled) {
-			xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
-		}
-	}
-
-	private function stopCoverage()
-	{
-		if ($this->isCoverageEnabled) {
-			xdebug_stop_code_coverage(false);
-		}
-	}
-
-	private function getCoverage()
-	{
-		if (!$this->isCoverageEnabled) {
-			return null;
-		}
-
-		$prefix = __DIR__ . '/';
-		$prefixLength = strlen($prefix);
-
-		$coverage = xdebug_get_code_coverage();
-
-		foreach ($coverage as $path => $lines) {
-			if (strncmp($path, $prefix, $prefixLength) === 0) {
-				unset($coverage[$path]);
-			}
-		}
-
-		return $coverage;
-	}
-
-	private function getLastError()
-	{
-		$error = error_get_last();
-		error_clear_last();
-
-		if (is_array($error)) {
-			$this->state['errors'][] = self::getErrorValue($error['type'], $error['message'], $error['file'], $error['line']);
-		}
-	}
-
-	private static function getErrorValue($level, $message, $file, $line)
-	{
-		list($file, $line) = self::getSource($file, $line);
-
-		return array($level, $message, $file, $line);
-	}
-
-	private static function getSource($errorFile, $errorLine)
-	{
-		if (!self::isEvaluatedCode($errorFile, $file, $line)) {
-			$file = $errorFile;
-			$line = $errorLine;
-		} elseif ($file === __FILE__) {
-			$file = null;
-			$line = $errorLine;
-		}
-
-		return array($file, $line);
-	}
-
-	private static function isEvaluatedCode($input, &$file, &$line)
-	{
-		$pattern = '~^((?:[a-z]+://)?(?:/[^/]+)+)\(([0-9]+)\) : eval\(\)\'d code$~';
-
-		if (preg_match($pattern, $input, $match) !== 1) {
+		if (preg_match($pattern, $code, $match) !== 1) {
 			return false;
 		}
 
-		list( , $file, $line) = $match;
+		$namespace = $match[1];
+		$isMock = (count($match) === 3);
+
+		if ($isMock) {
+			$namespace = 'Lens\\Mock\\' . $namespace;
+		}
+
+		$usePhp = "use {$namespace};";
 		return true;
+	}
+
+	private static function getTrimmedString(array $lines)
+	{
+		if (count($lines) === 0) {
+			return null;
+		}
+
+		$string = trim(implode("\n", $lines));
+
+		if (count($string) === 0) {
+			return null;
+		}
+
+		return $string;
+	}
+
+	private static function useMockCalls($code)
+	{
+		$expression = '^\\s*(\\$.+?)->(.+?)\\((.*?)\\);\\s*// (return|throw)\\s+(.*);$';
+
+		$pattern = self::getPattern($expression, 'm');
+
+		return preg_replace_callback($pattern, 'self::getMockCall', $code);
+	}
+
+	protected static function getMockCall(array $match)
+	{
+		list(, $object, $method, $argumentList, $resultAction, $resultValue) = $match;
+
+		$methodName = var_export($method, true);
+		$arguments = "array({$argumentList})";
+
+		$resultType = ($resultAction === 'throw' ? Agent::ACTION_THROW : Agent::ACTION_RETURN);
+		$result = "array({$resultType}, {$resultValue})";
+
+		return "\\Lens\\Engine\\Agent::call({$object}, {$methodName}, {$arguments}, {$result});";
+	}
+
+	private static function combine()
+	{
+		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
+	}
+
+	private static function getPattern($expression, $flags = '')
+	{
+		$delimiter = "\x03";
+
+		return "{$delimiter}{$expression}{$delimiter}{$flags}";
 	}
 }

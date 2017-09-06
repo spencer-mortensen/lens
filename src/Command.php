@@ -25,44 +25,54 @@
 
 namespace Lens;
 
-use Lens\Engine\Evaluator;
+use Lens\Engine\Coverage;
+use Lens\Engine\Shell\Evaluator;
+use Lens\Engine\Shell\TestExpected;
+use Lens\Engine\Shell\TestActual;
 
 class Command
 {
-	/** @var Logger */
-	private $logger;
-
-	// TODO: check for the PHP 5.4 and pcntl dependencies, and add a note if a dependency is not met
 	public function __construct()
 	{
-		$this->logger = new Logger('lens');
-
 		$options = array();
 
 		$parser = new OptionsParser($GLOBALS['argv']);
 
-		/*
-		// EXAMPLE:
-		lens --version  # get the installed version of lens
-		*/
+		if ($parser->getLongKeyValue($options)) {
+			list($key, $value) = each($options);
 
-		$parser->getLongFlag($options);
+			$decoded = base64_decode($value);
+			$decompressed = gzinflate($decoded);
+			$arguments = unserialize($decompressed);
 
-		if (isset($options['version'])) {
-			$this->getVersion();
+			switch ($key) {
+				case 'actual':
+					$this->getActual($arguments);
+					break;
+
+				case 'expected':
+					$this->getExpected($arguments);
+					break;
+
+				case 'coverage':
+					$this->getCoverage($arguments);
+					break;
+
+				default:
+					// TODO: error
+			}
 
 			return;
 		}
 
-		/*
-		// INTERNAL COMMANDS (not intended for end users):
-		lens --mode='test' --file='...  # get code coverage for source-code file
-		*/
+		if ($parser->getLongFlag($options)) {
+			// lens --version  # get the installed version of Lens
+			if (isset($options['version'])) {
+				$this->getVersion();
+			} else {
+				// TODO: error
+			}
 
-		while ($parser->getLongKeyValue($options));
-
-		if (isset($options['mode'])) {
-			$this->getCoverage(@$options['file']);
 			return;
 		}
 
@@ -76,35 +86,51 @@ class Command
 
 		while ($parser->getValue($paths));
 
-		$this->getRunner($paths);
+		$executable = $GLOBALS['argv'][0];
+		$this->getRunner($executable, $paths);
 	}
 
-	private function getCoverage($file)
+	private function getActual(array $arguments)
 	{
-		// TODO: use the filesystem
-		$filePath = realpath($file);
+		$executable = $GLOBALS['argv'][0];
+		list($lensDirectory, $srcDirectory, $fixture, $input, $output, $subject) = $arguments;
 
-		// TODO: require a valid PHP source-code file
+		$test = new TestActual($executable, $lensDirectory, $srcDirectory);
+		$test->run($fixture, $input, $output, $subject);
+	}
+
+	private function getExpected(array $arguments)
+	{
+		list($lensDirectory, $fixture, $input, $output) = $arguments;
+
+		$test = new TestExpected($lensDirectory);
+		$test->run($fixture, $input, $output);
+	}
+
+	private function getCoverage(array $arguments)
+	{
+		list($srcDirectory, $relativePaths) = $arguments;
+
 		$coverage = new Coverage();
-		$coverage->run($filePath);
+		$coverage->run($srcDirectory, $relativePaths);
 	}
 
 	private function getVersion()
 	{
-		$this->logger->info('lens 0.0.17');
+		echo "lens 0.0.17\n";
 		exit(0);
 	}
 
-	private function getRunner(array $paths)
+	private function getRunner($executable, array $paths)
 	{
 		$filesystem = new Filesystem();
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
-		$evaluator = new Evaluator();
+		$evaluator = new Evaluator($executable);
 		$console = new Console();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($filesystem, $browser, $evaluator, $console, $web, $this->logger);
+		$runner = new Runner($filesystem, $browser, $evaluator, $console, $web);
 		$runner->run($paths);
 	}
 }

@@ -115,7 +115,7 @@ unset($input);
 
 // Input
 $archivist = new Archivist();
-$input = $archivist->archive(fopen('php://stdout', 'r'));
+$input = $archivist->archive(fopen('php://memory', 'w+'));
 unset($archivist);
 
 // Output

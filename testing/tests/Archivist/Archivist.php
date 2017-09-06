@@ -111,7 +111,7 @@ $output = new ObjectArchive(
 
 
 // Input
-$input = fopen('php://stdout', 'r');
+$input = fopen('php://memory', 'w+');
 
 // Output
 $output = new ResourceArchive(

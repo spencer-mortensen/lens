@@ -60,9 +60,9 @@ class Console
 				foreach ($cases as $lineCase => $case) {
 					$input = $case['input'];
 					$output = $case['output'];
-					$result = $case['result'];
+					$results = $case['results'];
 
-					$this->verify($subject, $input, $output, $result);
+					$this->verify($subject, $input, $output, $results);
 				}
 			}
 		}
@@ -80,24 +80,20 @@ class Console
 		return implode("\n", $output) . "\n";
 	}
 
-	private function verify($subject, $input, $output, array $result)
+	private function verify($subject, $input, $output, array $results)
 	{
-		$fixture = $result['fixture'];
-		$expected = $result['expected'];
-		$actual = $result['actual'];
-
-		$fixtureFormatter = new Formatter(self::getObjectNames($fixture));
-		$expectedFormatter = new Formatter(self::getObjectNames($expected));
-		$actualFormatter = new Formatter(self::getObjectNames($actual));
+		$fixture = $results['fixture'];
+		$expected = $results['expected'];
+		$actual = $results['actual'];
 
 		if (!is_array($expected) || !is_array($actual)) {
+			$fixtureFormatter = new Formatter(self::getObjectNames($fixture));
 			$issues = $this->getFixtureIssues($fixtureFormatter, $fixture);
 			$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues);
 			return false;
 		}
 
-		self::ignoreUnwantedVariables($expected, $actual);
-		// TODO: ignore fixture variables (perhaps when $expected or $actual is null?)
+		self::ignoreSetupVariables($expected, $actual);
 		$this->ignoreMutualValues($expected, $actual);
 
 		if (self::isEmptyState($expected) && self::isEmptyState($actual)) {
@@ -105,7 +101,7 @@ class Console
 			return true;
 		}
 
-		$issues = $this->getDifferenceIssues($expectedFormatter, $expected, $actualFormatter, $actual);
+		$issues = $this->getDifferenceIssues($expected, $actual);
 		$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues);
 		return false;
 	}
@@ -142,7 +138,7 @@ class Console
 		return true;
 	}
 
-	private static function ignoreUnwantedVariables(array $expected, array &$actual)
+	private static function ignoreSetupVariables(array $expected, array &$actual)
 	{
 		foreach ($actual['variables'] as $name => $value) {
 			if (!array_key_exists($name, $expected['variables'])) {
@@ -191,8 +187,11 @@ class Console
 		return implode("\n", call_user_func_array('array_merge', $sections));
 	}
 
-	private function getDifferenceIssues(Formatter $expectedFormatter, array $expected, Formatter $actualFormatter, array $actual)
+	private function getDifferenceIssues(array $expected, array $actual)
 	{
+		$expectedFormatter = new Formatter(self::getObjectNames($expected));
+		$actualFormatter = new Formatter(self::getObjectNames($actual));
+
 		$sections = array(
 			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actual['exception'])),
 			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expected['exception'])),
