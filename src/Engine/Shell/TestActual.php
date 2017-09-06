@@ -125,8 +125,12 @@ class TestActual
 	}
 
 	// TODO: this is duplicated in "TestExpected"
-	private static function getCleanPostState(array $pre, array $post)
+	private static function getCleanPostState(array $pre, array $post = null)
 	{
+		if ($post === null) {
+			return null;
+		}
+
 		unset($post['constants'][Code::LENS_CONSTANT_NAME]);
 
 		self::removeDuplicateKeys($pre['variables'], $post['variables']);

@@ -51,8 +51,7 @@ class Evaluator implements \Lens\Evaluator
 
 	public function run($lensDirectory, $srcDirectory, array $suites)
 	{
-		// TODO: sample only those files that have changed since the last sampling
-		$relativePaths = $this->filesystem->listFiles($srcDirectory);
+		$relativePaths = $this->getRelativePaths($srcDirectory);
 
 		$this->startCoverage($srcDirectory, $relativePaths, $code, $executableLines);
 		$this->startTests($lensDirectory, $srcDirectory, $suites, $executedLines);
@@ -65,6 +64,20 @@ class Evaluator implements \Lens\Evaluator
 		}
 
 		return array($suites, $code, $coverage);
+	}
+
+	private function getRelativePaths($srcDirectory)
+	{
+		// TODO: sample only those files that have changed since the last sampling
+		$paths = $this->filesystem->listFiles($srcDirectory);
+
+		foreach ($paths as $key => $path) {
+			if (substr($path, -4) !== '.php') {
+				unset($paths[$key]);
+			}
+		}
+
+		return array_values($paths);
 	}
 
 	private function startCoverage($srcDirectory, $relativePaths, &$code, &$executableLines)
