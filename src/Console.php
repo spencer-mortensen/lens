@@ -62,7 +62,7 @@ class Console
 					$output = $case['output'];
 					$results = $case['results'];
 
-					$this->verify($subject, $input, $output, $results);
+					$this->verify($subject, $input, $output, $results, $filePath);
 				}
 			}
 		}
@@ -80,7 +80,7 @@ class Console
 		return implode("\n", $output) . "\n";
 	}
 
-	private function verify($subject, $input, $output, array $results)
+	private function verify($subject, $input, $output, array $results, $testFilePath)
 	{
 		$fixture = $results['fixture'];
 		$expected = $results['expected'];
@@ -89,7 +89,7 @@ class Console
 		if (!is_array($expected) || !is_array($actual)) {
 			$fixtureFormatter = new Formatter(self::getObjectNames($fixture));
 			$issues = $this->getFixtureIssues($fixtureFormatter, $fixture);
-			$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues);
+			$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues, $testFilePath);
 			return false;
 		}
 
@@ -102,7 +102,7 @@ class Console
 		}
 
 		$issues = $this->getDifferenceIssues($expected, $actual);
-		$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues);
+		$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues, $testFilePath);
 		return false;
 	}
 
@@ -300,9 +300,11 @@ class Console
 		return array_map(array($formatter, 'getCall'), $calls);
 	}
 
-	private function getFailedTestText($subject, $input, $output, $issues)
+	private function getFailedTestText($subject, $input, $output, $issues, $testFilePath)
 	{
 		$sections = array();
+
+		$sections[] = "   {$testFilePath}:";
 		$sections[] = "   // Test\n" . self::pad(self::wrap($subject), '   ');
 
 		if ($input !== null) {

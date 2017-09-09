@@ -175,22 +175,6 @@ class Displayer
 
 	private function showObject(ObjectArchive $object)
 	{
-		$id = $object->getId();
-
-		if (isset($this->objectNames[$id])) {
-			return $this->showVariable($this->objectNames[$id]);
-		}
-
-		return $this->showObjectValue($object);
-	}
-
-	private function showVariable($name)
-	{
-		return "\${$name}";
-	}
-
-	private function showObjectValue(ObjectArchive $object)
-	{
 		$class = $object->getClass();
 		$properties = $object->getProperties();
 

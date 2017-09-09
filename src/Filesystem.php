@@ -55,22 +55,21 @@ class Filesystem
 	{
 		$contents = array();
 
+		set_error_handler($this->errorHandler);
 		$this->listFilesInternal($path, '', $contents);
+		restore_error_handler();
 
 		return $contents;
 	}
 
 	private function listFilesInternal($baseDirectory, $relativePath, array &$contents)
 	{
-		set_error_handler($this->errorHandler);
-
 		$absolutePath = rtrim("{$baseDirectory}/{$relativePath}", '/');
 
 		$files = scandir($absolutePath, SCANDIR_SORT_NONE);
 
 		if ($files === false) {
 			// TODO: throw exception
-			restore_error_handler();
 			return null;
 		}
 
@@ -88,8 +87,6 @@ class Filesystem
 				$contents[] = $childRelativePath;
 			}
 		}
-
-		restore_error_handler();
 	}
 
 	private function readDirectory($path)

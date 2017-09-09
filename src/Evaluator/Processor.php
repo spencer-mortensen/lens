@@ -23,39 +23,38 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens;
+namespace Lens\Evaluator;
 
-// TODO: delete this class
-class Shell
+use SpencerMortensen\ParallelProcessor;
+use SpencerMortensen\ParallelProcessor\Fork\ForkWorker;
+use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
+use SpencerMortensen\ParallelProcessor\Shell\ShellWorker;
+
+class Processor extends ParallelProcessor\Processor
 {
-	private static $STDOUT = 1;
-	private static $STDERR = 2;
+	/** @var boolean */
+	private $useForks;
 
-	public function run($command, &$stdout, &$stderr, &$exitCode)
+	public function __construct()
 	{
-		$descriptor = array(
-			self::$STDOUT => array('pipe', 'w'),
-			self::$STDERR => array('pipe', 'w')
-		);
+		parent::__construct();
 
-		$process = proc_open($command, $descriptor, $pipes);
-
-		if (!is_resource($process)) {
-			return false;
-		}
-
-		$stdout = self::pipe_close($pipes[self::$STDOUT]);
-		$stderr = self::pipe_close($pipes[self::$STDERR]);
-		$exitCode = proc_close($process);
-
-		return true;
+		$this->useForks = function_exists('pcntl_fork');
 	}
 
-	private static function pipe_close($pipe)
+	public function start(ShellJob $job)
 	{
-		$output = stream_get_contents($pipe);
-		fclose($pipe);
+		if ($this->useForks) {
+			$worker = new ForkWorker($job);
+		} else {
+			$worker = new ShellWorker($job);
+		}
 
-		return $output;
+		$this->run($worker);
+	}
+
+	public function isUsingForks()
+	{
+		return $this->useForks;
 	}
 }

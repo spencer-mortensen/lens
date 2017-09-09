@@ -31,10 +31,10 @@ class Exception extends \Exception
 	private static $lensExecutable = 'lens';
 
 	/** @var string */
-	private static $lensGuideUrl = 'http://lens.guide/'; // TODO: use the "guide" anchor
+	private static $lensGuideUrl = 'http://lens.guide/#guide';
 
 	/** @var string */
-	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues'; // TODO: update this
+	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
 
 	const CODE_INTERNAL = 0;
 	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;

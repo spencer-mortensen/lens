@@ -25,44 +25,39 @@
 
 namespace Lens;
 
-use Lens\Engine\Coverage;
-use Lens\Engine\Shell\Evaluator;
-use Lens\Engine\Shell\TestExpected;
-use Lens\Engine\Shell\TestActual;
+use Lens\Evaluator\Engines\Fork;
+use Lens\Evaluator\Engines\Shell;
+use Lens\Evaluator\Engines\Shell\Workers\ActualWorker;
+use Lens\Evaluator\Engines\Shell\Workers\CoverageWorker;
+use Lens\Evaluator\Engines\Shell\Workers\ExpectedWorker;
+use Lens\Evaluator\Evaluator;
+use Lens\Evaluator\Processor;
+use Lens\Evaluator\Jobs\ActualJob;
+use Lens\Evaluator\Jobs\CoverageJob;
+use Lens\Evaluator\Jobs\ExpectedJob;
+use SpencerMortensen\ParallelProcessor\Shell\ShellSlave;
 
 class Command
 {
+	/** @var string */
+	private $executable;
+
 	public function __construct()
 	{
+		$this->executable = $GLOBALS['argv'][0];
+
 		$options = array();
 
 		$parser = new OptionsParser($GLOBALS['argv']);
 
 		if ($parser->getLongKeyValue($options)) {
 			list($key, $value) = each($options);
-
 			$decoded = base64_decode($value);
 			$decompressed = gzinflate($decoded);
 			$arguments = unserialize($decompressed);
 
-			switch ($key) {
-				case 'actual':
-					$this->getActual($arguments);
-					break;
-
-				case 'expected':
-					$this->getExpected($arguments);
-					break;
-
-				case 'coverage':
-					$this->getCoverage($arguments);
-					break;
-
-				default:
-					// TODO: error
-			}
-
-			return;
+			$this->getWorker($key, $arguments);
+			exit;
 		}
 
 		if ($parser->getLongFlag($options)) {
@@ -86,33 +81,34 @@ class Command
 
 		while ($parser->getValue($paths));
 
-		$executable = $GLOBALS['argv'][0];
-		$this->getRunner($executable, $paths);
+		$this->getRunner($paths);
 	}
 
-	private function getActual(array $arguments)
+	private function getWorker($name, array $arguments)
 	{
-		$executable = $GLOBALS['argv'][0];
-		list($lensDirectory, $srcDirectory, $fixture, $input, $output, $subject) = $arguments;
+		switch ($name) {
+			case 'actual':
+				list($lensDirectory, $srcDirectory, $fixture, $input, $output, $subject) = $arguments;
+				$job = new ActualJob($this->executable, $lensDirectory, $srcDirectory, $fixture, $input, $output, $subject, $results, $coverage);
+				break;
 
-		$test = new TestActual($executable, $lensDirectory, $srcDirectory);
-		$test->run($fixture, $input, $output, $subject);
-	}
+			case 'coverage':
+				list($srcDirectory, $relativePaths) = $arguments;
+				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $code, $coverage);
+				break;
 
-	private function getExpected(array $arguments)
-	{
-		list($lensDirectory, $fixture, $input, $output) = $arguments;
+			case 'expected':
+				list($lensDirectory, $fixture, $input, $output) = $arguments;
+				$job = new ExpectedJob($this->executable, $lensDirectory, $fixture, $input, $output, $preState, $postState, $script);
+				break;
 
-		$test = new TestExpected($lensDirectory);
-		$test->run($fixture, $input, $output);
-	}
+			default:
+				// TODO: error
+				return null;
+		}
 
-	private function getCoverage(array $arguments)
-	{
-		list($srcDirectory, $relativePaths) = $arguments;
-
-		$coverage = new Coverage();
-		$coverage->run($srcDirectory, $relativePaths);
+		$slave = new ShellSlave($job);
+		$slave->run();
 	}
 
 	private function getVersion()
@@ -121,12 +117,13 @@ class Command
 		exit(0);
 	}
 
-	private function getRunner($executable, array $paths)
+	private function getRunner(array $paths)
 	{
 		$filesystem = new Filesystem();
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
-		$evaluator = new Evaluator($executable);
+		$processor = new Processor();
+		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$console = new Console();
 		$web = new Web($filesystem);
 

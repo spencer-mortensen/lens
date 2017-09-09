@@ -77,7 +77,7 @@ class Comparer
 	private function isSameObject(ObjectArchive $a, ObjectArchive $b)
 	{
 		// TODO: check object IDs (but handle the case where both the Expected and Actual code create matching objects)
-		return  ($a->getClass() === $b->getClass()) &&
+		return ($a->getClass() === $b->getClass()) &&
 			$this->isSame($a->getProperties(), $b->getProperties());
 	}
 

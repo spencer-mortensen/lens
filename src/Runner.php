@@ -25,6 +25,8 @@
 
 namespace Lens;
 
+use Lens\Evaluator\Evaluator;
+
 class Runner
 {
 	/** @var string */

@@ -1,16 +1,32 @@
 <?php
 
-namespace Lens\Engine\Shell;
+/**
+ * Copyright (C) 2017 Spencer Mortensen
+ *
+ * This file is part of Lens.
+ *
+ * Lens is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Lens is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Spencer Mortensen <spencer@lens.guide>
+ * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
+ * @copyright 2017 Spencer Mortensen
+ */
 
-use Lens\Engine\Agent;
-use Lens\Engine\Code;
-use Lens\Engine\Test;
+namespace Lens\Evaluator;
 
-class TestExpected
+class Expected
 {
-	/** @var string */
-	private $lensDirectory;
-
 	/** @var Test */
 	private $test;
 
@@ -23,15 +39,15 @@ class TestExpected
 	/** @var null */
 	private $script;
 
-	public function __construct($lensDirectory)
-	{
-		$this->lensDirectory = $lensDirectory;
-	}
+	/** @var callable */
+	private $onShutdown;
 
-	public function run($fixture, $input, $output)
+	public function run($lensDirectory, $fixture, $input, $output, $onShutdown)
 	{
+		$this->onShutdown = $onShutdown;
+
 		$code = new Code();
-		$code->prepare($this->lensDirectory);
+		$code->prepare($lensDirectory);
 
 		list($prePhp, $postPhp) = $code->getExpectedPhp($fixture, $input, $output);
 
@@ -46,12 +62,27 @@ class TestExpected
 		$this->onPostShutdown();
 	}
 
+	public function getPreState()
+	{
+		return $this->preState;
+	}
+
+	public function getPostState()
+	{
+		return $this->postState;
+	}
+
+	public function getScript()
+	{
+		return $this->script;
+	}
+
 	public function onPreShutdown()
 	{
 		$this->preState = self::getCleanPreState($this->test->getState());
 
 		if ($this->test->isTerminated()) {
-			$this->sendResults();
+			call_user_func($this->onShutdown);
 		}
 
 		Agent::startRecording();
@@ -63,14 +94,7 @@ class TestExpected
 
 		$this->script = Agent::getScript();
 
-		$this->sendResults();
-	}
-
-	private function sendResults()
-	{
-		$results = array($this->preState, $this->postState, $this->script);
-
-		echo serialize($results);
+		call_user_func($this->onShutdown);
 	}
 
 	private static function getCleanPreState(array $pre)

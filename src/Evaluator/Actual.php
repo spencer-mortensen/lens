@@ -1,14 +1,33 @@
 <?php
 
-namespace Lens\Engine\Shell;
+/**
+ * Copyright (C) 2017 Spencer Mortensen
+ *
+ * This file is part of Lens.
+ *
+ * Lens is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Lens is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Lens. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Spencer Mortensen <spencer@lens.guide>
+ * @license http://www.gnu.org/licenses/gpl-3.0.html GPL-3.0
+ * @copyright 2017 Spencer Mortensen
+ */
 
-use Lens\Engine\Agent;
-use Lens\Engine\Code;
-use Lens\Engine\CoverageExtractor;
-use Lens\Engine\Shell\Jobs\ExpectedJob;
-use Lens\Engine\Test;
+namespace Lens\Evaluator;
 
-class TestActual
+use Lens\Evaluator\Jobs\ExpectedJob;
+
+class Actual
 {
 	/** @var string */
 	private $executable;
@@ -34,6 +53,9 @@ class TestActual
 	/** @var null|array */
 	private $coverage;
 
+	/** @var callable */
+	private $onShutdown;
+
 	public function __construct($executable, $lensDirectory, $srcDirectory)
 	{
 		$this->executable = $executable;
@@ -41,8 +63,10 @@ class TestActual
 		$this->srcDirectory = $srcDirectory;
 	}
 
-	public function run($fixture, $input, $output, $subject)
+	public function run($fixture, $input, $output, $subject, $onShutdown)
 	{
+		$this->onShutdown = $onShutdown;
+
 		$this->state = array(
 			'fixture' => null,
 			'expected' => null,
@@ -52,7 +76,7 @@ class TestActual
 		$this->getExpectedResults($fixture, $input, $output);
 
 		if ($this->script === null) {
-			$this->sendResults();
+			call_user_func($this->onShutdown);
 		}
 
 		$code = new Code();
@@ -71,13 +95,23 @@ class TestActual
 		$this->onPostShutdown();
 	}
 
+	public function getState()
+	{
+		return $this->state;
+	}
+
+	public function getCoverage()
+	{
+		return $this->coverage;
+	}
+
 	private function getExpectedResults($fixture, $input, $output)
 	{
 		$job = new ExpectedJob($this->executable, $this->lensDirectory, $fixture, $input, $output, $preState, $postState, $script);
 
 		$processor = new Processor();
 		$processor->start($job);
-		$processor->halt();
+		$processor->finish();
 
 		$this->state['fixture'] = self::getCleanPreState($preState);
 		$this->state['expected'] = self::getCleanPostState($this->state['fixture'], $postState);
@@ -89,7 +123,7 @@ class TestActual
 		$this->state['fixture'] = self::getCleanPreState($this->test->getState());
 
 		if ($this->test->isTerminated()) {
-			$this->sendResults();
+			call_user_func($this->onShutdown);
 		}
 
 		Agent::startPlaying($this->script);
@@ -103,17 +137,7 @@ class TestActual
 		$this->coverageExtractor->stop();
 		$this->coverage = $this->coverageExtractor->getCoverage();
 
-		$this->sendResults();
-	}
-
-	private function sendResults()
-	{
-		$results = array(
-			'state' => $this->state,
-			'coverage' => $this->coverage
-		);
-
-		echo serialize($results);
+		call_user_func($this->onShutdown);
 	}
 
 	// TODO: this is duplicated in "TestExpected"

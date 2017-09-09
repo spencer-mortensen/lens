@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Engine;
+namespace Lens\Evaluator;
 
 class MockBuilder
 {
@@ -95,7 +95,7 @@ EOS;
 		$code = <<<'EOS'
 	public function %s(%s)
 	{
-		return \Lens\Engine\Agent::call($this, __FUNCTION__, func_get_args());
+		return \Lens\Evaluator\Agent::call($this, __FUNCTION__, func_get_args());
 	}
 EOS;
 

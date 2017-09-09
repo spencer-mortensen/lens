@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Engine\Shell;
+namespace Lens\Evaluator;
 
-use Lens\Engine\Shell\Jobs\ActualJob;
-use Lens\Engine\Shell\Jobs\CoverageJob;
+use Lens\Evaluator\Jobs\ActualJob;
+use Lens\Evaluator\Jobs\CoverageJob;
 use Lens\Filesystem;
 
-class Evaluator implements \Lens\Evaluator
+class Evaluator
 {
 	/** @var string */
 	private $executable;
@@ -40,22 +40,21 @@ class Evaluator implements \Lens\Evaluator
 	/** @var Processor */
 	private $processor;
 
-	public function __construct($executable)
+	public function __construct($executable, $filesystem, $processor)
 	{
 		$this->executable = $executable;
-
-		// TODO: dependency injection
-		$this->filesystem = new Filesystem();
-		$this->processor = new Processor();
+		$this->filesystem = $filesystem;
+		$this->processor = $processor;
 	}
 
 	public function run($lensDirectory, $srcDirectory, array $suites)
 	{
 		$relativePaths = $this->getRelativePaths($srcDirectory);
 
+		// TODO: run this only if coverage is enabled:
 		$this->startCoverage($srcDirectory, $relativePaths, $code, $executableLines);
 		$this->startTests($lensDirectory, $srcDirectory, $suites, $executedLines);
-		$this->processor->halt();
+		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
 			$coverage = self::getCoverage($executableLines, $executedLines);
@@ -80,15 +79,14 @@ class Evaluator implements \Lens\Evaluator
 		return array_values($paths);
 	}
 
-	private function startCoverage($srcDirectory, $relativePaths, &$code, &$executableLines)
+	private function startCoverage($srcDirectory, array $relativePaths, array &$code = null, array &$coverage = null)
 	{
-		// TODO: run this only if coverage is enabled
 		$job = new CoverageJob(
 			$this->executable,
 			$srcDirectory,
 			$relativePaths,
 			$code,
-			$executableLines
+			$coverage
 		);
 
 		$this->processor->start($job);

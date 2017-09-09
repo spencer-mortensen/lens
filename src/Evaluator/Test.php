@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Engine;
+namespace Lens\Evaluator;
 
 use Exception;
 use Lens\Archivist\Archivist;
