@@ -21,8 +21,7 @@
         }
     ],
     "require": {
-        "php": ">=5.3.0",
-        "spencer-mortensen/parallel-processor": "~2.0"
+        "php": ">=5.4.0"
     },
     "bin": [
         "bin/lens"
