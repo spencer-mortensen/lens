@@ -3,7 +3,7 @@
 
 namespace Lens;
 
-(function () {
+call_user_func(function () {
 	$srcDirectory = dirname(__DIR__) . '/src';
 
 	$classes = array(
@@ -31,6 +31,6 @@ namespace Lens;
 
 		spl_autoload_register($autoloader);
 	}
-})();
+});
 
 new Command();
