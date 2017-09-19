@@ -167,7 +167,7 @@ class Code
 		$resultType = ($resultAction === 'throw' ? Agent::ACTION_THROW : Agent::ACTION_RETURN);
 		$result = "array({$resultType}, {$resultValue})";
 
-		return "\\Lens\\Engine\\Agent::call({$object}, {$methodName}, {$arguments}, {$result});";
+		return "\\Lens\\Evaluator\\Agent::call({$object}, {$methodName}, {$arguments}, {$result});";
 	}
 
 	private static function combine()
