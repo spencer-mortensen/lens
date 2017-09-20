@@ -37,6 +37,9 @@ class ExpectedJob implements ShellJob
 	private $lensDirectory;
 
 	/** @var string */
+	private $autoloaderPath;
+
+	/** @var string */
 	private $fixture;
 
 	/** @var string */
@@ -54,10 +57,11 @@ class ExpectedJob implements ShellJob
 	/** @var null|string */
 	private $script;
 
-	public function __construct($executable, $lensDirectory, $fixture, $input, $output, &$preState, &$postState, &$script)
+	public function __construct($executable, $lensDirectory, $autoloaderPath, $fixture, $input, $output, &$preState, &$postState, &$script)
 	{
 		$this->executable = $executable;
 		$this->lensDirectory = $lensDirectory;
+		$this->autoloaderPath = $autoloaderPath;
 		$this->fixture = $fixture;
 		$this->input = $input;
 		$this->output = $output;
@@ -69,7 +73,7 @@ class ExpectedJob implements ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensDirectory, $this->fixture, $this->input, $this->output);
+		$arguments = array($this->lensDirectory, $this->autoloaderPath, $this->fixture, $this->input, $this->output);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -79,7 +83,7 @@ class ExpectedJob implements ShellJob
 
 	public function run($send)
 	{
-		$expected = new Expected();
+		$expected = new Expected($this->lensDirectory, $this->autoloaderPath);
 
 		$onShutdown = function () use ($expected, $send) {
 			$preState = $expected->getPreState();
@@ -91,7 +95,7 @@ class ExpectedJob implements ShellJob
 			call_user_func($send, $message);
 		};
 
-		$expected->run($this->lensDirectory, $this->fixture, $this->input, $this->output, $onShutdown);
+		$expected->run($this->fixture, $this->input, $this->output, $onShutdown);
 	}
 
 	public function receive($message)

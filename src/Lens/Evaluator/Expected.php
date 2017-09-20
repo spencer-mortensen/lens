@@ -42,12 +42,18 @@ class Expected
 	/** @var callable */
 	private $onShutdown;
 
-	public function run($lensDirectory, $fixture, $input, $output, $onShutdown)
+	public function __construct($lensDirectory, $autoloaderPath)
+	{
+		$this->lensDirectory = $lensDirectory;
+		$this->autoloaderPath = $autoloaderPath;
+	}
+
+	public function run($fixture, $input, $output, $onShutdown)
 	{
 		$this->onShutdown = $onShutdown;
 
 		$code = new Code();
-		$code->prepare($lensDirectory);
+		$code->prepare($this->lensDirectory, $this->autoloaderPath);
 
 		list($prePhp, $postPhp) = $code->getExpectedPhp($fixture, $input, $output);
 

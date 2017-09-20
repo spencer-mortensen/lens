@@ -1,6 +1,6 @@
 <?php
 
-(function () {
+call_user_func(function () {
 	$classes = array(
 		'Lens' => dirname(__DIR__) . '/src',
 		'SpencerMortensen\\ParallelProcessor' => dirname(__DIR__) . '/vendor/spencer-mortensen/parallel-processor/src'
@@ -26,4 +26,4 @@
 
 		spl_autoload_register($autoloader);
 	}
-})();
+});

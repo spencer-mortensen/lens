@@ -38,6 +38,9 @@ class Actual
 	/** @var string */
 	private $srcDirectory;
 
+	/** @var string */
+	private $autoloaderPath;
+
 	/** @var Test */
 	private $test;
 
@@ -56,11 +59,12 @@ class Actual
 	/** @var callable */
 	private $onShutdown;
 
-	public function __construct($executable, $lensDirectory, $srcDirectory)
+	public function __construct($executable, $lensDirectory, $srcDirectory, $autoloaderPath)
 	{
 		$this->executable = $executable;
 		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
+		$this->autoloaderPath = $autoloaderPath;
 	}
 
 	public function run($fixture, $input, $output, $subject, $onShutdown)
@@ -80,7 +84,7 @@ class Actual
 		}
 
 		$code = new Code();
-		$code->prepare($this->lensDirectory);
+		$code->prepare($this->lensDirectory, $this->autoloaderPath);
 
 		list($prePhp, $postPhp) = $code->getActualPhp($fixture, $input, $subject);
 
@@ -107,7 +111,7 @@ class Actual
 
 	private function getExpectedResults($fixture, $input, $output)
 	{
-		$job = new ExpectedJob($this->executable, $this->lensDirectory, $fixture, $input, $output, $preState, $postState, $script);
+		$job = new ExpectedJob($this->executable, $this->lensDirectory, $this->autoloaderPath, $fixture, $input, $output, $preState, $postState, $script);
 
 		$processor = new Processor();
 		$processor->start($job);

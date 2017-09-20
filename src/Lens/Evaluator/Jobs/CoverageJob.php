@@ -26,6 +26,8 @@
 namespace Lens\Evaluator\Jobs;
 
 use Lens\Evaluator\Coverage;
+use Lens\Filesystem;
+use Lens\Logger;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 
 class CoverageJob implements ShellJob
@@ -39,17 +41,21 @@ class CoverageJob implements ShellJob
 	/** @var array */
 	private $relativePaths;
 
+	/** @var string */
+	private $autoloaderPath;
+
 	/** @var array */
 	private $code;
 
 	/** @var Coverage */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, array $relativePaths, &$code, &$coverage)
+	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloaderPath, &$code, &$coverage)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;
 		$this->relativePaths = $relativePaths;
+		$this->autoloaderPath = $autoloaderPath;
 
 		$this->code = &$code;
 		$this->coverage = &$coverage;
@@ -57,7 +63,7 @@ class CoverageJob implements ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->srcDirectory, $this->relativePaths);
+		$arguments = array($this->srcDirectory, $this->relativePaths, $this->autoloaderPath);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -67,7 +73,11 @@ class CoverageJob implements ShellJob
 
 	public function run($send)
 	{
-		$coverager = new Coverage();
+		// TODO: dependency injection:
+		$filesystem = new Filesystem();
+		$logger = new Logger('lens');
+
+		$coverager = new Coverage($filesystem, $logger);
 
 		$onShutdown = function () use ($coverager, $send) {
 			$code = $coverager->getCode();
@@ -78,7 +88,7 @@ class CoverageJob implements ShellJob
 			call_user_func($send, $message);
 		};
 
-		$coverager->run($this->srcDirectory, $this->relativePaths, $onShutdown);
+		$coverager->run($this->srcDirectory, $this->relativePaths, $this->autoloaderPath, $onShutdown);
 	}
 
 	public function receive($message)

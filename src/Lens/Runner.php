@@ -41,6 +41,9 @@ class Runner
 	/** @var integer */
 	private static $maximumLineLength = 96;
 
+	/** @var Settings */
+	private $settings;
+
 	/** @var Filesystem */
 	private $filesystem;
 
@@ -59,16 +62,21 @@ class Runner
 	/** @var Displayer */
 	private $displayer;
 
-	public function __construct(Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web)
+	/** @var Logger */
+	private $logger;
+
+	public function __construct(Settings $settings, Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web, Logger $logger)
 	{
 		$displayer = new Displayer();
 
+		$this->settings = $settings;
 		$this->filesystem = $filesystem;
 		$this->browser = $browser;
 		$this->evaluator = $evaluator;
 		$this->console = $console;
 		$this->web = $web;
 		$this->displayer = $displayer;
+		$this->logger = $logger;
 	}
 
 	public function run(array $paths)
@@ -86,15 +94,18 @@ class Runner
 		$testsDirectory = "{$lensDirectory}/tests";
 		$coverageDirectory = "{$lensDirectory}/coverage";
 
-		$settings = $this->getSettings($lensDirectory);
+		$this->settings->setPath("{$lensDirectory}/" . self::$settingsFileName);
+		$settings = $this->settings->read();
+
 		$this->findSrc($settings, $lensDirectory, $srcDirectory);
+		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloaderPath);
 
 		if (count($paths) === 0) {
 			$paths[] = $testsDirectory;
 		}
 
 		$suites = $this->browser->browse($testsDirectory, $paths);
-		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $suites);
+		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $autoloaderPath, $suites);
 
 		echo $this->console->summarize($suites);
 
@@ -106,7 +117,7 @@ class Runner
 		restore_error_handler();
 	}
 
-	public static function errorHandler($level, $message, $file, $line)
+	public function errorHandler($level, $message, $file, $line)
 	{
 		throw Exception::error($level, trim($message), $file, $line);
 	}
@@ -116,8 +127,6 @@ class Runner
 	 */
 	public function exceptionHandler($exception)
 	{
-		$code = $exception->getCode();
-
 		try {
 			throw $exception;
 		} catch (Exception $throwable) {
@@ -127,21 +136,23 @@ class Runner
 			$exception = Exception::exception($throwable);
 		}
 
-		$message = $this->getStderrText($exception);
-
-		file_put_contents("php://stderr", "{$message}\n");
-
-		exit($code);
-	}
-
-	private function getStderrText(Exception $exception)
-	{
-		$code = $exception->getCode();
 		$severity = $exception->getSeverity();
+		$code = $exception->getCode();
 		$message = $exception->getMessage();
 		$help = $exception->getHelp();
 		$data = $exception->getData();
 
+		$output = $this->getStderrText($severity, $code, $message, $help, $data);
+		file_put_contents("php://stderr", "{$output}\n");
+
+		$output = $this->getSyslogText($severity, $code, $message, $data);
+		$this->logger->log($severity, $output);
+
+		exit($code);
+	}
+
+	private function getStderrText($severity, $code, $message, $help, $data)
+	{
 		$output = self::getSeverityText($severity) . " {$code}: {$message}";
 
 		if (0 < count($help)) {
@@ -150,6 +161,17 @@ class Runner
 
 		if (0 < count($data)) {
 			$output .= "\n\nINFORMATION\n\n" . $this->getDataText($data);
+		}
+
+		return $output;
+	}
+
+	private function getSyslogText($severity, $code, $message, $data)
+	{
+		$output = self::getSeverityText($severity) . " {$code}: {$message}";
+
+		if (0 < count($data)) {
+			$output .= ' ' . json_encode($data);
 		}
 
 		return $output;
@@ -289,6 +311,20 @@ class Runner
 		return true;
 	}
 
+	private function findFile($basePath, $targetNames, &$output)
+	{
+		foreach ($targetNames as $targetName) {
+			$path = "{$basePath}/{$targetName}";
+
+			if ($this->filesystem->isFile($path)) {
+				$output = $path;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private function findGrandchild($basePath, $targetName, &$output)
 	{
 		$paths = $this->filesystem->search("{$basePath}/*/{$targetName}");
@@ -305,11 +341,11 @@ class Runner
 	private function findSrc(array $settings, $lens, &$srcDirectory)
 	{
 		// TODO: refactor this:
-		return $this->findSrcFromSetting($lens, $settings['src'], $srcDirectory) ||
+		return $this->findSrcFromSettings($lens, $settings['src'], $srcDirectory) ||
 			$this->findSrcFromLens($lens, $srcDirectory);
 	}
 
-	private function findSrcFromSetting($lens, &$relativePath, &$output)
+	private function findSrcFromSettings($lens, &$relativePath, &$output)
 	{
 		if ($relativePath === null) {
 			return false;
@@ -331,28 +367,44 @@ class Runner
 			$this->findChild(dirname($lens), self::$srcDirectoryName, $output);
 	}
 
-	private function getSettings($lens)
+	private function findAutoloader(array $settings, $lensDirectory, $srcDirectory, &$autoloaderPath)
 	{
-		$path = $lens . '/' . self::$settingsFileName;
-		$contents = $this->filesystem->read($path);
+		return $this->findAutoloaderFromSettings($settings['autoloader'], $autoloaderPath) ||
+			$this->findAutoloaderFromLens($lensDirectory, $autoloaderPath) ||
+			$this->findAutoloaderFromSrc($srcDirectory, $autoloaderPath);
+	}
 
-		if ($contents === null) {
-			return array();
+	private function findAutoloaderFromSettings(&$autoloaderPathSettings, &$autoloaderPath)
+	{
+		if ($autoloaderPathSettings === null) {
+			return false;
 		}
 
-		try {
-			$settings = parse_ini_string($contents, false);
-		} catch (Exception $exception) {
-			$data = $exception->getData();
-			$errorMessage = $data['message'];
+		$autoloaderPath = $autoloaderPathSettings;
+		return true;
+	}
 
-			throw Exception::invalidSettingsFile($path, $errorMessage);
+	private function findAutoloaderFromLens($lensDirectory, &$autoloaderPath)
+	{
+		$names = array('autoload.php', 'bootstrap.php', 'autoloader.php');
+
+		return $this->findFile($lensDirectory, $names, $autoloaderPath);
+	}
+
+	private function findAutoloaderFromSrc($srcDirectory, &$autoloaderPath)
+	{
+		if ($srcDirectory === null) {
+			return false;
 		}
 
-		if (!is_array($settings)) {
-			throw Exception::invalidSettingsFile($path);
+		$projectDirectory = dirname($srcDirectory);
+		$path = "{$projectDirectory}/vendor/autoload.php";
+
+		if (!$this->filesystem->isFile($path)) {
+			return false;
 		}
 
-		return $settings;
+		$autoloaderPath = $path;
+		return true;
 	}
 }

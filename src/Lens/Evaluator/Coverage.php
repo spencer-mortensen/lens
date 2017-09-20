@@ -26,6 +26,7 @@
 namespace Lens\Evaluator;
 
 use Lens\Filesystem;
+use Lens\Logger;
 
 class Coverage
 {
@@ -44,13 +45,16 @@ class Coverage
 	/** @var callable */
 	private $onShutdown;
 
-	public function __construct()
+	/** @var Logger */
+	private $logger;
+
+	public function __construct(Filesystem $filesystem, Logger $logger)
 	{
-		// TODO: dependency injection:
-		$this->filesystem = new Filesystem();
+		$this->filesystem = $filesystem;
+		$this->logger = $logger;
 	}
 
-	public function run($srcDirectory, array $relativePaths, $onShutdown)
+	public function run($srcDirectory, array $relativePaths, $autoloaderPath, $onShutdown)
 	{
 		if (!function_exists('xdebug_start_code_coverage')) {
 			return null;
@@ -59,7 +63,7 @@ class Coverage
 		$this->onShutdown = $onShutdown;
 
 		$this->readCode($srcDirectory, $relativePaths);
-		$this->readCoverage($srcDirectory, $relativePaths);
+		$this->readCoverage($srcDirectory, $relativePaths, $autoloaderPath);
 
 		call_user_func($onShutdown);
 	}
@@ -75,9 +79,9 @@ class Coverage
 		}
 	}
 
-	private function readCoverage($srcDirectory, array $relativePaths)
+	private function readCoverage($srcDirectory, array $relativePaths, $autoloaderPath)
 	{
-		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths);
+		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths, $autoloaderPath);
 		$this->coverage = self::getCleanCoverage($srcDirectory, $this->code, $rawCoverage);
 	}
 
@@ -98,10 +102,17 @@ class Coverage
 		return preg_split($pattern, $text);
 	}
 
-	private function getRawCoverage($srcDirectory, array $relativePaths)
+	private function getRawCoverage($srcDirectory, array $relativePaths, $autoloaderPath)
 	{
 		$absolutePaths = self::getAbsolutePaths($srcDirectory, $relativePaths);
-		$statements = self::getRequireStatements($absolutePaths);
+
+		$statements = self::getIncludeStatements($absolutePaths);
+
+		if (is_string($autoloaderPath)) {
+			$autoloaderPhp = self::getRequireStatement($autoloaderPath);
+			array_unshift($statements, $autoloaderPhp);
+		}
+
 		$this->php = implode("\n", $statements);
 
 		ini_set('display_errors', 'Off');
@@ -128,13 +139,20 @@ class Coverage
 		return $absolutePaths;
 	}
 
-	private static function getRequireStatements(array $paths)
+	private static function getRequireStatement($path)
+	{
+		$pathString = var_export($path, true);
+
+		return "require {$pathString};";
+	}
+
+	private static function getIncludeStatements(array $paths)
 	{
 		$statements = array();
 
 		foreach ($paths as $path) {
 			$pathString = var_export($path, true);
-			$statements[] = "require {$pathString};";
+			$statements[] = "include_once {$pathString};";
 		}
 
 		return $statements;

@@ -47,6 +47,9 @@ class EvaluatorJob implements ForkJob
 	/** @var string */
 	private $srcDirectory;
 
+	/** @var string */
+	private $autoloaderPath;
+
 	/** @var array */
 	private $suites;
 
@@ -56,13 +59,14 @@ class EvaluatorJob implements ForkJob
 	/** @var array */
 	private $coverage;
 
-	public function __construct($executable, Filesystem $filesystem, Processor $processor, $lensDirectory, $srcDirectory, array &$suites, array &$code = null, array &$coverage = null)
+	public function __construct($executable, Filesystem $filesystem, Processor $processor, $lensDirectory, $srcDirectory, $autoloaderPath, array &$suites, array &$code = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
 		$this->processor = $processor;
 		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
+		$this->autoloaderPath = $autoloaderPath;
 		$this->suites = &$suites;
 		$this->code = &$code;
 		$this->coverage = &$coverage;
@@ -71,7 +75,7 @@ class EvaluatorJob implements ForkJob
 	public function run($send)
 	{
 		$evaluator = new Evaluator($this->executable, $this->filesystem, $this->processor);
-		$results = $evaluator->run($this->lensDirectory, $this->srcDirectory, $this->suites);
+		$results = $evaluator->run($this->lensDirectory, $this->srcDirectory, $this->autoloaderPath, $this->suites);
 		$message = serialize($results);
 
 		call_user_func($send, $message);

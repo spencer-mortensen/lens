@@ -25,11 +25,6 @@
 
 namespace Lens;
 
-use Lens\Evaluator\Engines\Fork;
-use Lens\Evaluator\Engines\Shell;
-use Lens\Evaluator\Engines\Shell\Workers\ActualWorker;
-use Lens\Evaluator\Engines\Shell\Workers\CoverageWorker;
-use Lens\Evaluator\Engines\Shell\Workers\ExpectedWorker;
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
 use Lens\Evaluator\Jobs\ActualJob;
@@ -42,8 +37,12 @@ class Command
 	/** @var string */
 	private $executable;
 
+	/** @var Logger */
+	private $logger;
+
 	public function __construct()
 	{
+		$this->logger = new Logger('lens');
 		$this->executable = $GLOBALS['argv'][0];
 
 		$options = array();
@@ -52,11 +51,8 @@ class Command
 
 		if ($parser->getLongKeyValue($options)) {
 			list($key, $value) = each($options);
-			$decoded = base64_decode($value);
-			$decompressed = gzinflate($decoded);
-			$arguments = unserialize($decompressed);
 
-			$this->getWorker($key, $arguments);
+			$this->getWorker($key, $value);
 			exit;
 		}
 
@@ -71,12 +67,6 @@ class Command
 			return;
 		}
 
-		/*
-		// EXAMPLES:
-		lens  # run all tests (based on the current working directory)
-		lens tests/Archivist/ tests/Parser.php  # run just these tests
-		*/
-
 		$paths = array();
 
 		while ($parser->getValue($paths));
@@ -84,22 +74,26 @@ class Command
 		$this->getRunner($paths);
 	}
 
-	private function getWorker($name, array $arguments)
+	private function getWorker($name, $value)
 	{
+		$decoded = base64_decode($value);
+		$decompressed = gzinflate($decoded);
+		$arguments = unserialize($decompressed);
+
 		switch ($name) {
 			case 'actual':
-				list($lensDirectory, $srcDirectory, $fixture, $input, $output, $subject) = $arguments;
-				$job = new ActualJob($this->executable, $lensDirectory, $srcDirectory, $fixture, $input, $output, $subject, $results, $coverage);
+				list($lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject) = $arguments;
+				$job = new ActualJob($this->executable, $lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject, $results, $coverage);
 				break;
 
 			case 'coverage':
-				list($srcDirectory, $relativePaths) = $arguments;
-				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $code, $coverage);
+				list($srcDirectory, $relativePaths, $autoloaderPath) = $arguments;
+				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $autoloaderPath, $code, $coverage);
 				break;
 
 			case 'expected':
-				list($lensDirectory, $fixture, $input, $output) = $arguments;
-				$job = new ExpectedJob($this->executable, $lensDirectory, $fixture, $input, $output, $preState, $postState, $script);
+				list($lensDirectory, $autoloaderPath, $fixture, $input, $output) = $arguments;
+				$job = new ExpectedJob($this->executable, $lensDirectory, $autoloaderPath, $fixture, $input, $output, $preState, $postState, $script);
 				break;
 
 			default:
@@ -120,6 +114,8 @@ class Command
 	private function getRunner(array $paths)
 	{
 		$filesystem = new Filesystem();
+		$settingsFile = new IniFile($filesystem);
+		$settings = new Settings($settingsFile, $this->logger);
 		$parser = new Parser();
 		$browser = new Browser($filesystem, $parser);
 		$processor = new Processor();
@@ -127,7 +123,7 @@ class Command
 		$console = new Console();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($filesystem, $browser, $evaluator, $console, $web);
+		$runner = new Runner($settings, $filesystem, $browser, $evaluator, $console, $web, $this->logger);
 		$runner->run($paths);
 	}
 }

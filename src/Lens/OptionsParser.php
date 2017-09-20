@@ -35,7 +35,6 @@ namespace Lens;
 	--output <file>  # ambiguous
 */
 
-// TODO: delete this class (if possible)
 class OptionsParser
 {
 	/** @var array */

@@ -40,6 +40,9 @@ class ActualJob implements ShellJob
 	private $srcDirectory;
 
 	/** @var string */
+	private $autoloaderPath;
+
+	/** @var string */
 	private $fixture;
 
 	/** @var string */
@@ -57,11 +60,12 @@ class ActualJob implements ShellJob
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $lensDirectory, $srcDirectory, $fixture, $input, $output, $subject, &$results, &$coverage)
+	public function __construct($executable, $lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject, &$results, &$coverage)
 	{
 		$this->executable = $executable;
 		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
+		$this->autoloaderPath = $autoloaderPath;
 		$this->fixture = $fixture;
 		$this->input = $input;
 		$this->output = $output;
@@ -73,7 +77,7 @@ class ActualJob implements ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensDirectory, $this->srcDirectory, $this->fixture, $this->input, $this->output, $this->subject);
+		$arguments = array($this->lensDirectory, $this->srcDirectory, $this->autoloaderPath, $this->fixture, $this->input, $this->output, $this->subject);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -83,7 +87,7 @@ class ActualJob implements ShellJob
 
 	public function run($send)
 	{
-		$actual = new Actual($this->executable, $this->lensDirectory, $this->srcDirectory);
+		$actual = new Actual($this->executable, $this->lensDirectory, $this->srcDirectory, $this->autoloaderPath);
 
 		$onShutdown = function () use ($actual, $send) {
 			$state = $actual->getState();

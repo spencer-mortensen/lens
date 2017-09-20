@@ -40,8 +40,9 @@ class Exception extends \Exception
 	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;
 	const CODE_INVALID_SETTINGS_FILE = 2;
 	const CODE_INVALID_SRC_DIRECTORY = 3;
-	const CODE_INVALID_TESTS_PATH = 4;
-	const CODE_INVALID_TESTS_FILE = 5;
+	const CODE_INVALID_AUTOLOADER_PATH = 4;
+	const CODE_INVALID_TESTS_PATH = 5;
+	const CODE_INVALID_TESTS_FILE = 6;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
 	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
@@ -222,6 +223,23 @@ class Exception extends \Exception
 		$severity = self::SEVERITY_ERROR;
 
 		$message = self::getInvalidPathMessage($path, 'a tests file or directory');
+
+		$help = null;
+
+		$data = array(
+			'path' => $path
+		);
+
+		return new self($code, $severity, $message, $help, $data);
+	}
+
+	public static function invalidAutoloaderPath($path)
+	{
+		$code = self::CODE_INVALID_AUTOLOADER_PATH;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = self::getInvalidPathMessage($path, 'an autoloader file');
 
 		$help = null;
 

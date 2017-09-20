@@ -29,7 +29,7 @@ class Code
 {
 	const LENS_CONSTANT_NAME = 'LENS';
 
-	public function prepare($lensDirectory)
+	public function prepare($lensDirectory, $autoloaderPath)
 	{
 		define(self::LENS_CONSTANT_NAME, $lensDirectory . '/');
 
@@ -51,6 +51,10 @@ class Code
 				eval($mockCode);
 			}
 		);
+
+		if (is_string($autoloaderPath)) {
+			require $autoloaderPath;
+		}
 	}
 
 	public function getExpectedPhp($fixture, $input, $output)

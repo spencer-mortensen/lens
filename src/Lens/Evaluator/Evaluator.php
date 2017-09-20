@@ -47,13 +47,13 @@ class Evaluator
 		$this->processor = $processor;
 	}
 
-	public function run($lensDirectory, $srcDirectory, array $suites)
+	public function run($lensDirectory, $srcDirectory, $autoloaderPath, array $suites)
 	{
 		$relativePaths = $this->getRelativePaths($srcDirectory);
 
 		// TODO: run this only if coverage is enabled:
-		$this->startCoverage($srcDirectory, $relativePaths, $code, $executableLines);
-		$this->startTests($lensDirectory, $srcDirectory, $suites, $executedLines);
+		$this->startCoverage($srcDirectory, $relativePaths, $autoloaderPath, $code, $executableLines);
+		$this->startTests($lensDirectory, $srcDirectory, $autoloaderPath, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -79,12 +79,13 @@ class Evaluator
 		return array_values($paths);
 	}
 
-	private function startCoverage($srcDirectory, array $relativePaths, array &$code = null, array &$coverage = null)
+	private function startCoverage($srcDirectory, array $relativePaths, $autoloaderPath, array &$code = null, array &$coverage = null)
 	{
 		$job = new CoverageJob(
 			$this->executable,
 			$srcDirectory,
 			$relativePaths,
+			$autoloaderPath,
 			$code,
 			$coverage
 		);
@@ -92,7 +93,7 @@ class Evaluator
 		$this->processor->start($job);
 	}
 
-	private function startTests($lensDirectory, $srcDirectory, array &$suites, array &$coverage = null)
+	private function startTests($lensDirectory, $srcDirectory, $autoloaderPath, array &$suites, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -103,6 +104,7 @@ class Evaluator
 						$this->executable,
 						$lensDirectory,
 						$srcDirectory,
+						$autoloaderPath,
 						$suite['fixture'],
 						$case['input'],
 						$case['output'],

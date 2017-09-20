@@ -165,6 +165,11 @@ class Filesystem
 		return is_dir($path);
 	}
 
+	public function isFile($path)
+	{
+		return is_file($path);
+	}
+
 	public function getCurrentDirectory()
 	{
 		return self::getString(getcwd());

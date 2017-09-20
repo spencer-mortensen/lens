@@ -4,8 +4,6 @@ namespace Lens;
 
 use Lens\Archivist\Archivist;
 
-require LENS . '/bootstrap.php';
-
 
 // Test
 $displayer = new Displayer();

@@ -6,9 +6,6 @@ use Lens\Archivist\Archivist;
 use Lens\Archivist\Archives\ObjectArchive;
 use Lens\Archivist\Archives\ResourceArchive;
 
-require LENS . 'bootstrap.php';
-
-
 // Test
 $archivist = new Archivist();
 $output = $archivist->archive($input);
