@@ -25,8 +25,8 @@
 
 namespace Lens\Evaluator;
 
-use Lens\Evaluator\Jobs\ActualJob;
 use Lens\Evaluator\Jobs\CoverageJob;
+use Lens\Evaluator\Jobs\TestJob;
 use Lens\Filesystem;
 
 class Evaluator
@@ -47,13 +47,11 @@ class Evaluator
 		$this->processor = $processor;
 	}
 
-	public function run($lensDirectory, $srcDirectory, $autoloaderPath, array $suites)
+	public function run($lensDirectory, $srcDirectory, $bootstrapPath, array $suites)
 	{
-		$relativePaths = $this->getRelativePaths($srcDirectory);
-
 		// TODO: run this only if coverage is enabled:
-		$this->startCoverage($srcDirectory, $relativePaths, $autoloaderPath, $code, $executableLines);
-		$this->startTests($lensDirectory, $srcDirectory, $autoloaderPath, $suites, $executedLines);
+		$this->startCoverage($srcDirectory, $bootstrapPath, $code, $executableLines);
+		$this->startTests($lensDirectory, $srcDirectory, $bootstrapPath, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -63,6 +61,22 @@ class Evaluator
 		}
 
 		return array($suites, $code, $coverage);
+	}
+
+	private function startCoverage($srcDirectory, $bootstrapPath, array &$code = null, array &$coverage = null)
+	{
+		$relativePaths = $this->getRelativePaths($srcDirectory);
+
+		$job = new CoverageJob(
+			$this->executable,
+			$srcDirectory,
+			$relativePaths,
+			$bootstrapPath,
+			$code,
+			$coverage
+		);
+
+		$this->processor->start($job);
 	}
 
 	private function getRelativePaths($srcDirectory)
@@ -79,52 +93,14 @@ class Evaluator
 		return array_values($paths);
 	}
 
-	private function startCoverage($srcDirectory, array $relativePaths, $autoloaderPath, array &$code = null, array &$coverage = null)
-	{
-		$job = new CoverageJob(
-			$this->executable,
-			$srcDirectory,
-			$relativePaths,
-			$autoloaderPath,
-			$code,
-			$coverage
-		);
-
-		$this->processor->start($job);
-	}
-
-	private function startTests($lensDirectory, $srcDirectory, $autoloaderPath, array &$suites, array &$coverage = null)
-	{
-		$coverage = array();
-
-		foreach ($suites as $file => &$suite) {
-			foreach ($suite['tests'] as $testLine => &$test) {
-				foreach ($test['cases'] as $caseLine => &$case) {
-					$job = new ActualJob(
-						$this->executable,
-						$lensDirectory,
-						$srcDirectory,
-						$autoloaderPath,
-						$suite['fixture'],
-						$case['input'],
-						$case['output'],
-						$test['subject'],
-						$case['results'],
-						$coverage[]
-					);
-
-					$this->processor->start($job);
-				}
-			}
-		}
-	}
-
 	private static function getCoverage(array $lines, array $results)
 	{
 		// TODO: run this only if coverage is enabled:
 		$coverage = array();
 
 		foreach ($lines as $path => $lineNumbers) {
+			$coverage[$path] = array();
+
 			foreach ($lineNumbers as $lineNumber) {
 				$coverage[$path][$lineNumber] = false;
 			}
@@ -141,5 +117,68 @@ class Evaluator
 		}
 
 		return $coverage;
+	}
+
+	private function startTests($lensDirectory, $srcDirectory, $bootstrapPath, array &$suites, array &$coverage = null)
+	{
+		$coverage = array();
+
+		foreach ($suites as $file => &$suite) {
+			foreach ($suite['tests'] as $testLine => &$test) {
+				foreach ($test['cases'] as $caseLine => &$case) {
+					$this->startTest(
+						$lensDirectory,
+						$srcDirectory,
+						$bootstrapPath,
+						$suite['fixture'],
+						$case['input'],
+						$case['output'],
+						$test['subject'],
+						$case['results'],
+						$coverage[]
+					);
+				}
+			}
+		}
+	}
+
+	private function startTest($lensDirectory, $srcDirectory, $bootstrapPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
+	{
+		$code = new Code();
+		$php = $code->getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp);
+		list($contextPhp, $beforePhp, $expectedPhp, $actualPhp, $script) = $php;
+
+		$actualJob = new TestJob(
+			$this->executable,
+			$lensDirectory,
+			$srcDirectory,
+			$bootstrapPath,
+			$contextPhp,
+			$beforePhp,
+			$actualPhp,
+			$script,
+			$results['fixture'],
+			$results['actual'],
+			$coverage
+		);
+
+		$this->processor->start($actualJob);
+
+		$unused = null;
+
+		$expectedJob = new TestJob(
+			$this->executable,
+			$lensDirectory,
+			$srcDirectory,
+			$bootstrapPath,
+			$contextPhp,
+			$beforePhp,
+			$expectedPhp,
+			null,
+			$unused,
+			$results['expected']
+		);
+
+		$this->processor->start($expectedJob);
 	}
 }

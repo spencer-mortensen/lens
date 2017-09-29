@@ -26,6 +26,7 @@
 namespace Lens;
 
 use Lens\Evaluator\Evaluator;
+use SpencerMortensen\Parser;
 
 class Runner
 {
@@ -50,6 +51,9 @@ class Runner
 	/** @var Browser */
 	private $browser;
 
+	/** @var SuiteParser */
+	private $parser;
+
 	/** @var Evaluator */
 	private $evaluator;
 
@@ -65,13 +69,14 @@ class Runner
 	/** @var Logger */
 	private $logger;
 
-	public function __construct(Settings $settings, Filesystem $filesystem, Browser $browser, Evaluator $evaluator, Console $console, Web $web, Logger $logger)
+	public function __construct(Settings $settings, Filesystem $filesystem, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Console $console, Web $web, Logger $logger)
 	{
 		$displayer = new Displayer();
 
 		$this->settings = $settings;
 		$this->filesystem = $filesystem;
 		$this->browser = $browser;
+		$this->parser = $parser;
 		$this->evaluator = $evaluator;
 		$this->console = $console;
 		$this->web = $web;
@@ -98,14 +103,16 @@ class Runner
 		$settings = $this->settings->read();
 
 		$this->findSrc($settings, $lensDirectory, $srcDirectory);
-		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloaderPath);
+		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $bootstrapPath);
 
 		if (count($paths) === 0) {
 			$paths[] = $testsDirectory;
 		}
 
-		$suites = $this->browser->browse($testsDirectory, $paths);
-		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $autoloaderPath, $suites);
+		$testFiles = $this->browser->browse($testsDirectory, $paths);
+		$suites = $this->getSuites($testsDirectory, $testFiles);
+
+		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $bootstrapPath, $suites);
 
 		echo $this->console->summarize($suites);
 
@@ -115,6 +122,39 @@ class Runner
 
 		restore_exception_handler();
 		restore_error_handler();
+	}
+
+	private function getSuites($testsDirectory, $files)
+	{
+		$suites = array();
+
+		foreach ($files as $path => $contents) {
+			try {
+				$suites[$path] = $this->parser->parse($contents);
+			} catch (Parser\Exception $exception) {
+				$currentDirectory = $this->filesystem->getCurrentDirectory();
+				$absolutePath = "{$testsDirectory}/{$path}";
+				$relativePath = self::getRelativePath($currentDirectory, $absolutePath);
+
+				$data = $exception->getData();
+				throw Exception::invalidTestsFileSyntax($relativePath, $contents, $data['position'], $data['expectation']);
+			}
+		}
+
+		return $suites;
+	}
+
+	public static function getRelativePath($aPath, $bPath)
+	{
+		$aTrail = explode('/', trim($aPath, '/'));
+		$bTrail = explode('/', trim($bPath, '/'));
+
+		$aCount = count($aTrail);
+		$bCount= count($bTrail);
+
+		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aTrail[$i] === $bTrail[$i]); ++$i);
+
+		return str_repeat('../', $aCount - $i) . implode('/', array_slice($bTrail, $i));
 	}
 
 	public function errorHandler($level, $message, $file, $line)
@@ -367,31 +407,36 @@ class Runner
 			$this->findChild(dirname($lens), self::$srcDirectoryName, $output);
 	}
 
-	private function findAutoloader(array $settings, $lensDirectory, $srcDirectory, &$autoloaderPath)
+	private function findAutoloader(array $settings, $lensDirectory, $srcDirectory, &$bootstrapPath)
 	{
-		return $this->findAutoloaderFromSettings($settings['autoloader'], $autoloaderPath) ||
-			$this->findAutoloaderFromLens($lensDirectory, $autoloaderPath) ||
-			$this->findAutoloaderFromSrc($srcDirectory, $autoloaderPath);
+		return $this->findAutoloaderFromSettings($settings['bootstrap'], $bootstrapPath) ||
+			$this->findAutoloaderFromLens($lensDirectory, $bootstrapPath) ||
+			$this->findAutoloaderFromSrc($srcDirectory, $bootstrapPath);
 	}
 
-	private function findAutoloaderFromSettings(&$autoloaderPathSettings, &$autoloaderPath)
+	private function findAutoloaderFromSettings(&$bootstrapPathSettings, &$bootstrapPath)
 	{
-		if ($autoloaderPathSettings === null) {
+		if ($bootstrapPathSettings === null) {
 			return false;
 		}
 
-		$autoloaderPath = $autoloaderPathSettings;
+		$bootstrapPath = $bootstrapPathSettings;
 		return true;
 	}
 
-	private function findAutoloaderFromLens($lensDirectory, &$autoloaderPath)
+	private function findAutoloaderFromLens($lensDirectory, &$bootstrapPath)
 	{
-		$names = array('autoload.php', 'bootstrap.php', 'autoloader.php');
+		$path = "{$lensDirectory}/bootstrap.php";
 
-		return $this->findFile($lensDirectory, $names, $autoloaderPath);
+		if (!$this->filesystem->isFile($path)) {
+			return false;
+		}
+
+		$bootstrapPath = $path;
+		return true;
 	}
 
-	private function findAutoloaderFromSrc($srcDirectory, &$autoloaderPath)
+	private function findAutoloaderFromSrc($srcDirectory, &$bootstrapPath)
 	{
 		if ($srcDirectory === null) {
 			return false;
@@ -404,7 +449,7 @@ class Runner
 			return false;
 		}
 
-		$autoloaderPath = $path;
+		$bootstrapPath = $path;
 		return true;
 	}
 }

@@ -104,7 +104,7 @@ class Displayer
 	 */
 	private function showString($string)
 	{
-		$decidingCharacters = "'\n\r\t\v\e\f\\\$";
+		$decidingCharacters = "'\n\r\t\v\e\f\\";
 
 		if (strcspn($string, $decidingCharacters) === strlen($string)) {
 			return var_export($string, true);

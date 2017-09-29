@@ -8,7 +8,8 @@ call_user_func(function () {
 
 	$classes = array(
 		'Lens' => "{$srcDirectory}/Lens",
-		'SpencerMortensen\\ParallelProcessor' => "{$srcDirectory}/ParallelProcessor"
+		'SpencerMortensen\\ParallelProcessor' => "{$srcDirectory}/ParallelProcessor",
+		'SpencerMortensen\\Parser' => "{$srcDirectory}/Parser"
 	);
 
 	foreach ($classes as $namespacePrefix => $libraryPath) {

@@ -36,13 +36,16 @@ class Exception extends \Exception
 	/** @var string */
 	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
 
+	/** @var string */
+	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
+
 	const CODE_INTERNAL = 0;
 	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;
 	const CODE_INVALID_SETTINGS_FILE = 2;
 	const CODE_INVALID_SRC_DIRECTORY = 3;
 	const CODE_INVALID_AUTOLOADER_PATH = 4;
 	const CODE_INVALID_TESTS_PATH = 5;
-	const CODE_INVALID_TESTS_FILE = 6;
+	const CODE_INVALID_TESTS_FILE_SYNTAX = 6;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
 	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
@@ -120,6 +123,28 @@ class Exception extends \Exception
 		return new self($code, $severity, $message, $help, $data);
 	}
 
+	private static function getSeverityFromErrorLevel($level)
+	{
+		switch ($level) {
+			case E_STRICT:
+			case E_DEPRECATED:
+			case E_USER_DEPRECATED:
+			case E_NOTICE:
+			case E_USER_NOTICE:
+				return self::SEVERITY_NOTICE;
+
+			case E_WARNING:
+			case E_CORE_WARNING:
+			case E_COMPILE_WARNING:
+			case E_USER_WARNING:
+			case E_RECOVERABLE_ERROR:
+				return self::SEVERITY_WARNING;
+
+			default:
+				return self::SEVERITY_ERROR;
+		}
+	}
+
 	/**
 	 * @param \Throwable $throwable
 	 * @return Exception
@@ -179,13 +204,14 @@ class Exception extends \Exception
 
 		$severity = self::SEVERITY_WARNING;
 
+		// TODO: include the file path in this message:
 		$message = "The settings file isn't a valid INI file.";
 
 		$help = array(
-			"Here's an overview of the INI file format:\n" .
-			"https://en.wikipedia.org/wiki/INI_file"
+			"Here's an overview of the INI file format:\n" . self::$iniSyntaxUrl
 		);
 
+		// TODO: convert this absolute path into a relative path (based on the current working directory)
 		$data = array(
 			'file' => $path
 		);
@@ -248,48 +274,6 @@ class Exception extends \Exception
 		);
 
 		return new self($code, $severity, $message, $help, $data);
-	}
-
-	public static function invalidTestsFile($path)
-	{
-		$code = self::CODE_INVALID_TESTS_FILE;
-
-		$severity = self::SEVERITY_ERROR;
-
-		// TODO: display all quotations in double quotes:
-		$pathValue = var_export($path, true);
-		// TODO: improve this error message:
-		$message = "The test file {$pathValue} has invalid syntax.";
-
-		$help = null;
-
-		$data = array(
-			'file' => $path
-		);
-
-		return new self($code, $severity, $message, $help, $data);
-	}
-
-	private static function getSeverityFromErrorLevel($level)
-	{
-		switch ($level) {
-			case E_STRICT:
-			case E_DEPRECATED:
-			case E_USER_DEPRECATED:
-			case E_NOTICE:
-			case E_USER_NOTICE:
-				return self::SEVERITY_NOTICE;
-
-			case E_WARNING:
-			case E_CORE_WARNING:
-			case E_COMPILE_WARNING:
-			case E_USER_WARNING:
-			case E_RECOVERABLE_ERROR:
-				return self::SEVERITY_WARNING;
-
-			default:
-				return self::SEVERITY_ERROR;
-		}
 	}
 
 	private static function getInvalidPathMessage($path, $description)
@@ -360,6 +344,143 @@ class Exception extends \Exception
 
 			default:
 				return 'an unknown value';
+		}
+	}
+
+	public static function invalidTestsFileSyntax($path, $contents, $position, $expectation)
+	{
+		$code = self::CODE_INVALID_TESTS_FILE_SYNTAX;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = self::getTestsFileInvalidSyntaxMessage($path, $contents, $position, $expectation);
+
+		// TODO:
+		/*
+		$help = array(
+			"There's an article about the syntax of a tests file:\n" . self::$lensTestsSyntaxUrl
+		);
+		*/
+
+		$help = null;
+
+		return new self($code, $severity, $message, $help);
+	}
+
+	private static function getTestsFileInvalidSyntaxMessage($path, $contents, $position, $expectation)
+	{
+		$displayer = new Displayer();
+
+		$pathText = $displayer->display($path);
+
+		$message = "Syntax error in {$pathText}: ";
+
+		list($line, $character) = self::getCoordinates($contents, $position);
+
+		$tail = self::getTail($contents, $position);
+		$tailText = $displayer->display($tail);
+
+		if ($expectation === null) {
+			$message .= "unexpected text ({$tailText}) at the end of the file.";
+		} else {
+			$expectationText = self::getExpectationText($expectation);
+			$message .= "expected {$expectationText}, but read {$tailText} at line {$line} character {$character}.";
+		}
+
+		return $message;
+	}
+
+	private static function getCoordinates($input, $position)
+	{
+		$lines = explode("\n", substr($input, 0, $position));
+		$x = count($lines);
+
+		$lastLine = array_pop($lines);
+		$y = strlen($lastLine) + 1;
+
+		return array($x, $y);
+	}
+
+	public static function getTail($input, $position)
+	{
+		$tail = substr($input, $position);
+		$end = strpos($tail, "\n");
+
+		if ($end === 0) {
+			$end = 1;
+		} elseif (!is_integer($end)) {
+			$end = 96;
+		}
+
+		return substr($tail, 0, $end);
+	}
+
+	private static function getExpectationText($expectation)
+	{
+		switch ($expectation) {
+			case 'suite':
+				return "a valid tests file";
+
+			case 'phpTag':
+				return "an opening PHP tag ('<?php')";
+
+			case 'namespace':
+				return "a namespace declaration (e.g. 'namespace Example;')";
+
+			case 'space':
+				return "a whitespace character";
+
+			case 'namespaceKeyword':
+				return "the word 'namespace'";
+
+			case 'namespacePath':
+				return "a namespace path";
+
+			case 'semicolon':
+				return "a semicolon (';')";
+
+			case 'useStatement':
+			case 'useKeyword':
+				return "a 'use' statement (e.g. 'use Example\\\\MyClass;')";
+
+			case 'code':
+				return "a code block";
+
+			case 'tests':
+				return "tests";
+
+			case 'test':
+				return "a test";
+
+			case 'subject':
+				return "a subject block";
+
+			case 'subjectLabel':
+				return "a test label ('// Test')";
+
+			case 'cases':
+				return "test cases";
+
+			case 'case':
+				return "a test case";
+
+			case 'optionalInput':
+				return "an optional input section";
+
+			case 'input':
+				return "an input section";
+
+			case 'inputLabel':
+				return "an input label ('// Input')";
+
+			case 'output':
+				return "an output section";
+
+			case 'outputLabel':
+				return "an output label ('// Output')";
+
+			default:
+				throw Exception::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
 		}
 	}
 }

@@ -30,55 +30,18 @@ class Browser
 	/** @var Filesystem */
 	private $filesystem;
 
-	/** @var Parser */
-	private $parser;
-
 	/** @var array */
-	private $suites;
+	private $files;
 
 	/** @var integer */
 	private $testsPrefixLength;
 
-	public function __construct(Filesystem $filesystem, Parser $parser)
+	public function __construct(Filesystem $filesystem)
 	{
 		$this->filesystem = $filesystem;
-		$this->parser = $parser;
-		$this->suites = array();
+		$this->files = array();
 	}
 
-	/*
-	suites: {
-		<file>: <suite>
-	}
-
-	suite: {
-		"fixture": "..."
-		"tests": {
-			<line>: <test>
-		}
-	}
-
-	test: {
-		"subject": "...",
-		"cases": {
-			<line>: <case>
-		}
-	}
-
-	case: {
-		"input": "...",
-		"output": "...",
-		"result": <result>
-	}
-
-	result: {
-		"fixture": <state>,
-		"expected": <state>|null,
-		"actual": <state>|null
-	}
-
-	state: {...}
-	*/
 	public function browse($testsDirectory, array $paths)
 	{
 		$testsPrefix = $testsDirectory . '/';
@@ -101,7 +64,7 @@ class Browser
 			$this->get($path, $contents);
 		}
 
-		return $this->suites;
+		return $this->files;
 	}
 
 	private function get($path, $contents)
@@ -122,21 +85,15 @@ class Browser
 		}
 	}
 
-	private function getFile($path, $contents)
+	private function getFile($absolutePath, $contents)
 	{
-		if (!$this->isTestsFile($path)) {
+		if (!$this->isTestsFile($absolutePath)) {
 			return;
 		}
 
-		$suite = $this->parser->parse($contents);
+		$relativePath = $this->getRelativePath($absolutePath);
 
-		if ($suite === null) {
-			throw Exception::invalidTestsFile($path);
-		}
-
-		$relativePath = $this->getRelativePath($path);
-
-		$this->suites[$relativePath] = $suite;
+		$this->files[$relativePath] = $contents;
 	}
 
 	private function isTestsFile($path)

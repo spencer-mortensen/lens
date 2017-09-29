@@ -95,7 +95,8 @@ EOS;
 		$code = <<<'EOS'
 	public function %s(%s)
 	{
-		return \Lens\Evaluator\Agent::call($this, __FUNCTION__, func_get_args());
+		\Lens\Evaluator\Agent::record($this, __FUNCTION__, func_get_args());
+		return eval(\Lens\Evaluator\Agent::play());
 	}
 EOS;
 

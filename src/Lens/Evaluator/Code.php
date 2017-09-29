@@ -27,156 +27,246 @@ namespace Lens\Evaluator;
 
 class Code
 {
-	const LENS_CONSTANT_NAME = 'LENS';
-
-	public function prepare($lensDirectory, $autoloaderPath)
+	public function getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp)
 	{
-		define(self::LENS_CONSTANT_NAME, $lensDirectory . '/');
+		// TODO: what if $namespace is null?
+		$namespace = self::extractNamespace($fixturePhp);
+		$aliases = self::extractAliases($fixturePhp);
 
-		spl_autoload_register(
-			function ($class)
-			{
-				$mockPrefix = 'Lens\\Mock\\';
-				$mockPrefixLength = strlen($mockPrefix);
+		$contextPhp = self::getContextPhp($namespace, $aliases);
+		$fixturePhp = self::combine($fixturePhp, $inputPhp);
 
-				if (strncmp($class, $mockPrefix, $mockPrefixLength) !== 0) {
-					return;
-				}
+		$mocks = self::extractMockNames($namespace, $aliases, $fixturePhp);
+		$script = self::extractScript($mocks, $outputPhp);
 
-				$parentClass = substr($class, $mockPrefixLength);
-
-				$mockBuilder = new MockBuilder($mockPrefix, $parentClass);
-				$mockCode = $mockBuilder->getMock();
-
-				eval($mockCode);
-			}
-		);
-
-		if (is_string($autoloaderPath)) {
-			require $autoloaderPath;
-		}
+		return array($contextPhp, $fixturePhp, $outputPhp, $testPhp, $script);
 	}
 
-	public function getExpectedPhp($fixture, $input, $output)
+	private static function extractNamespace(&$php)
 	{
-		$contextPhp = self::extractContextPhp($fixture);
-		$beforePhp = self::combine($contextPhp, $fixture, $input);
-		$afterPhp = self::combine($contextPhp, self::useMockCalls($output));
+		$pattern = self::getPattern('^namespace\h+([^;]+);');
 
-		return array($beforePhp, $afterPhp);
-	}
-
-	public function getActualPhp($fixture, $input, $subject)
-	{
-		$contextPhp = self::extractContextPhp($fixture);
-		$beforePhp = self::combine($contextPhp, $fixture, $input);
-		$afterPhp = self::combine($contextPhp, $subject);
-
-		return array($beforePhp, $afterPhp);
-	}
-
-	private static function extractContextPhp(&$fixturePhp)
-	{
-		$namespacePhp = self::extractNamespacePhp($fixturePhp);
-		$usePhp = self::extractUsePhp($fixturePhp);
-
-		return self::combine($namespacePhp, $usePhp);
-	}
-
-	private static function extractNamespacePhp(&$inputPhp)
-	{
-		$namespacePattern = self::getPattern('^\s*namespace\h+[^\n\r]+');
-
-		if (preg_match($namespacePattern, $inputPhp, $match, PREG_OFFSET_CAPTURE) !== 1) {
+		if (preg_match($pattern, $php, $match) !== 1) {
 			return null;
 		}
 
-		$inputPhp = trim(substr($inputPhp, $match[0][1] + strlen($match[0][0])));
-		return trim($match[0][0]);
+		$namespace = $match[1];
+		$php = trim(substr($php, strlen($match[0])));
+
+		return $namespace;
 	}
 
-	// TODO: this might corrupt multiline text strings:
-	private static function extractUsePhp(&$inputPhp)
+	private static function extractAliases(&$php)
 	{
-		$inputLines = self::getLines($inputPhp);
-		$outputLines = array();
+		$aliases = array();
 
-		foreach ($inputLines as $i => $line) {
-			if (self::getUsePhp($line, $usePhp)) {
-				unset($inputLines[$i]);
-				$outputLines[] = $usePhp;
+		$lines = self::getLines($php);
+
+		foreach ($lines as $i => $line) {
+			if (self::getAlias($line, $name, $path)) {
+				$aliases[$name] = $path;
+				unset($lines[$i]);
 			}
 		}
 
-		$inputPhp = self::getTrimmedString($inputLines);
-		return self::getTrimmedString($outputLines);
+		$php = implode("\n", $lines);
+
+		return $aliases;
 	}
 
 	private static function getLines($code)
 	{
-		$pattern = self::getPattern('\\n|\\r', 'm');
-		return preg_split($pattern, trim($code));
+		$pattern = self::getPattern('\\r?\\n');
+
+		return preg_split($pattern, $code, null, PREG_SPLIT_NO_EMPTY);
 	}
 
-	private static function getUsePhp($code, &$usePhp)
+	private static function getAlias($php, &$name, &$path)
 	{
-		$pattern = self::getPattern('^\h*use\\h+([^\\h]+);\h*(// Mock)?\h*$');
+		$expression = '^use\\h+(?\'path\'[a-zA-Z_0-9\\\\]+)(?:\\h+as\\h+(?\'alias\'[a-zA-Z_0-9]+))?;$';
+		$pattern = self::getPattern($expression, 'm');
 
-		if (preg_match($pattern, $code, $match) !== 1) {
+		if (preg_match($pattern, $php, $match) !== 1) {
 			return false;
 		}
 
-		$namespace = $match[1];
-		$isMock = (count($match) === 3);
+		$path = $match['path'];
+		$alias = &$match['alias'];
 
-		if ($isMock) {
-			$namespace = 'Lens\\Mock\\' . $namespace;
+		if (!is_string($alias) || (strlen($alias) === 0)) {
+			$alias = self::getAliasName($path);
 		}
 
-		$usePhp = "use {$namespace};";
+		$name = $alias;
+
 		return true;
 	}
 
-	private static function getTrimmedString(array $lines)
+	private static function getAliasName($path)
 	{
-		if (count($lines) === 0) {
+		$slash = strrpos($path, '\\');
+
+		if (is_integer($slash)) {
+			return substr($path, $slash + 1);
+		}
+
+		return $path;
+	}
+
+	private static function getContextPhp($namespace, array $aliases)
+	{
+		$namespacePhp = self::getNamespacePhp($namespace);
+		$aliasesPhp = self::getAliasesPhp($aliases);
+
+		return self::combine($namespacePhp, $aliasesPhp);
+	}
+
+	private static function getNamespacePhp($namespace)
+	{
+		return "namespace {$namespace};";
+	}
+
+	private static function getAliasesPhp(array $aliases)
+	{
+		if (count($aliases) === 0) {
 			return null;
 		}
 
-		$string = trim(implode("\n", $lines));
+		$aliasesPhp = array();
 
-		if (count($string) === 0) {
-			return null;
+		foreach ($aliases as $name => $path) {
+			$aliasesPhp[] = self::getAliasPhp($name, $path);
 		}
 
-		return $string;
+		return implode("\n", $aliasesPhp);
 	}
 
-	private static function useMockCalls($code)
+	private static function getAliasPhp($name, $path)
 	{
-		$expression = '^\\s*(\\$.+?)->(.+?)\\((.*?)\\);\\s*// (return|throw)\\s+(.*);$';
+		$aliasPhp = "use {$path}";
 
-		$pattern = self::getPattern($expression, 'm');
+		if ($name !== self::getAliasName($path)) {
+			$aliasPhp .= " as {$name}";
+		}
 
-		return preg_replace_callback($pattern, 'self::getMockCall', $code);
-	}
+		$aliasPhp .= ';';
 
-	protected static function getMockCall(array $match)
-	{
-		list(, $object, $method, $argumentList, $resultAction, $resultValue) = $match;
-
-		$methodName = var_export($method, true);
-		$arguments = "array({$argumentList})";
-
-		$resultType = ($resultAction === 'throw' ? Agent::ACTION_THROW : Agent::ACTION_RETURN);
-		$result = "array({$resultType}, {$resultValue})";
-
-		return "\\Lens\\Evaluator\\Agent::call({$object}, {$methodName}, {$arguments}, {$result});";
+		return $aliasPhp;
 	}
 
 	private static function combine()
 	{
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
+	}
+
+	private static function extractMockNames($namespace, array $aliases, &$php)
+	{
+		$names = array();
+
+		$lines = self::getLines($php);
+
+		foreach ($lines as &$line) {
+			if (self::getMock($line, $name, $class, $arguments)) {
+				$absoluteClass = self::getAbsoluteClass($namespace, $aliases, $class);
+				$mockClass = "\\Lens\\Mock{$absoluteClass}";
+				$line = self::getInstantiationPhp($name, $mockClass, $arguments);
+
+				$names[$name] = $name;
+			}
+		}
+
+		$php = implode("\n", $lines);
+
+		return $names;
+	}
+
+	private static function getMock(&$php, &$name, &$class, &$arguments)
+	{
+		$expression = '^\$(?\'name\'[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?\'class\'[a-zA-Z_0-9\\\\]+)\\((?\'arguments\'.*?)\\);\\h*// Mock$';
+		$pattern = self::getPattern($expression);
+
+		if (preg_match($pattern, $php, $match) !== 1) {
+			return false;
+		}
+
+		$name = $match['name'];
+		$class = $match['class'];
+		$arguments = $match['arguments'];
+
+		return true;
+	}
+
+	private static function getAbsoluteClass($namespace, array $aliases, $class)
+	{
+		if (substr($class, 0, 1) === '\\') {
+			return $class;
+		}
+
+		if (self::resolveAliases($aliases, $class)) {
+			return $class;
+		}
+
+		return "\\{$namespace}\\{$class}";
+	}
+
+	private static function resolveAliases(array $aliases, &$class)
+	{
+		$names = explode('\\', $class, 2);
+		$baseName = $names[0];
+		$basePath = &$aliases[$baseName];
+
+		if ($basePath === null) {
+			return false;
+		}
+
+		$names[0] = $basePath;
+		$class = '\\' . implode('\\', $names);
+
+		return true;
+	}
+
+	private static function getInstantiationPhp($name, $class, $arguments)
+	{
+		return "\${$name} = new {$class}({$arguments});";
+	}
+
+	private static function extractScript(array $mocks, &$outputPhp)
+	{
+		$script = array();
+
+		$pattern = self::getScriptPattern($mocks);
+		$lines = self::getLines($outputPhp);
+
+		foreach ($lines as &$line) {
+			if (preg_match($pattern, $line, $match) === 1) {
+				$line = $match[1];
+				$script[] = &$match[2];
+			}
+		}
+
+		$outputPhp = implode("\n", $lines);
+
+		return $script;
+	}
+
+	private static function getScriptPattern(array $mocks)
+	{
+		$literals = array();
+
+		foreach ($mocks as $name) {
+			$literals[] = self::getLiteral($name);
+		}
+
+		$literalsExpression = implode('|', $literals);
+		$expression = "^(\\\$(?:{$literalsExpression})->.*?)(?:\\s*//\\s+(.*))?$";
+		return self::getPattern($expression);
+	}
+
+	private static function getLiteral($string)
+	{
+		$delimiter = "\x03";
+
+		return preg_quote($string, $delimiter);
 	}
 
 	private static function getPattern($expression, $flags = '')

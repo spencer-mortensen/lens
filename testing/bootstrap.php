@@ -1,9 +1,12 @@
 <?php
 
 call_user_func(function () {
+	$srcDirectory = dirname(__DIR__) . '/src';
+
 	$classes = array(
-		'Lens' => dirname(__DIR__) . '/src',
-		'SpencerMortensen\\ParallelProcessor' => dirname(__DIR__) . '/vendor/spencer-mortensen/parallel-processor/src'
+		'Lens' => "{$srcDirectory}/Lens",
+		'SpencerMortensen\\ParallelProcessor' => "{$srcDirectory}/ParallelProcessor",
+		'SpencerMortensen\\Parser' => "{$srcDirectory}/Parser"
 	);
 
 	foreach ($classes as $namespacePrefix => $libraryPath) {

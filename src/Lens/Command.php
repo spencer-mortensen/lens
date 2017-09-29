@@ -27,9 +27,8 @@ namespace Lens;
 
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
-use Lens\Evaluator\Jobs\ActualJob;
 use Lens\Evaluator\Jobs\CoverageJob;
-use Lens\Evaluator\Jobs\ExpectedJob;
+use Lens\Evaluator\Jobs\TestJob;
 use SpencerMortensen\ParallelProcessor\Shell\ShellSlave;
 
 class Command
@@ -81,19 +80,14 @@ class Command
 		$arguments = unserialize($decompressed);
 
 		switch ($name) {
-			case 'actual':
-				list($lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject) = $arguments;
-				$job = new ActualJob($this->executable, $lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject, $results, $coverage);
-				break;
-
 			case 'coverage':
-				list($srcDirectory, $relativePaths, $autoloaderPath) = $arguments;
-				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $autoloaderPath, $code, $coverage);
+				list($srcDirectory, $relativePaths, $bootstrapPath) = $arguments;
+				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $bootstrapPath, $code, $coverage);
 				break;
 
-			case 'expected':
-				list($lensDirectory, $autoloaderPath, $fixture, $input, $output) = $arguments;
-				$job = new ExpectedJob($this->executable, $lensDirectory, $autoloaderPath, $fixture, $input, $output, $preState, $postState, $script);
+			case 'test':
+				list($lensDirectory, $srcDirectory, $bootstrapPath, $contextPhp, $beforePhp, $afterPhp, $script) = $arguments;
+				$job = new TestJob($this->executable, $lensDirectory, $srcDirectory, $bootstrapPath, $contextPhp, $beforePhp, $afterPhp, $script, $preState, $postState, $coverage);
 				break;
 
 			default:
@@ -116,14 +110,14 @@ class Command
 		$filesystem = new Filesystem();
 		$settingsFile = new IniFile($filesystem);
 		$settings = new Settings($settingsFile, $this->logger);
-		$parser = new Parser();
-		$browser = new Browser($filesystem, $parser);
+		$browser = new Browser($filesystem);
+		$parser = new SuiteParser();
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$console = new Console();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($settings, $filesystem, $browser, $evaluator, $console, $web, $this->logger);
+		$runner = new Runner($settings, $filesystem, $browser, $parser, $evaluator, $console, $web, $this->logger);
 		$runner->run($paths);
 	}
 }

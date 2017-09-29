@@ -25,10 +25,10 @@
 
 namespace Lens\Evaluator\Jobs;
 
-use Lens\Evaluator\Actual;
+use Lens\Evaluator\Test;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 
-class ActualJob implements ShellJob
+class TestJob implements ShellJob
 {
 	/** @var string */
 	private $executable;
@@ -40,69 +40,73 @@ class ActualJob implements ShellJob
 	private $srcDirectory;
 
 	/** @var string */
-	private $autoloaderPath;
+	private $bootstrapPath;
 
 	/** @var string */
-	private $fixture;
+	private $contextPhp;
 
 	/** @var string */
-	private $input;
+	private $beforePhp;
 
 	/** @var string */
-	private $output;
-
-	/** @var string */
-	private $subject;
+	private $afterPhp;
 
 	/** @var null|array */
-	private $results;
+	private $script;
+
+	/** @var null|array */
+	private $preState;
+
+	/** @var null|array */
+	private $postState;
 
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $lensDirectory, $srcDirectory, $autoloaderPath, $fixture, $input, $output, $subject, &$results, &$coverage)
+	public function __construct($executable, $lensDirectory, $srcDirectory, $bootstrapPath, $contextPhp, $beforePhp, $afterPhp, $script, array &$preState = null, array &$postState = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
-		$this->autoloaderPath = $autoloaderPath;
-		$this->fixture = $fixture;
-		$this->input = $input;
-		$this->output = $output;
-		$this->subject = $subject;
-
-		$this->results = &$results;
+		$this->bootstrapPath = $bootstrapPath;
+		$this->contextPhp = $contextPhp;
+		$this->beforePhp = $beforePhp;
+		$this->afterPhp = $afterPhp;
+		$this->script = $script;
+		$this->preState = &$preState;
+		$this->postState = &$postState;
 		$this->coverage = &$coverage;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensDirectory, $this->srcDirectory, $this->autoloaderPath, $this->fixture, $this->input, $this->output, $this->subject);
+		$arguments = array($this->lensDirectory, $this->srcDirectory, $this->bootstrapPath, $this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
 
-		return "{$this->executable} --actual={$encoded}";
+		return "{$this->executable} --test={$encoded}";
 	}
 
 	public function run($send)
 	{
-		$actual = new Actual($this->executable, $this->lensDirectory, $this->srcDirectory, $this->autoloaderPath);
+		$test = new Test($this->lensDirectory, $this->srcDirectory, $this->bootstrapPath);
 
-		$onShutdown = function () use ($actual, $send) {
-			$state = $actual->getState();
-			$coverage = $actual->getCoverage();
+		$onShutdown = function () use ($test, $send) {
+			$preState = $test->getPreState();
+			$postState = $test->getPostState();
+			$coverage = $test->getCoverage();
 
-			$message = serialize(array($state, $coverage));
+			$message = serialize(array($preState, $postState, $coverage));
 
 			call_user_func($send, $message);
 		};
 
-		$actual->run($this->fixture, $this->input, $this->output, $this->subject, $onShutdown);
+		$test->run($this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script, $onShutdown);
 	}
 
 	public function receive($message)
 	{
-		list($this->results, $this->coverage) = unserialize($message);
+		list($this->preState, $this->postState, $this->coverage) = unserialize($message);
 	}
 }

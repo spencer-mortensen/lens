@@ -2,8 +2,6 @@
 
 namespace Example;
 
-require LENS . 'bootstrap.php';
-
 $math = new Math();
 
 

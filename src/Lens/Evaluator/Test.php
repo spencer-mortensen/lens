@@ -25,233 +25,197 @@
 
 namespace Lens\Evaluator;
 
-use Exception;
 use Lens\Archivist\Archivist;
-use Throwable;
 
 class Test
 {
+	const LENS_CONSTANT_NAME = 'LENS';
+
 	/** @var Archivist */
 	private $archivist;
 
-	/** @var boolean */
-	private $isTerminated;
+	/** @var string */
+	private $lensDirectory;
 
 	/** @var string */
-	private $code;
+	private $srcDirectory;
+
+	/** @var string */
+	private $bootstrapPath;
+
+	/** @var null|string */
+	private $contextPhp;
+
+	/** @var null|array */
+	private $script;
 
 	/** @var callable */
 	private $onShutdown;
 
-	/** @var array */
-	private $state;
+	/** @var Examiner */
+	private $examiner;
 
-	public function __construct()
+	/** @var null|array */
+	private $preState;
+
+	/** @var null|array */
+	private $postState;
+
+	/** @var CoverageExtractor */
+	private $coverageExtractor;
+
+	/** @var null|array */
+	private $coverage;
+
+	public function __construct($lensDirectory, $srcDirectory, $bootstrapPath)
 	{
 		$this->archivist = new Archivist();
-
-		ini_set('display_errors', 'Off');
-		set_error_handler(array($this, 'errorHandler'));
-		register_shutdown_function(array($this, 'shutdownFunction'));
-		self::unsetGlobals();
-
-		$this->isTerminated = false;
-		$this->state = array(
-			'output' => null,
-			'variables' => array(),
-			'globals' => null,
-			'constants' => null,
-			'exception' => null,
-			'errors' => null,
-			'calls' => null
-		);
+		$this->lensDirectory = $lensDirectory;
+		$this->srcDirectory = $srcDirectory;
+		$this->bootstrapPath = $bootstrapPath;
 	}
 
-	public function run($code, $onShutdown)
+	public function getPreState()
 	{
-		if ($this->isTerminated()) {
-			return;
-		}
+		return $this->preState;
+	}
 
-		$this->code = $code;
+	public function getPostState()
+	{
+		return $this->postState;
+	}
+
+	public function getCoverage()
+	{
+		return $this->coverage;
+	}
+
+	public function run($contextPhp, $beforePhp, $afterPhp, $script, $onShutdown)
+	{
+		$this->contextPhp = $contextPhp;
+		$this->script = $script;
 		$this->onShutdown = $onShutdown;
 
-		$this->evaluateCode();
+		$prePhp = self::combine($contextPhp, $beforePhp);
+		$postPhp = self::combine($contextPhp, $afterPhp);
+
+		$this->examiner = new Examiner();
+		$this->prepare();
+
+		$this->examiner->run($prePhp, array($this, 'onPreShutdown'));
+		$this->onPreShutdown();
+
+		$this->examiner->run($postPhp, array($this, 'onPostShutdown'));
+		$this->onPostShutdown();
 	}
 
-	private function evaluateCode()
+	private static function combine()
 	{
-		$this->state['exception'] = null;
-		$this->state['errors'] = array();
+		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
+	}
 
-		extract($this->state['variables']);
-		ob_start();
+	private function prepare()
+	{
+		define(self::LENS_CONSTANT_NAME, "{$this->lensDirectory}/");
 
-		try {
-			eval($this->code);
-		} catch (Throwable $LENS_EXCEPTION) {
-			$this->isTerminated = true;
-			$this->state['exception'] = $LENS_EXCEPTION;
-			unset($LENS_EXCEPTION);
-		} catch (Exception $LENS_EXCEPTION) {
-			$this->isTerminated = true;
-			$this->state['exception'] = $LENS_EXCEPTION;
-			unset($LENS_EXCEPTION);
+		spl_autoload_register(
+			function ($class)
+			{
+				$mockPrefix = 'Lens\\Mock\\';
+				$mockPrefixLength = strlen($mockPrefix);
+
+				if (strncmp($class, $mockPrefix, $mockPrefixLength) !== 0) {
+					return;
+				}
+
+				$parentClass = substr($class, $mockPrefixLength);
+
+				$mockBuilder = new MockBuilder($mockPrefix, $parentClass);
+				$mockCode = $mockBuilder->getMock();
+
+				eval($mockCode);
+			}
+		);
+
+		if (is_string($this->bootstrapPath)) {
+			require $this->bootstrapPath;
+		}
+	}
+
+	public function onPreShutdown()
+	{
+		$this->preState = $this->getState();
+
+		if ($this->examiner->isTerminated()) {
+			call_user_func($this->onShutdown);
 		}
 
-		$this->state['variables'] = get_defined_vars();
-		ksort($this->state['variables'], SORT_NATURAL);
-		$this->setGlobalState();
-
-		$this->onShutdown = null;
+		Agent::start($this->contextPhp, $this->script);
+		$this->startCoverage();
 	}
 
-	private function setGlobalState()
+	private function getState($calls = null)
 	{
-		$this->state['output'] = self::getOutput();
-		$this->state['globals'] = self::getGlobals();
-		$this->state['constants'] = self::getConstants();
-		$this->state['calls'] = self::getCalls();
-	}
+		$state = $this->examiner->getState();
 
-	public function shutdownFunction()
-	{
-		if ($this->onShutdown === null) {
-			return;
+		if (is_array($state)) {
+			unset($state['constants'][self::LENS_CONSTANT_NAME]);
+			$state['calls'] = $calls;
 		}
 
-		$this->isTerminated = true;
+		return $this->archivist->archive($state);
+	}
 
-		$this->state['variables'] = array();
-		$this->getLastError();
-		$this->setGlobalState();
+	public function onPostShutdown()
+	{
+		$this->stopCoverage();
+		$calls = Agent::stop();
+
+		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
 
 		call_user_func($this->onShutdown);
 	}
 
-	public function errorHandler($level, $message, $file, $line)
+	private static function getCleanPostState(array $pre, array $post = null)
 	{
-		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
-	}
-
-	private static function getOutput()
-	{
-		$output = ob_get_clean();
-
-		if (strlen($output) === 0) {
+		if ($post === null) {
 			return null;
 		}
 
-		return $output;
+		self::removeDuplicateKeys($pre['variables'], $post['variables']);
+		self::removeDuplicateKeys($pre['globals'], $post['globals']);
+		self::removeDuplicateKeys($pre['constants'], $post['constants']);
+
+		return $post;
 	}
 
-	private static function unsetGlobals()
+	private static function removeDuplicateKeys(array $a, array &$b)
 	{
-		foreach ($GLOBALS as $key => $value) {
-			if ($key !== 'GLOBALS') {
-				unset($GLOBALS[$key]);
+		foreach ($b as $key => $value) {
+			if (array_key_exists($key, $a)) {
+				unset($b[$key]);
 			}
 		}
 	}
 
-	private static function getGlobals()
+	private function startCoverage()
 	{
-		$globals = array();
-
-		foreach ($GLOBALS as $key => $value) {
-			if (!self::isSuperGlobal($key)) {
-				$globals[$key] = $value;
-			}
+		if ($this->script === null) {
+			return;
 		}
 
-		ksort($globals, SORT_NATURAL);
-		return $globals;
+		$this->coverageExtractor = new CoverageExtractor($this->srcDirectory);
+		$this->coverageExtractor->start();
+
 	}
 
-	private static function isSuperGlobal($name)
+	private function stopCoverage()
 	{
-		$superglobals = array(
-			'GLOBALS' => true,
-			'_SERVER' => true,
-			'_GET' => true,
-			'_POST' => true,
-			'_FILES' => true,
-			'_COOKIE' => true,
-			'_SESSION' => true,
-			'_REQUEST' => true,
-			'_ENV' => true
-		);
-
-		return isset($superglobals[$name]);
-	}
-
-	private static function getConstants()
-	{
-		$constants = get_defined_constants(true);
-		$userConstants = &$constants['user'];
-
-		if (!is_array($userConstants)) {
-			return array();
+		if ($this->coverageExtractor === null) {
+			return;
 		}
 
-		ksort($userConstants, SORT_NATURAL);
-		return $userConstants;
-	}
-
-	private static function getCalls()
-	{
-		return Agent::getCalls();
-	}
-
-	private function getLastError()
-	{
-		$error = error_get_last();
-		error_clear_last();
-
-		if (is_array($error)) {
-			$this->state['errors'][] = self::getErrorValue($error['type'], $error['message'], $error['file'], $error['line']);
-		}
-	}
-
-	private static function getErrorValue($level, $message, $file, $line)
-	{
-		list($file, $line) = self::getSource($file, $line);
-
-		return array($level, $message, $file, $line);
-	}
-
-	private static function getSource($errorFile, $errorLine)
-	{
-		if (!self::isEvaluatedCode($errorFile, $file, $line)) {
-			$file = $errorFile;
-			$line = $errorLine;
-		} elseif ($file === __FILE__) {
-			$file = null;
-			$line = $errorLine;
-		}
-
-		return array($file, $line);
-	}
-
-	private static function isEvaluatedCode($input, &$file, &$line)
-	{
-		$pattern = '~^((?:[a-z]+://)?(?:/[^/]+)+)\\(([0-9]+)\\) : eval\\(\\)\'d code$~';
-
-		if (preg_match($pattern, $input, $match) !== 1) {
-			return false;
-		}
-
-		list( , $file, $line) = $match;
-		return true;
-	}
-
-	public function isTerminated()
-	{
-		return $this->isTerminated;
-	}
-
-	public function getState()
-	{
-		return $this->archivist->archive($this->state);
+		$this->coverageExtractor->stop();
+		$this->coverage = $this->coverageExtractor->getCoverage();
 	}
 }

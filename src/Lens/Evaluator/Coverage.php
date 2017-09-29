@@ -54,7 +54,7 @@ class Coverage
 		$this->logger = $logger;
 	}
 
-	public function run($srcDirectory, array $relativePaths, $autoloaderPath, $onShutdown)
+	public function run($srcDirectory, array $relativePaths, $bootstrapPath, $onShutdown)
 	{
 		if (!function_exists('xdebug_start_code_coverage')) {
 			return null;
@@ -63,7 +63,7 @@ class Coverage
 		$this->onShutdown = $onShutdown;
 
 		$this->readCode($srcDirectory, $relativePaths);
-		$this->readCoverage($srcDirectory, $relativePaths, $autoloaderPath);
+		$this->readCoverage($srcDirectory, $relativePaths, $bootstrapPath);
 
 		call_user_func($onShutdown);
 	}
@@ -79,9 +79,9 @@ class Coverage
 		}
 	}
 
-	private function readCoverage($srcDirectory, array $relativePaths, $autoloaderPath)
+	private function readCoverage($srcDirectory, array $relativePaths, $bootstrapPath)
 	{
-		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths, $autoloaderPath);
+		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths, $bootstrapPath);
 		$this->coverage = self::getCleanCoverage($srcDirectory, $this->code, $rawCoverage);
 	}
 
@@ -102,19 +102,20 @@ class Coverage
 		return preg_split($pattern, $text);
 	}
 
-	private function getRawCoverage($srcDirectory, array $relativePaths, $autoloaderPath)
+	private function getRawCoverage($srcDirectory, array $relativePaths, $bootstrapPath)
 	{
 		$absolutePaths = self::getAbsolutePaths($srcDirectory, $relativePaths);
 
 		$statements = self::getIncludeStatements($absolutePaths);
 
-		if (is_string($autoloaderPath)) {
-			$autoloaderPhp = self::getRequireStatement($autoloaderPath);
-			array_unshift($statements, $autoloaderPhp);
+		if (is_string($bootstrapPath)) {
+			$bootstrapPhp = self::getRequireStatement($bootstrapPath);
+			array_unshift($statements, $bootstrapPhp);
 		}
 
 		$this->php = implode("\n", $statements);
 
+		// TODO: Can we use the "CoverageExtractor" here?
 		ini_set('display_errors', 'Off');
 		// TODO: handle a fatal error caused by requiring a file:
 		// register_shutdown_function($callable);

@@ -27,78 +27,48 @@ namespace Lens\Evaluator;
 
 abstract class Agent
 {
-	const ACTION_RETURN = 0;
-	const ACTION_THROW = 1;
+	/** @var null|string */
+	private static $contextPhp;
 
-	private static $isRecording = null;
+	/** @var null|array */
+	private static $script;
 
-	private static $calls = array();
+	/** @var null|array */
+	private static $calls;
 
-	private static $script = array();
-
-	public static function call($object, $method, array $arguments, array $action = null)
+	public static function start($contextPhp, array $script = null)
 	{
-		if (self::$isRecording === null) {
-			return null;
-		}
+		self::$contextPhp = $contextPhp;
+		self::$script = $script;
+		self::$calls = array();
+	}
 
+	public static function record($object, $method, array $arguments)
+	{
 		self::$calls[] = array($object, $method, $arguments);
-
-		if (self::$isRecording) {
-			return self::record($action);
-		}
-
-		return self::play();
 	}
 
-	private static function record(array $action = null)
+	public static function play()
 	{
-		self::$script[] = $action;
-
-		return null;
-	}
-
-	private static function play()
-	{
-		$action = array_shift(self::$script);
-
-		if ($action === null) {
+		if (self::$script === null) {
 			return null;
 		}
 
-		return self::perform($action);
-	}
+		$code = array_shift(self::$script);
 
-	private static function perform($action)
-	{
-		list($type, $value) = $action;
-
-		if ($type === self::ACTION_THROW) {
-			// TODO: only a throwable can be thrown
-			throw $value;
+		if ($code === null) {
+			return null;
 		}
 
-		return $value;
+		if (self::$contextPhp !== null) {
+			$code = self::$contextPhp . "\n" . $code;
+		}
+
+		return $code;
 	}
 
-	public static function getCalls()
+	public static function stop()
 	{
 		return self::$calls;
-	}
-
-	public static function getScript()
-	{
-		return serialize(self::$script);
-	}
-
-	public static function startRecording()
-	{
-		self::$isRecording = true;
-	}
-
-	public static function startPlaying($serializedScript)
-	{
-		self::$isRecording = false;
-		self::$script = unserialize($serializedScript);
 	}
 }
