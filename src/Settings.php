@@ -64,7 +64,7 @@ class Settings
 			$this->writeNewFile($settings);
 		}
 
-		// TODO: validate recognized keys (e.g. the autoloader path)
+		// TODO: validate recognized keys (e.g. the bootstrap path)
 		// TODO: insert missing keys (with a note-level message): map missing key to a null value
 		// TODO: preserve unrecognized keys (with a warning-level message)
 
@@ -94,7 +94,7 @@ class Settings
 	{
 		return array(
 			'src' => null,
-			'autoloader' => null
+			'bootstrap' => null
 		);
 	}
 }

@@ -29,7 +29,6 @@ class Code
 {
 	public function getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp)
 	{
-		// TODO: what if $namespace is null?
 		$namespace = self::extractNamespace($fixturePhp);
 		$aliases = self::extractAliases($fixturePhp);
 
@@ -123,6 +122,10 @@ class Code
 
 	private static function getNamespacePhp($namespace)
 	{
+		if ($namespace === null) {
+			return null;
+		}
+
 		return "namespace {$namespace};";
 	}
 
@@ -204,6 +207,10 @@ class Code
 
 		if (self::resolveAliases($aliases, $class)) {
 			return $class;
+		}
+
+		if ($namespace === null) {
+			return "\\{$class}";
 		}
 
 		return "\\{$namespace}\\{$class}";

@@ -106,6 +106,8 @@ class Evaluator
 			}
 		}
 
+		$results = array_filter($results, 'is_array');
+
 		foreach ($results as $result) {
 			foreach ($result as $path => $fileCoverage) {
 				foreach ($fileCoverage as $lineNumber) {

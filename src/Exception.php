@@ -155,13 +155,11 @@ class Exception extends \Exception
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Lens encountered an object that was thrown but never caught.";
+		$message = "Lens encountered an unexpected exception.";
 
 		$help = array(
 			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
 		);
-
-		$archivist = new Archivist\Archivist();
 
 		$errorMessage = $throwable->getMessage();
 		$file = $throwable->getFile();
@@ -171,8 +169,7 @@ class Exception extends \Exception
 			'code' => $code,
 			'message' => $errorMessage,
 			'file' => $file,
-			'line' => $line,
-			'object' => $archivist->archive($throwable),
+			'line' => $line
 		);
 
 		return new self($code, $severity, $message, $help, $data);

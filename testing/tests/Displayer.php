@@ -104,18 +104,14 @@ $output = "array('a' => 'A', 'b' => 'B')";
 // Input
 $archivist = new Archivist();
 $input = $archivist->archive(new \stdClass());
-unset($archivist);
 
 // Output
 $output = 'object(\'stdClass\')';
-unset($input);
 
 
 // Input
 $archivist = new Archivist();
 $input = $archivist->archive(fopen('php://memory', 'w+'));
-unset($archivist);
 
 // Output
 $output = 'resource(stream)';
-unset($input);
