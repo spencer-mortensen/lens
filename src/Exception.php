@@ -415,63 +415,20 @@ class Exception extends \Exception
 	private static function getExpectationText($expectation)
 	{
 		switch ($expectation) {
-			case 'suite':
-				return "a valid tests file";
-
 			case 'phpTag':
 				return "an opening PHP tag ('<?php')";
 
-			case 'namespace':
-				return "a namespace declaration (e.g. 'namespace Example;')";
+			case 'codeUnit':
+				return "PHP statements";
 
-			case 'space':
-				return "a whitespace character";
-
-			case 'namespaceKeyword':
-				return "the word 'namespace'";
-
-			case 'namespacePath':
-				return "a namespace path";
-
-			case 'semicolon':
-				return "a semicolon (';')";
-
-			case 'useStatement':
-			case 'useKeyword':
-				return "a 'use' statement (e.g. 'use Example\\\\MyClass;')";
-
-			case 'code':
-				return "a code block";
-
-			case 'tests':
-				return "tests";
-
-			case 'test':
-				return "a test";
-
-			case 'subject':
-				return "a subject block";
+			case 'comment':
+				return "a multiline comment (e.g. '/* Comment */')";
 
 			case 'subjectLabel':
 				return "a test label ('// Test')";
 
-			case 'cases':
-				return "test cases";
-
-			case 'case':
-				return "a test case";
-
-			case 'optionalInput':
-				return "an optional input section";
-
-			case 'input':
-				return "an input section";
-
 			case 'inputLabel':
 				return "an input label ('// Input')";
-
-			case 'output':
-				return "an output section";
 
 			case 'outputLabel':
 				return "an output label ('// Output')";

@@ -66,15 +66,13 @@ class SuiteParser extends Parser
 	public function __construct()
 	{
 		$syntax = <<<'EOS'
-suite: AND phpTag space code tests optionalSpace
+suite: AND phpTag code tests
 phpTag: STRING <?php
-space: RE \s+
-code: AND comments codeGroups
-comments: REPEAT comment 0
+code: AND codeUnit codeGroups
+codeUnit: RE .*?(?=(?:\n// (?:Test|Input|Output))|/\*|$)\s?
+codeGroups: REPEAT codeGroup 0
+codeGroup: AND comment codeUnit
 comment: RE /\*.*?\*/
-codeGroups: REPEAT codeGroup 1
-codeGroup: AND codeSection comments
-codeSection: RE (?!// (?:Test|Input|Output)|/\*).+?(?=(?:// (?:Test|Input|Output)|/\*|$))
 tests: REPEAT test 1
 test: AND subject cases
 subject: AND subjectLabel code
@@ -83,10 +81,9 @@ cases: REPEAT case 1
 case: AND optionalInput output
 optionalInput: REPEAT input 0 1
 input: AND inputLabel code
-inputLabel: STRING // Input
+inputLabel:  STRING // Input
 output: AND outputLabel code
 outputLabel: STRING // Output
-optionalSpace: RE \s*
 EOS;
 
 		parent::__construct($syntax);
@@ -100,29 +97,48 @@ EOS;
 	protected function formatSuite(array $values)
 	{
 		return array(
-			'fixture' => $values[2],
-			'tests' => $values[3]
+			'fixture' => $values[1],
+			'tests' => $values[2]
 		);
 	}
 
 	protected function formatCode(array $values)
 	{
-		return $values[1];
+		$values = array_filter($values, 'is_string');
+
+
+		if (count($values) === 0) {
+			return null;
+		}
+
+		return implode("\n", $values);
+	}
+
+	protected function formatCodeUnit(array $values)
+	{
+		$php = trim($values[0]);
+
+		if (strlen($php) === 0) {
+			return null;
+		}
+
+		return $php;
 	}
 
 	protected function formatCodeGroups(array $values)
 	{
-		return implode(PHP_EOL, $values);
+		$values = array_filter($values, 'is_string');
+
+		if (count($values) === 0) {
+			return null;
+		}
+
+		return implode("\n", $values);
 	}
 
 	protected function formatCodeGroup(array $values)
 	{
-		return trim($values[0]);
-	}
-
-	protected function formatTests(array $values)
-	{
-		return $values;
+		return $values[1];
 	}
 
 	protected function formatTest(array $values)
@@ -136,11 +152,6 @@ EOS;
 	protected function formatSubject(array $values)
 	{
 		return trim($values[1]);
-	}
-
-	protected function formatCases(array $values)
-	{
-		return $values;
 	}
 
 	protected function formatCase(array $values)
