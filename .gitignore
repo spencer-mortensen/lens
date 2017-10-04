@@ -1,8 +1,8 @@
-/build/
 /.idea/
+/build/
+/plan/
 /vendor/
 /x/
 /composer.lock
 /.source
 coverage/
-/TODO
