@@ -78,7 +78,22 @@ class Comparer
 	{
 		// TODO: check object IDs (but handle the case where both the Expected and Actual code create matching objects)
 		return ($a->getClass() === $b->getClass()) &&
-			$this->isSame($a->getProperties(), $b->getProperties());
+			$this->isSameArray(
+				self::ignoreUnwantedProperties($a->getProperties()),
+				self::ignoreUnwantedProperties($b->getProperties())
+			);
+	}
+
+	private static function ignoreUnwantedProperties(array $properties)
+	{
+		unset(
+			$properties['Error']['file'],
+			$properties['Error']['line'],
+			$properties['Exception']['file'],
+			$properties['Exception']['line']
+		);
+
+		return $properties;
 	}
 
 	private function isSameResource(ResourceArchive $a, ResourceArchive $b)

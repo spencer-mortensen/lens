@@ -42,7 +42,7 @@ class CoverageJob implements ShellJob
 	private $relativePaths;
 
 	/** @var string */
-	private $bootstrapPath;
+	private $autoloadPath;
 
 	/** @var array */
 	private $code;
@@ -50,12 +50,12 @@ class CoverageJob implements ShellJob
 	/** @var Coverage */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, array $relativePaths, $bootstrapPath, &$code, &$coverage)
+	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, &$code, &$coverage)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;
 		$this->relativePaths = $relativePaths;
-		$this->bootstrapPath = $bootstrapPath;
+		$this->autoloadPath = $autoloadPath;
 
 		$this->code = &$code;
 		$this->coverage = &$coverage;
@@ -63,7 +63,7 @@ class CoverageJob implements ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->srcDirectory, $this->relativePaths, $this->bootstrapPath);
+		$arguments = array($this->srcDirectory, $this->relativePaths, $this->autoloadPath);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -88,7 +88,7 @@ class CoverageJob implements ShellJob
 			call_user_func($send, $message);
 		};
 
-		$coverager->run($this->srcDirectory, $this->relativePaths, $this->bootstrapPath, $onShutdown);
+		$coverager->run($this->srcDirectory, $this->relativePaths, $this->autoloadPath, $onShutdown);
 	}
 
 	public function receive($message)

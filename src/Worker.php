@@ -47,13 +47,13 @@ class Worker
 
 		switch ($jobName) {
 			case 'coverage':
-				list($srcDirectory, $relativePaths, $bootstrapPath) = $arguments;
-				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $bootstrapPath, $code, $coverage);
+				list($srcDirectory, $relativePaths, $autoloadPath) = $arguments;
+				$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $autoloadPath, $code, $coverage);
 				break;
 
 			case 'test':
-				list($lensDirectory, $srcDirectory, $bootstrapPath, $contextPhp, $beforePhp, $afterPhp, $script) = $arguments;
-				$job = new TestJob($this->executable, $lensDirectory, $srcDirectory, $bootstrapPath, $contextPhp, $beforePhp, $afterPhp, $script, $preState, $postState, $coverage);
+				list($lensDirectory, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script) = $arguments;
+				$job = new TestJob($this->executable, $lensDirectory, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script, $preState, $postState, $coverage);
 				break;
 
 			default:

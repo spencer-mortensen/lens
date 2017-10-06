@@ -69,13 +69,14 @@ class Console
 
 		$output = array();
 
+		if (0 < count($this->failedTests)) {
+			$output[] = $this->showFailedTests();
+		}
+
 		if (0 < $this->passedTestsCount) {
 			$output[] = $this->showPassedTests();
 		}
 
-		if (0 < count($this->failedTests)) {
-			$output[] = $this->showFailedTests();
-		}
 
 		return implode("\n", $output) . "\n";
 	}
@@ -317,16 +318,17 @@ class Console
 		return implode("\n\n", $sections);
 	}
 
+	private function showFailedTests()
+	{
+		$failedTestsCount = count($this->failedTests);
+
+		return implode("\n\n\n", $this->failedTests) . "\n\n\n" .
+			"Failed tests: {$failedTestsCount}";
+	}
+
 	private function showPassedTests()
 	{
 		return "Passed tests: {$this->passedTestsCount}";
-	}
-
-	private function showFailedTests()
-	{
-		$count = count($this->failedTests);
-
-		return "Failed tests: {$count}\n\n\n" . implode("\n\n\n", $this->failedTests);
 	}
 
 	// TODO: this is duplicated elsewhere

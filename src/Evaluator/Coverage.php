@@ -54,7 +54,7 @@ class Coverage
 		$this->logger = $logger;
 	}
 
-	public function run($srcDirectory, array $relativePaths, $bootstrapPath, $onShutdown)
+	public function run($srcDirectory, array $relativePaths, $autoloadPath, $onShutdown)
 	{
 		if (!function_exists('xdebug_start_code_coverage')) {
 			return null;
@@ -63,7 +63,7 @@ class Coverage
 		$this->onShutdown = $onShutdown;
 
 		$this->readCode($srcDirectory, $relativePaths);
-		$this->readCoverage($srcDirectory, $relativePaths, $bootstrapPath);
+		$this->readCoverage($srcDirectory, $relativePaths, $autoloadPath);
 
 		call_user_func($onShutdown);
 	}
@@ -79,9 +79,9 @@ class Coverage
 		}
 	}
 
-	private function readCoverage($srcDirectory, array $relativePaths, $bootstrapPath)
+	private function readCoverage($srcDirectory, array $relativePaths, $autoloadPath)
 	{
-		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths, $bootstrapPath);
+		$rawCoverage = $this->getRawCoverage($srcDirectory, $relativePaths, $autoloadPath);
 		$this->coverage = self::getCleanCoverage($srcDirectory, $this->code, $rawCoverage);
 	}
 
@@ -102,15 +102,15 @@ class Coverage
 		return preg_split($pattern, $text);
 	}
 
-	private function getRawCoverage($srcDirectory, array $relativePaths, $bootstrapPath)
+	private function getRawCoverage($srcDirectory, array $relativePaths, $autoloadPath)
 	{
 		$absolutePaths = self::getAbsolutePaths($srcDirectory, $relativePaths);
 
 		$statements = self::getIncludeStatements($absolutePaths);
 
-		if (is_string($bootstrapPath)) {
-			$bootstrapPhp = self::getRequireStatement($bootstrapPath);
-			array_unshift($statements, $bootstrapPhp);
+		if (is_string($autoloadPath)) {
+			$autoloadPhp = self::getRequireStatement($autoloadPath);
+			array_unshift($statements, $autoloadPhp);
 		}
 
 		$this->php = implode("\n", $statements);

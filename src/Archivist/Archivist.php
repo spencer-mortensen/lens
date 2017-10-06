@@ -128,9 +128,6 @@ class Archivist
 	private static function isUnwantedProperty($class, $property)
 	{
 		return (
-			($property === 'file') ||
-			($property === 'line') ||
-			($property === 'previous') ||
 			($property === 'trace') ||
 			($property === 'xdebug_message')
 		) && (

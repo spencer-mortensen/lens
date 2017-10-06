@@ -87,7 +87,7 @@ class Runner
 		$settings = $this->settings->read();
 
 		$this->findSrc($settings, $lensDirectory, $srcDirectory);
-		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $bootstrapPath);
+		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloadPath);
 
 		if (count($paths) === 0) {
 			$paths[] = $testsDirectory;
@@ -96,7 +96,7 @@ class Runner
 		$testFiles = $this->browser->browse($testsDirectory, $paths);
 		$suites = $this->getSuites($testsDirectory, $testFiles);
 
-		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $bootstrapPath, $suites);
+		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $autoloadPath, $suites);
 
 		echo $this->console->summarize($suites);
 
@@ -266,36 +266,36 @@ class Runner
 			$this->findChild($lens, self::$srcDirectoryName, $output);
 	}
 
-	private function findAutoloader(array $settings, $lensDirectory, $srcDirectory, &$bootstrapPath)
+	private function findAutoloader(array $settings, $lensDirectory, $srcDirectory, &$autoloadPath)
 	{
-		return $this->findAutoloaderFromSettings($settings['bootstrap'], $bootstrapPath) ||
-			$this->findAutoloaderFromLens($lensDirectory, $bootstrapPath) ||
-			$this->findAutoloaderFromSrc($srcDirectory, $bootstrapPath);
+		return $this->findAutoloaderFromSettings($settings['autoload'], $autoloadPath) ||
+			$this->findAutoloaderFromLens($lensDirectory, $autoloadPath) ||
+			$this->findAutoloaderFromSrc($srcDirectory, $autoloadPath);
 	}
 
-	private function findAutoloaderFromSettings(&$bootstrapPathSettings, &$bootstrapPath)
+	private function findAutoloaderFromSettings(&$autoloadPathSettings, &$autoloadPath)
 	{
-		if ($bootstrapPathSettings === null) {
+		if ($autoloadPathSettings === null) {
 			return false;
 		}
 
-		$bootstrapPath = $bootstrapPathSettings;
+		$autoloadPath = $autoloadPathSettings;
 		return true;
 	}
 
-	private function findAutoloaderFromLens($lensDirectory, &$bootstrapPath)
+	private function findAutoloaderFromLens($lensDirectory, &$autoloadPath)
 	{
-		$path = "{$lensDirectory}/bootstrap.php";
+		$path = "{$lensDirectory}/autoload.php";
 
 		if (!$this->filesystem->isFile($path)) {
 			return false;
 		}
 
-		$bootstrapPath = $path;
+		$autoloadPath = $path;
 		return true;
 	}
 
-	private function findAutoloaderFromSrc($srcDirectory, &$bootstrapPath)
+	private function findAutoloaderFromSrc($srcDirectory, &$autoloadPath)
 	{
 		if ($srcDirectory === null) {
 			return false;
@@ -308,7 +308,7 @@ class Runner
 			return false;
 		}
 
-		$bootstrapPath = $path;
+		$autoloadPath = $path;
 		return true;
 	}
 }

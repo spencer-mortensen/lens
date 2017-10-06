@@ -41,7 +41,7 @@ class Test
 	private $srcDirectory;
 
 	/** @var string */
-	private $bootstrapPath;
+	private $autoloadPath;
 
 	/** @var null|string */
 	private $contextPhp;
@@ -67,12 +67,12 @@ class Test
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($lensDirectory, $srcDirectory, $bootstrapPath)
+	public function __construct($lensDirectory, $srcDirectory, $autoloadPath)
 	{
 		$this->archivist = new Archivist();
 		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
-		$this->bootstrapPath = $bootstrapPath;
+		$this->autoloadPath = $autoloadPath;
 	}
 
 	public function getPreState()
@@ -137,8 +137,8 @@ class Test
 			}
 		);
 
-		if (is_string($this->bootstrapPath)) {
-			require $this->bootstrapPath;
+		if (is_string($this->autoloadPath)) {
+			require $this->autoloadPath;
 		}
 	}
 

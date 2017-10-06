@@ -47,11 +47,11 @@ class Evaluator
 		$this->processor = $processor;
 	}
 
-	public function run($lensDirectory, $srcDirectory, $bootstrapPath, array $suites)
+	public function run($lensDirectory, $srcDirectory, $autoloadPath, array $suites)
 	{
 		// TODO: run this only if coverage is enabled:
-		$this->startCoverage($srcDirectory, $bootstrapPath, $code, $executableLines);
-		$this->startTests($lensDirectory, $srcDirectory, $bootstrapPath, $suites, $executedLines);
+		$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
+		$this->startTests($lensDirectory, $srcDirectory, $autoloadPath, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -63,7 +63,7 @@ class Evaluator
 		return array($suites, $code, $coverage);
 	}
 
-	private function startCoverage($srcDirectory, $bootstrapPath, array &$code = null, array &$coverage = null)
+	private function startCoverage($srcDirectory, $autoloadPath, array &$code = null, array &$coverage = null)
 	{
 		$relativePaths = $this->getRelativePaths($srcDirectory);
 
@@ -71,7 +71,7 @@ class Evaluator
 			$this->executable,
 			$srcDirectory,
 			$relativePaths,
-			$bootstrapPath,
+			$autoloadPath,
 			$code,
 			$coverage
 		);
@@ -121,7 +121,7 @@ class Evaluator
 		return $coverage;
 	}
 
-	private function startTests($lensDirectory, $srcDirectory, $bootstrapPath, array &$suites, array &$coverage = null)
+	private function startTests($lensDirectory, $srcDirectory, $autoloadPath, array &$suites, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -131,7 +131,7 @@ class Evaluator
 					$this->startTest(
 						$lensDirectory,
 						$srcDirectory,
-						$bootstrapPath,
+						$autoloadPath,
 						$suite['fixture'],
 						$case['input'],
 						$case['output'],
@@ -144,7 +144,7 @@ class Evaluator
 		}
 	}
 
-	private function startTest($lensDirectory, $srcDirectory, $bootstrapPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
+	private function startTest($lensDirectory, $srcDirectory, $autoloadPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
 	{
 		$code = new Code();
 		$php = $code->getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp);
@@ -154,7 +154,7 @@ class Evaluator
 			$this->executable,
 			$lensDirectory,
 			$srcDirectory,
-			$bootstrapPath,
+			$autoloadPath,
 			$contextPhp,
 			$beforePhp,
 			$actualPhp,
@@ -172,7 +172,7 @@ class Evaluator
 			$this->executable,
 			$lensDirectory,
 			$srcDirectory,
-			$bootstrapPath,
+			$autoloadPath,
 			$contextPhp,
 			$beforePhp,
 			$expectedPhp,
