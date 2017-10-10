@@ -33,8 +33,8 @@ class Browser
 	/** @var array */
 	private $files;
 
-	/** @var integer */
-	private $testsPrefixLength;
+	/** @var Base */
+	private $base;
 
 	public function __construct(Filesystem $filesystem)
 	{
@@ -44,14 +44,11 @@ class Browser
 
 	public function browse($testsDirectory, array $paths)
 	{
-		$testsPrefix = $testsDirectory . '/';
-		$testsPrefixLength = strlen($testsPrefix);
-
-		$this->testsPrefixLength = $testsPrefixLength;
+		$this->base = new Base($testsDirectory);
 
 		foreach ($paths as $path) {
-			// TODO: explain that this path is invalid because it lies outside the tests directory:
-			if (strncmp($path . '/', $testsPrefix, $testsPrefixLength) !== 0) {
+			if (!$this->base->isChildPath($path)) {
+				// TODO: explain that this path is invalid because it lies outside the tests directory:
 				throw Exception::invalidTestsPath($path);
 			}
 
@@ -91,7 +88,7 @@ class Browser
 			return;
 		}
 
-		$relativePath = $this->getRelativePath($absolutePath);
+		$relativePath = $this->base->getRelativePath($absolutePath);
 
 		$this->files[$relativePath] = $contents;
 	}
@@ -99,10 +96,5 @@ class Browser
 	private function isTestsFile($path)
 	{
 		return substr($path, -4) === '.php';
-	}
-
-	private function getRelativePath($path)
-	{
-		return substr($path, $this->testsPrefixLength);
 	}
 }

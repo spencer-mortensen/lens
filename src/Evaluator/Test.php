@@ -29,13 +29,8 @@ use Lens\Archivist\Archivist;
 
 class Test
 {
-	const LENS_CONSTANT_NAME = 'LENS';
-
 	/** @var Archivist */
 	private $archivist;
-
-	/** @var string */
-	private $lensDirectory;
 
 	/** @var string */
 	private $srcDirectory;
@@ -67,10 +62,9 @@ class Test
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($lensDirectory, $srcDirectory, $autoloadPath)
+	public function __construct($srcDirectory, $autoloadPath)
 	{
 		$this->archivist = new Archivist();
-		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
 		$this->autoloadPath = $autoloadPath;
 	}
@@ -116,8 +110,6 @@ class Test
 
 	private function prepare()
 	{
-		define(self::LENS_CONSTANT_NAME, "{$this->lensDirectory}/");
-
 		spl_autoload_register(
 			function ($class)
 			{
@@ -159,7 +151,6 @@ class Test
 		$state = $this->examiner->getState();
 
 		if (is_array($state)) {
-			unset($state['constants'][self::LENS_CONSTANT_NAME]);
 			$state['calls'] = $calls;
 		}
 
@@ -200,7 +191,7 @@ class Test
 
 	private function startCoverage()
 	{
-		if ($this->script === null) {
+		if (($this->script === null) || ($this->srcDirectory === null)) {
 			return;
 		}
 

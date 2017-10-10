@@ -34,9 +34,6 @@ class TestJob implements ShellJob
 	private $executable;
 
 	/** @var string */
-	private $lensDirectory;
-
-	/** @var string */
 	private $srcDirectory;
 
 	/** @var string */
@@ -63,10 +60,9 @@ class TestJob implements ShellJob
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $lensDirectory, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script, array &$preState = null, array &$postState = null, array &$coverage = null)
+	public function __construct($executable, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script, array &$preState = null, array &$postState = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
-		$this->lensDirectory = $lensDirectory;
 		$this->srcDirectory = $srcDirectory;
 		$this->autoloadPath = $autoloadPath;
 		$this->contextPhp = $contextPhp;
@@ -80,7 +76,7 @@ class TestJob implements ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensDirectory, $this->srcDirectory, $this->autoloadPath, $this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script);
+		$arguments = array($this->srcDirectory, $this->autoloadPath, $this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -90,7 +86,7 @@ class TestJob implements ShellJob
 
 	public function run($send)
 	{
-		$test = new Test($this->lensDirectory, $this->srcDirectory, $this->autoloadPath);
+		$test = new Test($this->srcDirectory, $this->autoloadPath);
 
 		$onShutdown = function () use ($test, $send) {
 			$preState = $test->getPreState();

@@ -47,11 +47,11 @@ class Evaluator
 		$this->processor = $processor;
 	}
 
-	public function run($lensDirectory, $srcDirectory, $autoloadPath, array $suites)
+	public function run($srcDirectory, $autoloadPath, array $suites)
 	{
 		// TODO: run this only if coverage is enabled:
 		$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
-		$this->startTests($lensDirectory, $srcDirectory, $autoloadPath, $suites, $executedLines);
+		$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -65,6 +65,10 @@ class Evaluator
 
 	private function startCoverage($srcDirectory, $autoloadPath, array &$code = null, array &$coverage = null)
 	{
+		if ($srcDirectory === null) {
+			return;
+		}
+
 		$relativePaths = $this->getRelativePaths($srcDirectory);
 
 		$job = new CoverageJob(
@@ -121,7 +125,7 @@ class Evaluator
 		return $coverage;
 	}
 
-	private function startTests($lensDirectory, $srcDirectory, $autoloadPath, array &$suites, array &$coverage = null)
+	private function startTests($srcDirectory, $autoloadPath, array &$suites, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -129,7 +133,6 @@ class Evaluator
 			foreach ($suite['tests'] as $testLine => &$test) {
 				foreach ($test['cases'] as $caseLine => &$case) {
 					$this->startTest(
-						$lensDirectory,
 						$srcDirectory,
 						$autoloadPath,
 						$suite['fixture'],
@@ -144,7 +147,7 @@ class Evaluator
 		}
 	}
 
-	private function startTest($lensDirectory, $srcDirectory, $autoloadPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
+	private function startTest($srcDirectory, $autoloadPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
 	{
 		$code = new Code();
 		$php = $code->getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp);
@@ -152,7 +155,6 @@ class Evaluator
 
 		$actualJob = new TestJob(
 			$this->executable,
-			$lensDirectory,
 			$srcDirectory,
 			$autoloadPath,
 			$contextPhp,
@@ -170,7 +172,6 @@ class Evaluator
 
 		$expectedJob = new TestJob(
 			$this->executable,
-			$lensDirectory,
 			$srcDirectory,
 			$autoloadPath,
 			$contextPhp,

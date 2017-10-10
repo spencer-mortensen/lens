@@ -75,28 +75,37 @@ class Runner
 	{
 		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
 
-		if (!$this->findTests($paths, $tests)) {
-			throw Exception::unknownTestsDirectory();
+		if ($this->findTests($paths, $testsDirectory)) {
+			$lensDirectory = dirname($testsDirectory);
+			$coverageDirectory = "{$lensDirectory}/coverage";
+
+			$this->settings->setPath("{$lensDirectory}/" . self::$settingsFileName);
+			$settings = $this->settings->read();
+
+			$this->findSrc($settings, $lensDirectory, $srcDirectory);
+			$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloadPath);
+		} else {
+			$lensDirectory = null;
+			$testsDirectory = null;
+			$coverageDirectory = null;
+
+			$srcDirectory = null;
+			$autoloadPath = null;
 		}
 
-		$lensDirectory = dirname($tests);
-		$testsDirectory = "{$lensDirectory}/tests";
-		$coverageDirectory = "{$lensDirectory}/coverage";
-
-		$this->settings->setPath("{$lensDirectory}/" . self::$settingsFileName);
-		$settings = $this->settings->read();
-
-		$this->findSrc($settings, $lensDirectory, $srcDirectory);
-		$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloadPath);
-
 		if (count($paths) === 0) {
+			if ($testsDirectory === null) {
+				throw Exception::unknownTestsDirectory();
+			}
+
 			$paths[] = $testsDirectory;
 		}
 
 		$testFiles = $this->browser->browse($testsDirectory, $paths);
+
 		$suites = $this->getSuites($testsDirectory, $testFiles);
 
-		list($suites, $code, $coverage) = $this->evaluator->run($lensDirectory, $srcDirectory, $autoloadPath, $suites);
+		list($suites, $code, $coverage) = $this->evaluator->run($srcDirectory, $autoloadPath, $suites);
 
 		echo $this->console->summarize($suites);
 
@@ -105,7 +114,7 @@ class Runner
 		}
 	}
 
-	private function getSuites($testsDirectory, $files)
+	private function getSuites($testsDirectory, array $files)
 	{
 		$suites = array();
 
@@ -113,31 +122,25 @@ class Runner
 			try {
 				$suites[$path] = $this->parser->parse($contents);
 			} catch (Parser\Exception $exception) {
-				$currentDirectory = $this->filesystem->getCurrentDirectory();
-				$absolutePath = "{$testsDirectory}/{$path}";
-				$relativePath = self::getRelativePath($currentDirectory, $absolutePath);
+				$testsBase = new Base($testsDirectory);
+				$absolutePath = $testsBbase->getAbsolutePath($path);
 
-				$data = $exception->getData();
-				throw Exception::invalidTestsFileSyntax($relativePath, $contents, $data['position'], $data['expectation']);
+				$this->invalidTestsFileSyntax($absolutePath, $exception);
 			}
 		}
 
 		return $suites;
 	}
 
-	public static function getRelativePath($aPath, $bPath)
+	private function invalidTestsFileSyntax($absolutePath, Parser\Exception $exception)
 	{
-		$aTrail = explode('/', trim($aPath, '/'));
-		$bTrail = explode('/', trim($bPath, '/'));
+		$currentDirectory = $this->filesystem->getCurrentDirectory();
+		$currentBase = new Base($currentDirectory);
+		$relativePath = $currentBase->getRelativePath($absolutePath);
 
-		$aCount = count($aTrail);
-		$bCount= count($bTrail);
-
-		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aTrail[$i] === $bTrail[$i]); ++$i);
-
-		return str_repeat('../', $aCount - $i) . implode('/', array_slice($bTrail, $i));
+		$data = $exception->getData();
+		throw Exception::invalidTestsFileSyntax($relativePath, $contents, $data['position'], $data['expectation']);
 	}
-
 
 	private function getAbsoluteTestsPath($relativePath)
 	{
@@ -244,7 +247,7 @@ class Runner
 			$this->findSrcFromLens($lens, $srcDirectory);
 	}
 
-	private function findSrcFromSettings($lens, &$relativePath, &$output)
+	private function findSrcFromSettings($lens, $relativePath, &$output)
 	{
 		if ($relativePath === null) {
 			return false;
