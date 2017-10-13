@@ -123,7 +123,7 @@ class Runner
 				$suites[$path] = $this->parser->parse($contents);
 			} catch (Parser\Exception $exception) {
 				$testsBase = new Base($testsDirectory);
-				$absolutePath = $testsBbase->getAbsolutePath($path);
+				$absolutePath = $testsBase->getAbsolutePath($path);
 
 				$this->invalidTestsFileSyntax($absolutePath, $exception);
 			}
