@@ -66,13 +66,6 @@ EOS;
 			'__construct' => self::getMockMethod('__construct', '')
 		);
 
-		$this->addMockMethods($mockMethods);
-
-		return implode("\n\n", $mockMethods);
-	}
-
-	private function addMockMethods(array &$mockMethods)
-	{
 		$parentClass = new \ReflectionClass($this->absoluteParentClass);
 		$methods = $parentClass->getMethods(\ReflectionMethod::IS_PUBLIC);
 
@@ -83,14 +76,22 @@ EOS;
 			}
 
 			$name = $method->getName();
+
+			if (isset($mockMethods[$name])) {
+				continue;
+			}
+
+
 			$mockParameters = self::getMockParameters($method);
 			$mockMethod = self::getMockMethod($name, $mockParameters);
 
 			$mockMethods[$name] = $mockMethod;
 		}
+
+		return implode("\n\n", $mockMethods);
 	}
 
-	private function getMockMethod($name, $parameters)
+	private static function getMockMethod($name, $parameters)
 	{
 		$code = <<<'EOS'
 	public function %s(%s)
