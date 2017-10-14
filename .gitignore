@@ -3,6 +3,7 @@
 /plan/
 /vendor/
 /x/
-/composer.lock
 /.source
+/composer.lock
+/index.php
 coverage/
