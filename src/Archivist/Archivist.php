@@ -59,13 +59,15 @@ class Archivist
 		}
 	}
 
-	private function archiveArray(array $array)
+	private function archiveArray(array $input)
 	{
-		foreach ($array as &$value) {
-			$value = $this->archive($value);
+		$output = array();
+
+		foreach ($input as $key => $value) {
+			$output[$key] = $this->archive($value);
 		}
 
-		return $array;
+		return $output;
 	}
 
 	private function archiveObject($object)
