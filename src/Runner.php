@@ -26,7 +26,7 @@
 namespace Lens;
 
 use Lens\Evaluator\Evaluator;
-use SpencerMortensen\Parser;
+use SpencerMortensen\Parser\ParserException;
 
 class Runner
 {
@@ -121,25 +121,26 @@ class Runner
 		foreach ($files as $path => $contents) {
 			try {
 				$suites[$path] = $this->parser->parse($contents);
-			} catch (Parser\Exception $exception) {
+			} catch (ParserException $exception) {
 				$testsBase = new Base($testsDirectory);
 				$absolutePath = $testsBase->getAbsolutePath($path);
 
-				$this->invalidTestsFileSyntax($absolutePath, $exception);
+				$this->invalidTestsFileSyntax($absolutePath, $contents, $exception);
 			}
 		}
 
 		return $suites;
 	}
 
-	private function invalidTestsFileSyntax($absolutePath, Parser\Exception $exception)
+	private function invalidTestsFileSyntax($absolutePath, $contents, ParserException $exception)
 	{
 		$currentDirectory = $this->filesystem->getCurrentDirectory();
 		$currentBase = new Base($currentDirectory);
 		$relativePath = $currentBase->getRelativePath($absolutePath);
 
-		$data = $exception->getData();
-		throw Exception::invalidTestsFileSyntax($relativePath, $contents, $data['position'], $data['expectation']);
+		$position = $exception->getState();
+		$rule = $exception->getRule();
+		throw Exception::invalidTestsFileSyntax($relativePath, $contents, $position, $rule);
 	}
 
 	private function getAbsoluteTestsPath($relativePath)

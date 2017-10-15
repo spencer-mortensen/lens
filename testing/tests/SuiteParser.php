@@ -2,7 +2,7 @@
 
 namespace Lens;
 
-use SpencerMortensen\Parser\Exception;
+use SpencerMortensen\Parser\ParserException;
 
 
 // Test
@@ -14,35 +14,35 @@ $output = $parser->parse($input);
 $input = '';
 
 // Output
-throw new Exception(0, 'phpTag');
+throw new ParserException('phpTag', 0);
 
 
 // Input
 $input = "<?php";
 
 // Output
-throw new Exception(5, 'subjectLabel');
+throw new ParserException('subjectLabel', 5);
 
 
 // Input
 $input = "<?php\n// test";
 
 // Output
-throw new Exception(13, 'subjectLabel');
+throw new ParserException('subjectLabel', 13);
 
 
 // Input
 $input = "<?php\n//Test";
 
 // Output
-throw new Exception(12, 'subjectLabel');
+throw new ParserException('subjectLabel', 12);
 
 
 // Input
 $input = "<?php\n// Test";
 
 // Output
-throw new Exception(13, 'outputLabel');
+throw new ParserException('outputLabel', 13);
 
 
 // Input

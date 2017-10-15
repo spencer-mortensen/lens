@@ -25,7 +25,8 @@
 
 namespace Lens;
 
-use SpencerMortensen\Parser\Parser;
+use SpencerMortensen\Parser\ReadableRules;
+use SpencerMortensen\Parser\String\Parser;
 
 /*
 suites: {
@@ -65,36 +66,34 @@ class SuiteParser extends Parser
 {
 	public function __construct()
 	{
-		$syntax = <<<'EOS'
+		$grammar = <<<'EOS'
 suite: AND phpTag code tests
 phpTag: STRING <?php
 code: AND codeUnit codeGroups
 codeUnit: RE .*?(?=(?:\n// (?:Test|Input|Output))|/\*|$)\s?
-codeGroups: REPEAT codeGroup 0
+codeGroups: MANY codeGroup 0
 codeGroup: AND comment codeUnit
 comment: RE /\*.*?\*/
-tests: REPEAT test 1
+tests: MANY test 1
 test: AND subject cases
 subject: AND subjectLabel code
 subjectLabel: STRING // Test
-cases: REPEAT case 1
+cases: MANY case 1
 case: AND optionalInput output
-optionalInput: REPEAT input 0 1
+optionalInput: MANY input 0 1
 input: AND inputLabel code
 inputLabel:  STRING // Input
 output: AND outputLabel code
 outputLabel: STRING // Output
 EOS;
 
-		parent::__construct($syntax);
+		$rules = new ReadableRules($this, $grammar);
+		$rule = $rules->getRule('suite');
+
+		parent::__construct($rule);
 	}
 
-	public function parse($input)
-	{
-		return $this->evaluate($input, 'suite');
-	}
-
-	protected function formatSuite(array $values)
+	public function getSuite(array $values)
 	{
 		return array(
 			'fixture' => $values[1],
@@ -102,7 +101,7 @@ EOS;
 		);
 	}
 
-	protected function formatCode(array $values)
+	public function getCode(array $values)
 	{
 		$values = array_filter($values, 'is_string');
 
@@ -114,7 +113,7 @@ EOS;
 		return implode("\n", $values);
 	}
 
-	protected function formatCodeUnit(array $values)
+	public function getCodeUnit(array $values)
 	{
 		$php = trim($values[0]);
 
@@ -125,7 +124,7 @@ EOS;
 		return $php;
 	}
 
-	protected function formatCodeGroups(array $values)
+	public function getCodeGroups(array $values)
 	{
 		$values = array_filter($values, 'is_string');
 
@@ -136,12 +135,12 @@ EOS;
 		return implode("\n", $values);
 	}
 
-	protected function formatCodeGroup(array $values)
+	public function getCodeGroup(array $values)
 	{
 		return $values[1];
 	}
 
-	protected function formatTest(array $values)
+	public function getTest(array $values)
 	{
 		return array(
 			'subject' => $values[0],
@@ -149,12 +148,12 @@ EOS;
 		);
 	}
 
-	protected function formatSubject(array $values)
+	public function getSubject(array $values)
 	{
 		return trim($values[1]);
 	}
 
-	protected function formatCase(array $values)
+	public function getCase(array $values)
 	{
 		return array(
 			'input' => $values[0],
@@ -162,7 +161,7 @@ EOS;
 		);
 	}
 
-	protected function formatOptionalInput(array $values)
+	public function getOptionalInput(array $values)
 	{
 		if (count($values) === 0) {
 			return null;
@@ -171,12 +170,12 @@ EOS;
 		return $values[0];
 	}
 
-	protected function formatInput(array $values)
+	public function getInput(array $values)
 	{
 		return trim($values[1]);
 	}
 
-	protected function formatOutput(array $values)
+	public function getOutput(array $values)
 	{
 		return trim($values[1]);
 	}
