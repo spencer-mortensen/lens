@@ -214,20 +214,6 @@ class Runner
 		return true;
 	}
 
-	private function findFile($basePath, $targetNames, &$output)
-	{
-		foreach ($targetNames as $targetName) {
-			$path = "{$basePath}/{$targetName}";
-
-			if ($this->filesystem->isFile($path)) {
-				$output = $path;
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	private function findGrandchild($basePath, $targetName, &$output)
 	{
 		$paths = $this->filesystem->search("{$basePath}/*/{$targetName}");

@@ -195,7 +195,7 @@ class Logger
 
 	private function writeSyslog($severity, $message)
 	{
-		openlog($this->identity, LOG_NDELAY, LOG_LOCAL3);
+		openlog($this->identity, LOG_NDELAY, LOG_USER);
 		syslog($severity, $message);
 		closelog();
 	}
