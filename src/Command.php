@@ -27,6 +27,7 @@ namespace Lens;
 
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
+use SpencerMortensen\Paths\Paths;
 
 class Command
 {
@@ -109,16 +110,17 @@ class Command
 	private function getRunner(array $paths)
 	{
 		$filesystem = new Filesystem();
+		$platform = Paths::getPlatformPaths();
 		$settingsFile = new IniFile($filesystem);
 		$settings = new Settings($settingsFile, $this->logger);
-		$browser = new Browser($filesystem);
+		$browser = new Browser($filesystem, $platform);
 		$parser = new SuiteParser();
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$console = new Console();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($settings, $filesystem, $browser, $parser, $evaluator, $console, $web);
+		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $console, $web);
 		$runner->run($paths);
 	}
 

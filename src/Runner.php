@@ -27,6 +27,7 @@ namespace Lens;
 
 use Lens\Evaluator\Evaluator;
 use SpencerMortensen\Parser\ParserException;
+use SpencerMortensen\Paths\Paths;
 
 class Runner
 {
@@ -45,6 +46,9 @@ class Runner
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Paths */
+	private $paths;
+
 	/** @var Browser */
 	private $browser;
 
@@ -60,10 +64,11 @@ class Runner
 	/** @var Web */
 	private $web;
 
-	public function __construct(Settings $settings, Filesystem $filesystem, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Console $console, Web $web)
+	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Console $console, Web $web)
 	{
 		$this->settings = $settings;
 		$this->filesystem = $filesystem;
+		$this->paths = $paths;
 		$this->browser = $browser;
 		$this->parser = $parser;
 		$this->evaluator = $evaluator;
@@ -77,9 +82,10 @@ class Runner
 
 		if ($this->findTests($paths, $testsDirectory)) {
 			$lensDirectory = dirname($testsDirectory);
-			$coverageDirectory = "{$lensDirectory}/coverage";
+			$coverageDirectory = $this->paths->join($lensDirectory, 'coverage');
 
-			$this->settings->setPath("{$lensDirectory}/" . self::$settingsFileName);
+			$settingsFilePath = $this->paths->join($lensDirectory, self::$settingsFileName);
+			$this->settings->setPath($settingsFilePath);
 			$settings = $this->settings->read();
 
 			$this->findSrc($settings, $lensDirectory, $srcDirectory);
@@ -122,8 +128,7 @@ class Runner
 			try {
 				$suites[$path] = $this->parser->parse($contents);
 			} catch (ParserException $exception) {
-				$testsBase = new Base($testsDirectory);
-				$absolutePath = $testsBase->getAbsolutePath($path);
+				$absolutePath = $this->paths->join($testsDirectory, $path);
 
 				$this->invalidTestsFileSyntax($absolutePath, $contents, $exception);
 			}
@@ -135,8 +140,7 @@ class Runner
 	private function invalidTestsFileSyntax($absolutePath, $contents, ParserException $exception)
 	{
 		$currentDirectory = $this->filesystem->getCurrentDirectory();
-		$currentBase = new Base($currentDirectory);
-		$relativePath = $currentBase->getRelativePath($absolutePath);
+		$relativePath = $this->paths->getRelativePath($currentDirectory, $absolutePath);
 
 		$position = $exception->getState();
 		$rule = $exception->getRule();
@@ -170,11 +174,15 @@ class Runner
 
 	private function findAncestor($basePath, $targetName, &$output)
 	{
-		$trail = self::getTrail($basePath);
+		$data = $this->paths->deserialize($basePath);
+		$atoms = $data->getAtoms();
 
-		for ($i = count($trail) - 1; -1 < $i; --$i) {
-			if ($trail[$i] === $targetName) {
-				$output = '/' . implode('/', array_slice($trail, 0, $i + 1));
+		for ($i = count($atoms) - 1; -1 < $i; --$i) {
+			if ($atoms[$i] === $targetName) {
+				$atoms = array_slice($atoms, 0, $i + 1);
+				$data->setAtoms($atoms);
+
+				$output = $this->paths->serialize($data);
 				return true;
 			}
 		}
@@ -182,20 +190,12 @@ class Runner
 		return false;
 	}
 
-	private static function getTrail($path)
-	{
-		$path = trim($path, '/');
-
-		if (strlen($path) === 0) {
-			return array();
-		}
-
-		return explode('/', $path);
-	}
-
 	private function findTestsFromDirectory($directory, &$output)
 	{
-		return ($directory !== '/') && (
+		$data = $this->paths->deserialize($directory);
+		$atoms = $data->getAtoms();
+
+		return (0 < count($atoms)) && (
 			$this->findChild($directory, self::$testsDirectoryName, $output) ||
 			$this->findGrandchild($directory, self::$testsDirectoryName, $output) ||
 			$this->findTestsFromDirectory(dirname($directory), $output)
@@ -204,7 +204,7 @@ class Runner
 
 	private function findChild($basePath, $targetName, &$output)
 	{
-		$path = "{$basePath}/{$targetName}";
+		$path = $this->paths->join($basePath, $targetName);
 
 		if (!$this->filesystem->isDirectory($path)) {
 			return false;
@@ -216,7 +216,8 @@ class Runner
 
 	private function findGrandchild($basePath, $targetName, &$output)
 	{
-		$paths = $this->filesystem->search("{$basePath}/*/{$targetName}");
+		$targetPath = $this->paths->join($basePath, '*', $targetName);
+		$paths = $this->filesystem->search($targetPath);
 		$paths = array_filter($paths, array($this->filesystem, 'isDirectory'));
 
 		if (count($paths) !== 1) {
@@ -240,7 +241,9 @@ class Runner
 			return false;
 		}
 
-		$absolutePath = $this->filesystem->getAbsolutePath("{$lens}/{$relativePath}");
+		$relativePath = $this->paths->join($lens, $relativePath);
+		// TODO: remove this line (when the "Paths" class can handle '..' directories):
+		$absolutePath = $this->filesystem->getAbsolutePath($relativePath);
 
 		if ($absolutePath === null) {
 			throw Exception::invalidSrcDirectory($relativePath);
@@ -275,7 +278,7 @@ class Runner
 
 	private function findAutoloaderFromLens($lensDirectory, &$autoloadPath)
 	{
-		$path = "{$lensDirectory}/autoload.php";
+		$path = $this->paths->join($lensDirectory, 'autoload.php');
 
 		if (!$this->filesystem->isFile($path)) {
 			return false;
@@ -292,7 +295,7 @@ class Runner
 		}
 
 		$projectDirectory = dirname($srcDirectory);
-		$path = "{$projectDirectory}/vendor/autoload.php";
+		$path = $this->paths->join($projectDirectory, 'vendor', 'autoload.php');
 
 		if (!$this->filesystem->isFile($path)) {
 			return false;

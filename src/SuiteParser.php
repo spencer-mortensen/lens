@@ -113,9 +113,9 @@ EOS;
 		return implode("\n", $values);
 	}
 
-	public function getCodeUnit(array $values)
+	public function getCodeUnit($value)
 	{
-		$php = trim($values[0]);
+		$php = trim($value);
 
 		if (strlen($php) === 0) {
 			return null;

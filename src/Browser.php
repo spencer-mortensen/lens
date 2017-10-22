@@ -25,29 +25,35 @@
 
 namespace Lens;
 
+use SpencerMortensen\Paths\Paths;
+
 class Browser
 {
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Paths */
+	private $paths;
+
+	/** @var string */
+	private $testsDirectory;
+
 	/** @var array */
 	private $files;
 
-	/** @var Base */
-	private $base;
-
-	public function __construct(Filesystem $filesystem)
+	public function __construct(Filesystem $filesystem, Paths $paths)
 	{
 		$this->filesystem = $filesystem;
+		$this->paths = $paths;
 		$this->files = array();
 	}
 
 	public function browse($testsDirectory, array $paths)
 	{
-		$this->base = new Base($testsDirectory);
+		$this->testsDirectory = $testsDirectory;
 
 		foreach ($paths as $path) {
-			if (!$this->base->isChildPath($path)) {
+			if (!$this->paths->isChildPath($this->testsDirectory, $path)) {
 				// TODO: explain that this path is invalid because it lies outside the tests directory:
 				throw Exception::invalidTestsPath($path);
 			}
@@ -76,7 +82,7 @@ class Browser
 	private function getDirectory($path, array $contents)
 	{
 		foreach ($contents as $childName => $childContents) {
-			$childPath = "{$path}/{$childName}";
+			$childPath = $this->paths->join($path, $childName);
 
 			$this->get($childPath, $childContents);
 		}
@@ -88,7 +94,7 @@ class Browser
 			return;
 		}
 
-		$relativePath = $this->base->getRelativePath($absolutePath);
+		$relativePath = $this->paths->getRelativePath($this->testsDirectory, $absolutePath);
 
 		$this->files[$relativePath] = $contents;
 	}

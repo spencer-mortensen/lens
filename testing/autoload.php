@@ -7,7 +7,8 @@ call_user_func(function () {
 		'Lens' => "{$projectDirectory}/src",
 		'SpencerMortensen\\ParallelProcessor' => "{$projectDirectory}/vendor/spencer-mortensen/parallel-processor/src",
 		'SpencerMortensen\\Parser' => "{$projectDirectory}/vendor/spencer-mortensen/parser/src",
-		'SpencerMortensen\\Paths' => "{$projectDirectory}/vendor/spencer-mortensen/paths/src"
+		'SpencerMortensen\\Paths' => "{$projectDirectory}/vendor/spencer-mortensen/paths/src",
+		'SpencerMortensen\\RegularExpressions' => "{$projectDirectory}/vendor/spencer-mortensen/regular-expressions/src"
 	);
 
 	foreach ($classes as $namespacePrefix => $libraryPath) {
