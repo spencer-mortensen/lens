@@ -53,7 +53,7 @@ class Browser
 		$this->testsDirectory = $testsDirectory;
 
 		foreach ($paths as $path) {
-			if (!$this->paths->isChildPath($this->testsDirectory, $path)) {
+			if (($this->testsDirectory !== null) && !$this->paths->isChildPath($this->testsDirectory, $path)) {
 				// TODO: explain that this path is invalid because it lies outside the tests directory:
 				throw Exception::invalidTestsPath($path);
 			}
