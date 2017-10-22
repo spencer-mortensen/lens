@@ -6,7 +6,8 @@ call_user_func(function () {
 	$classes = array(
 		'Lens' => "{$projectDirectory}/src",
 		'SpencerMortensen\\ParallelProcessor' => "{$projectDirectory}/vendor/spencer-mortensen/parallel-processor/src",
-		'SpencerMortensen\\Parser' => "{$projectDirectory}/vendor/spencer-mortensen/parser/src"
+		'SpencerMortensen\\Parser' => "{$projectDirectory}/vendor/spencer-mortensen/parser/src",
+		'SpencerMortensen\\Paths' => "{$projectDirectory}/vendor/spencer-mortensen/paths/src"
 	);
 
 	foreach ($classes as $namespacePrefix => $libraryPath) {

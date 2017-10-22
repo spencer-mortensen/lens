@@ -23,7 +23,8 @@
     "require": {
         "php": ">=5.4.0",
         "spencer-mortensen/parallel-processor": "~2.0",
-        "spencer-mortensen/parser": "~2.0"
+        "spencer-mortensen/parser": "~2.0",
+        "spencer-mortensen/paths": "~0.0"
     },
     "bin": [
         "bin/lens"
