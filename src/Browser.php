@@ -94,7 +94,11 @@ class Browser
 			return;
 		}
 
-		$relativePath = $this->paths->getRelativePath($this->testsDirectory, $absolutePath);
+		if ($this->testsDirectory === null) {
+			$relativePath = basename($absolutePath);
+		} else {
+			$relativePath = $this->paths->getRelativePath($this->testsDirectory, $absolutePath);
+		}
 
 		$this->files[$relativePath] = $contents;
 	}
@@ -104,3 +108,4 @@ class Browser
 		return substr($path, -4) === '.php';
 	}
 }
+
