@@ -25,8 +25,8 @@
 
 namespace Lens;
 
-use SpencerMortensen\Parser\ReadableRules;
 use SpencerMortensen\Parser\String\Parser;
+use SpencerMortensen\Parser\String\Rules;
 
 /*
 suites: {
@@ -87,7 +87,7 @@ output: AND outputLabel code
 outputLabel: STRING // Output
 EOS;
 
-		$rules = new ReadableRules($this, $grammar);
+		$rules = new Rules($this, $grammar);
 		$rule = $rules->getRule('suite');
 
 		parent::__construct($rule);

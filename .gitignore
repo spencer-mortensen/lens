@@ -2,7 +2,6 @@
 /build/
 /plan/
 /vendor/
-/x/
 /.source
 /composer.lock
 /index.php
