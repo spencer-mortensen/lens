@@ -26,6 +26,8 @@
 namespace Lens;
 
 use Closure;
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
 
 class Filesystem
 {
@@ -153,6 +155,53 @@ class Filesystem
 	private static function writeFileContents($path, $contents)
 	{
 		return file_put_contents($path, $contents) === strlen($contents);
+	}
+
+	public function delete($path)
+	{
+		if (!is_string($path) || (strlen($path) === 0)) {
+			return false;
+		}
+
+		if (!file_exists($path)) {
+			return true;
+		}
+
+		if (is_dir($path)) {
+			return $this->deleteDirectory($path);
+		}
+
+		return $this->deleteFile($path);
+	}
+
+	private function deleteFile($path)
+	{
+		return unlink($path);
+	}
+
+	private function deleteDirectory($directoryPath)
+	{
+		$files = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator($directoryPath, RecursiveDirectoryIterator::SKIP_DOTS),
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
+
+		foreach ($files as $file) {
+			$isDirectory = $file->isDir();
+			$childPath = $file->getRealPath();
+
+			if ($isDirectory) {
+				$isDeleted = rmdir($childPath);
+			} else {
+				$isDeleted = unlink($childPath);
+			}
+
+			if (!$isDeleted) {
+				return false;
+			}
+		}
+
+		return rmdir($directoryPath);
 	}
 
 	public function search($expression)

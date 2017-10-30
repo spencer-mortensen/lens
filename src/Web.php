@@ -49,13 +49,13 @@ class Web
 
 	public function coverage($codeDirectory, $coverageDirectory, $code, $coverage)
 	{
-		// TODO: generate a notice when ($codeDirectory === null)
-		$this->codeDirectory = $codeDirectory;
-		$this->coverageDirectory = $coverageDirectory;
-
-		if ($codeDirectory === null) {
+		if (!isset($codeDirectory, $coverageDirectory)) {
+			// TODO: generate a notice?
 			return;
 		}
+
+		$this->codeDirectory = $codeDirectory;
+		$this->coverageDirectory = $coverageDirectory;
 
 		if ($coverage === null) {
 			$this->writeInstructions();
@@ -66,8 +66,7 @@ class Web
 
 	private function writeInstructions()
 	{
-		// TODO: use the "Filesystem" object here:
-		exec("rm -rf {$this->coverageDirectory}/*");
+		$this->filesystem->delete($this->coverageDirectory);
 		$this->writeCssFiles('style.css', 'instructions.css');
 		$this->writeInstructionsIndex();
 	}
@@ -163,8 +162,7 @@ class Web
 		$filePaths = array_keys($this->code);
 		$hierarchy = self::getRelativeHierarchy($filePaths);
 
-		// TODO: use the "Filesystem" object here:
-		exec("rm -rf {$this->coverageDirectory}/*");
+		$this->filesystem->delete($this->coverageDirectory);
 		$this->writeCssFiles('style.css', 'directory.css', 'file.css', 'filesystem.png');
 		$this->writeDirectory('coverage', $hierarchy, '');
 	}
