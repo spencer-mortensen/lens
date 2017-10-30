@@ -25,10 +25,15 @@
 
 namespace Lens;
 
+use SpencerMortensen\Paths\Paths;
+
 class Web
 {
 	/** @var Filesystem */
 	private $filesystem;
+
+	/** Paths */
+	private $paths;
 
 	/** @var string */
 	private $codeDirectory;
@@ -45,6 +50,7 @@ class Web
 	public function __construct(Filesystem $filesystem)
 	{
 		$this->filesystem = $filesystem;
+		$this->paths = Paths::getPlatformPaths();
 	}
 
 	public function coverage($codeDirectory, $coverageDirectory, $code, $coverage)
@@ -73,15 +79,15 @@ class Web
 	private function writeInstructionsIndex()
 	{
 		$cssFiles = array(
-			'style/style.css',
-			'style/instructions.css'
+			$this->paths->join('style', 'style.css'),
+			$this->paths->join('style', 'instructions.css')
 		);
 
 		$menuHtml = null;
 		$titleHtml = 'coverage';
 		$bodyHtml = $this->getInstructionsHtml();
 
-		$absoluteFilePath = $this->coverageDirectory . '/index.html';
+		$absoluteFilePath = $this->paths->join($this->coverageDirectory, 'index.html');
 		$html = self::getHtml($cssFiles, $menuHtml, $titleHtml, $bodyHtml);
 
 		$this->filesystem->write($absoluteFilePath, $html);
@@ -160,40 +166,31 @@ class Web
 		$this->coverage = $coverage;
 
 		$filePaths = array_keys($this->code);
-		$hierarchy = self::getRelativeHierarchy($filePaths);
+		$hierarchy = $this->getRelativeHierarchy($filePaths);
 
 		$this->filesystem->delete($this->coverageDirectory);
 		$this->writeCssFiles('style.css', 'directory.css', 'file.css', 'filesystem.png');
 		$this->writeDirectory('coverage', $hierarchy, '');
 	}
 
-	private static function getRelativeHierarchy($filePaths)
+	private function getRelativeHierarchy($filePaths)
 	{
 		$files = array();
+
 		foreach ($filePaths as $filePath) {
-			$trail = self::getTrail($filePath);
+			$data = $this->paths->deserialize($filePath);
+			$atoms = $data->getAtoms();
 
 			$p = &$files;
 
-			foreach ($trail as $name) {
-				$p = &$p[$name];
+			foreach ($atoms as $atom) {
+				$p = &$p[$atom];
 			}
 
 			$p = null;
 		}
 
 		return $files;
-	}
-
-	private static function getTrail($filePath)
-	{
-		$filePath = trim($filePath, '/');
-
-		if (($filePath === '.') || ($filePath === '')) {
-			return array();
-		}
-
-		return explode('/', $filePath);
 	}
 
 	private function writeDirectory($name, array $contents, $path, &$pass = null, &$fail = null)
@@ -204,7 +201,7 @@ class Web
 
 		foreach ($contents as $childName => $childContents) {
 			$isChildDirectory = is_array($childContents);
-			$childPath = self::mergePaths($path, $childName);
+			$childPath = $this->paths->join($path, $childName);
 
 			if ($isChildDirectory) {
 				$this->writeDirectory($childName, $childContents, $childPath, $childPass, $childFail);
@@ -222,30 +219,43 @@ class Web
 
 	private function writeIndex($name, $path, array $children)
 	{
-		$relativeFilePath = self::mergePaths($path, 'index.html');
+		$filePath = $this->paths->join($this->coverageDirectory, $path, 'index.html');
 
-		$depth = substr_count($relativeFilePath, '/');
+		$cssFiles = $this->getCssFilePaths($path, array('style.css', 'directory.css'));
 
-		$cssFiles = array(
-			str_repeat('../', $depth) . 'style/style.css',
-			str_repeat('../', $depth) . 'style/directory.css'
-		);
-
-		$urls = self::getMenuUrls($path, 1);
+		$urls = $this->getMenuUrls($path, 1);
 		$menuHtml = self::getMenuHtml($urls);
 
 		$titleHtml = self::html5TextEncode($name);
 
-		$bodyHtml = self::getIndexBodyHtml($children);
+		$bodyHtml = $this->getIndexBodyHtml($children);
 
 		$html = self::getHtml($cssFiles, $menuHtml, $titleHtml, $bodyHtml);
 
-		$absoluteFilePath = $this->coverageDirectory . '/' . $relativeFilePath;
-
-		$this->filesystem->write($absoluteFilePath, $html);
+		$this->filesystem->write($filePath, $html);
 	}
 
-	private static function getIndexBodyHtml(array $children)
+	private function getCssFilePaths($path, array $files)
+	{
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+
+		foreach ($atoms as &$atom) {
+			$atom = '..';
+		}
+
+		$atoms[] = 'style';
+
+		$styleDirectory = $this->paths->join($atoms);
+
+		foreach ($files as &$file) {
+			$file = $this->paths->join($styleDirectory, $file);
+		}
+
+		return $files;
+	}
+
+	private function getIndexBodyHtml(array $children)
 	{
 		usort($children, array('self', 'sortIndexItems'));
 
@@ -255,9 +265,9 @@ class Web
 			list($childName, $childIsDirectory, $childPass, $childFail) = $child;
 
 			if ($childIsDirectory) {
-				$childUrl = "{$childName}/index.html";
+				$childUrl = $this->paths->join($childName, 'index.html');
 				$childClass = 'directory';
-				$childLabel = "{$childName}/";
+				$childLabel = $childName . DIRECTORY_SEPARATOR;
 			} else {
 				$childUrl = "{$childName}.html";
 				$childClass = 'file';
@@ -328,14 +338,11 @@ class Web
 
 	private function writeFile($name, $path, &$pass = null, &$fail = null)
 	{
-		$depth = substr_count($path, '/');
+		$filePath = $this->paths->join($this->coverageDirectory, "{$path}.html");
 
-		$cssFiles = array(
-			str_repeat('../', $depth) . 'style/style.css',
-			str_repeat('../', $depth) . 'style/file.css'
-		);
+		$cssFiles = $this->getCssFilePaths($path, array('style.css', 'file.css'));
 
-		$urls = self::getMenuUrls($path, 0);
+		$urls = $this->getMenuUrls($path, 0);
 		$menuHtml = self::getMenuHtml($urls);
 
 		$titleHtml = self::html5TextEncode($name);
@@ -350,25 +357,28 @@ class Web
 
 		$html = self::getHtml($cssFiles, $menuHtml, $titleHtml, $bodyHtml);
 
-		$relativeFilePath ="{$path}.html";
-		$absoluteFilePath = $this->coverageDirectory . '/' . $relativeFilePath;
-
-		$this->filesystem->write($absoluteFilePath, $html);
+		$this->filesystem->write($filePath, $html);
 	}
 
-	private static function getMenuUrls($path, $depth)
+	private function getMenuUrls($path, $depth)
 	{
-		$trail = self::getTrail($path);
-		array_unshift($trail, 'coverage');
-		array_pop($trail);
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+
+		array_pop($atoms);
+		array_unshift($atoms, 'coverage');
+
+		$depth += count($atoms) - 1;
 
 		$urls = array();
 
-		$depth += count($trail) - 1;
+		foreach ($atoms as $atom) {
+			$urlAtoms = array_fill(0, $depth--, '..');
+			$urlAtoms[] = 'index.html';
 
-		foreach ($trail as $name) {
-			$url = str_repeat('../', $depth--) . 'index.html';
-			$urls[$url] = $name;
+			$url = $this->paths->join($urlAtoms);
+
+			$urls[$url] = $atom;
 		}
 
 		return $urls;
@@ -482,25 +492,16 @@ EOS;
 		return htmlspecialchars($text, ENT_HTML5 | ENT_COMPAT | ENT_DISALLOWED | ENT_QUOTES, 'UTF-8');
 	}
 
-	private static function mergePaths($a, $b)
-	{
-		if ($a === '') {
-			return $b;
-		}
-
-		return "{$a}/{$b}";
-	}
-
 	private function writeCssFiles()
 	{
 		$files = func_get_args();
 
-		$inputDirectory = dirname(__DIR__) . '/files/style';
-		$outputDirectory = "{$this->coverageDirectory}/style";
+		$inputDirectory = $this->paths->join(dirname(__DIR__), 'files', 'style');
+		$outputDirectory = $this->paths->join($this->coverageDirectory, 'style');
 
 		foreach ($files as $file) {
-			$inputFilePath = "{$inputDirectory}/{$file}";
-			$outputFilePath = "{$outputDirectory}/{$file}";
+			$inputFilePath = $this->paths->join($inputDirectory, $file);
+			$outputFilePath = $this->paths->join($outputDirectory, $file);
 
 			$this->copyFile($inputFilePath, $outputFilePath);
 		}
