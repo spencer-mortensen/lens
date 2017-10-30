@@ -221,7 +221,11 @@ class Web
 	{
 		$filePath = $this->paths->join($this->coverageDirectory, $path, 'index.html');
 
-		$cssFiles = $this->getCssFilePaths($path, array('style.css', 'directory.css'));
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+		$depth = count($atoms);
+
+		$cssFiles = $this->getCssFilePaths($depth, array('style.css', 'directory.css'));
 
 		$urls = $this->getMenuUrls($path, 1);
 		$menuHtml = self::getMenuHtml($urls);
@@ -235,21 +239,15 @@ class Web
 		$this->filesystem->write($filePath, $html);
 	}
 
-	private function getCssFilePaths($path, array $files)
+	private function getCssFilePaths($depth, array $files)
 	{
-		$data = $this->paths->deserialize($path);
-		$atoms = $data->getAtoms();
-
-		foreach ($atoms as &$atom) {
-			$atom = '..';
-		}
-
+		$atoms = array_fill(0, $depth, '..');
 		$atoms[] = 'style';
 
-		$styleDirectory = $this->paths->join($atoms);
+		$cssDirectory = $this->paths->join($atoms);
 
 		foreach ($files as &$file) {
-			$file = $this->paths->join($styleDirectory, $file);
+			$file = $this->paths->join($cssDirectory, $file);
 		}
 
 		return $files;
@@ -340,7 +338,11 @@ class Web
 	{
 		$filePath = $this->paths->join($this->coverageDirectory, "{$path}.html");
 
-		$cssFiles = $this->getCssFilePaths($path, array('style.css', 'file.css'));
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+		$depth = count($atoms) - 1;
+
+		$cssFiles = $this->getCssFilePaths($depth, array('style.css', 'file.css'));
 
 		$urls = $this->getMenuUrls($path, 0);
 		$menuHtml = self::getMenuHtml($urls);
