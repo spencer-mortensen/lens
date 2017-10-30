@@ -103,7 +103,7 @@ class Command
 
 	private function getVersion()
 	{
-		echo "lens 0.0.38\n";
+		echo "lens 0.0.39\n";
 		exit(0);
 	}
 
