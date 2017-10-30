@@ -498,12 +498,12 @@ EOS;
 	{
 		$files = func_get_args();
 
-		$inputDirectory = $this->paths->join(dirname(__DIR__), 'files', 'style');
-		$outputDirectory = $this->paths->join($this->coverageDirectory, 'style');
+		$inputDirectory = dirname(__DIR__) . '/files/style';
+		$outputDirectory = "{$this->coverageDirectory}/style";
 
 		foreach ($files as $file) {
-			$inputFilePath = $this->paths->join($inputDirectory, $file);
-			$outputFilePath = $this->paths->join($outputDirectory, $file);
+			$inputFilePath = "{$inputDirectory}/{$file}";
+			$outputFilePath = "{$outputDirectory}/{$file}";
 
 			$this->copyFile($inputFilePath, $outputFilePath);
 		}
