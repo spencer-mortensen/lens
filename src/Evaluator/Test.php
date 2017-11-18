@@ -26,6 +26,7 @@
 namespace Lens\Evaluator;
 
 use Lens\Archivist\Archivist;
+use SpencerMortensen\RegularExpressions\Re;
 
 class Test
 {
@@ -110,28 +111,26 @@ class Test
 
 	private function prepare()
 	{
-		spl_autoload_register(
-			function ($class)
-			{
-				$mockPrefix = 'Lens\\Mock\\';
-				$mockPrefixLength = strlen($mockPrefix);
+		$namespace = $this->getNamespace();
 
-				if (strncmp($class, $mockPrefix, $mockPrefixLength) !== 0) {
-					return;
-				}
+		$autoloader = new Autoloader();
+		$autoloader->register();
 
-				$parentClass = substr($class, $mockPrefixLength);
-
-				$mockBuilder = new MockBuilder($mockPrefix, $parentClass);
-				$mockCode = $mockBuilder->getMock();
-
-				eval($mockCode);
-			}
-		);
+		eval($autoloader->getMockFunctionsPhp($namespace));
 
 		if (is_string($this->autoloadPath)) {
 			require $this->autoloadPath;
 		}
+	}
+
+	// TODO: Remove this:
+	private function getNamespace()
+	{
+		if (Re::match('^namespace ([^;]+);', $this->contextPhp, $match)) {
+			return $match[1];
+		}
+
+		return null;
 	}
 
 	public function onPreShutdown()

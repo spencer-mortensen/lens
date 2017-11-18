@@ -25,34 +25,48 @@
 
 namespace Lens\Evaluator;
 
+use SpencerMortensen\RegularExpressions\Re;
+
 class Code
 {
 	public function getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp)
 	{
 		$namespace = self::extractNamespace($fixturePhp);
 		$aliases = self::extractAliases($fixturePhp);
+		// TODO: add DateTime et. al. mocks
 
 		$contextPhp = self::getContextPhp($namespace, $aliases);
-		$fixturePhp = self::combine($fixturePhp, $inputPhp);
+		$beforePhp = self::combine($fixturePhp, $inputPhp);
 
-		$mocks = self::extractMockNames($namespace, $aliases, $fixturePhp);
-		$script = self::extractScript($mocks, $outputPhp);
+		self::useMocks($namespace, $aliases, $beforePhp);
+		$script = self::extractScript($outputPhp);
 
-		return array($contextPhp, $fixturePhp, $outputPhp, $testPhp, $script);
+		return array($contextPhp, $beforePhp, $outputPhp, $testPhp, $script);
 	}
 
 	private static function extractNamespace(&$php)
 	{
-		$pattern = self::getPattern('^namespace\h+([^;]+);');
+		$expression = '^namespace\h+([^;]+);';
 
-		if (preg_match($pattern, $php, $match) !== 1) {
+		if (!Re::match($expression, $php, $match)) {
 			return null;
 		}
 
 		$namespace = $match[1];
-		$php = trim(substr($php, strlen($match[0])));
+		$php = self::getValidString(substr($php, strlen($match[0])));
 
 		return $namespace;
+	}
+
+	private static function getValidString($input)
+	{
+		$input = trim($input);
+
+		if (strlen($input) === 0) {
+			return null;
+		}
+
+		return $input;
 	}
 
 	private static function extractAliases(&$php)
@@ -68,24 +82,21 @@ class Code
 			}
 		}
 
-		$php = implode("\n", $lines);
+		$php = self::getValidString(implode("\n", $lines));
 
 		return $aliases;
 	}
 
-	private static function getLines($code)
+	private static function getLines($php)
 	{
-		$pattern = self::getPattern('\\r?\\n');
-
-		return preg_split($pattern, $code, null, PREG_SPLIT_NO_EMPTY);
+		return Re::split('\\r?\\n', $php);
 	}
 
 	private static function getAlias($php, &$name, &$path)
 	{
 		$expression = '^use\\h+(?\'path\'[a-zA-Z_0-9\\\\]+)(?:\\h+as\\h+(?\'alias\'[a-zA-Z_0-9]+))?;$';
-		$pattern = self::getPattern($expression, 'm');
 
-		if (preg_match($pattern, $php, $match) !== 1) {
+		if (!Re::match($expression, $php, $match)) {
 			return false;
 		}
 
@@ -162,10 +173,8 @@ class Code
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private static function extractMockNames($namespace, array $aliases, &$php)
+	private static function useMocks($namespace, array $aliases, &$php)
 	{
-		$names = array();
-
 		$lines = self::getLines($php);
 
 		foreach ($lines as &$line) {
@@ -173,22 +182,17 @@ class Code
 				$absoluteClass = self::getAbsoluteClass($namespace, $aliases, $class);
 				$mockClass = "\\Lens\\Mock{$absoluteClass}";
 				$line = self::getInstantiationPhp($name, $mockClass, $arguments);
-
-				$names[$name] = $name;
 			}
 		}
 
-		$php = implode("\n", $lines);
-
-		return $names;
+		$php = self::getValidString(implode("\n", $lines));
 	}
 
 	private static function getMock(&$php, &$name, &$class, &$arguments)
 	{
-		$expression = '^\$(?\'name\'[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?\'class\'[a-zA-Z_0-9\\\\]+)\\((?\'arguments\'.*?)\\);\\h*// Mock$';
-		$pattern = self::getPattern($expression);
+		$expression = '^\$(?<name>[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?<class>[a-zA-Z_0-9\\\\]+)\\h*\\((?<arguments>.*?)\\);$';
 
-		if (preg_match($pattern, $php, $match) !== 1) {
+		if (!Re::match($expression, $php, $match)) {
 			return false;
 		}
 
@@ -216,6 +220,11 @@ class Code
 		return "\\{$namespace}\\{$class}";
 	}
 
+	private static function getInstantiationPhp($name, $class, $arguments)
+	{
+		return "\${$name} = new {$class}({$arguments});";
+	}
+
 	private static function resolveAliases(array $aliases, &$class)
 	{
 		$names = explode('\\', $class, 2);
@@ -232,54 +241,28 @@ class Code
 		return true;
 	}
 
-	private static function getInstantiationPhp($name, $class, $arguments)
-	{
-		return "\${$name} = new {$class}({$arguments});";
-	}
-
-	private static function extractScript(array $mocks, &$outputPhp)
+	private static function extractScript(&$php)
 	{
 		$script = array();
 
-		$pattern = self::getScriptPattern($mocks);
-		$lines = self::getLines($outputPhp);
+		$expression = '^(?<call>(?:\\$[a-zA-Z_0-9]+->)?[a-zA-Z_0-9]+\(.*?\);)(?:\\s*//\\s+(?<body>.*?))?$';
+
+		$lines = self::getLines($php);
 
 		foreach ($lines as &$line) {
-			if (preg_match($pattern, $line, $match) === 1) {
-				$line = $match[1];
-				$script[] = &$match[2];
+			if (!Re::match($expression, $line, $match)) {
+				continue;
 			}
+
+			$function = &$match['call'];
+			$body = &$match['body'];
+
+			$line = $function;
+			$script[] = $body;
 		}
 
-		$outputPhp = implode("\n", $lines);
+		$php = implode("\n", $lines);
 
 		return $script;
-	}
-
-	private static function getScriptPattern(array $mocks)
-	{
-		$literals = array();
-
-		foreach ($mocks as $name) {
-			$literals[] = self::getLiteral($name);
-		}
-
-		$literalsExpression = implode('|', $literals);
-		$expression = "^(\\\$(?:{$literalsExpression})->.*?)(?:\\s*//\\s+(.*))?$";
-		return self::getPattern($expression);
-	}
-
-	private static function getLiteral($string)
-	{
-		$delimiter = "\x03";
-
-		return preg_quote($string, $delimiter);
-	}
-
-	private static function getPattern($expression, $flags = '')
-	{
-		$delimiter = "\x03";
-
-		return "{$delimiter}{$expression}{$delimiter}{$flags}";
 	}
 }

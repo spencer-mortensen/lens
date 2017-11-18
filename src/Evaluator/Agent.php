@@ -28,7 +28,7 @@ namespace Lens\Evaluator;
 abstract class Agent
 {
 	/** @var null|string */
-	private static $contextPhp;
+	private static $namespacePhp;
 
 	/** @var null|array */
 	private static $script;
@@ -36,9 +36,9 @@ abstract class Agent
 	/** @var null|array */
 	private static $calls;
 
-	public static function start($contextPhp, array $script = null)
+	public static function start($namespacePhp, array $script = null)
 	{
-		self::$contextPhp = $contextPhp;
+		self::$namespacePhp = $namespacePhp;
 		self::$script = $script;
 		self::$calls = array();
 	}
@@ -60,8 +60,8 @@ abstract class Agent
 			return null;
 		}
 
-		if (self::$contextPhp !== null) {
-			$code = self::$contextPhp . "\n" . $code;
+		if (self::$namespacePhp !== null) {
+			$code = self::$namespacePhp . "\n" . $code;
 		}
 
 		return $code;

@@ -25,135 +25,139 @@
 
 namespace Lens\Evaluator;
 
+use ReflectionClass;
+use ReflectionFunction;
+use ReflectionFunctionAbstract;
+use ReflectionMethod;
+use ReflectionParameter;
+
 class MockBuilder
 {
-	/** @var string */
-	private $absoluteParentClass;
-
-	/** @var string */
-	private $childNamespace;
-
-	/** @var string */
-	private $childClass;
-
-	public function __construct($mockPrefix, $absoluteParentClass)
+	public function getMockClassPhp($namespacedClass)
 	{
-		$absoluteChildClass = "{$mockPrefix}{$absoluteParentClass}";
-		$slash = strrpos($absoluteChildClass, '\\');
+		$class = new ReflectionClass($namespacedClass);
 
-		$this->absoluteParentClass = $absoluteParentClass;
-		$this->childNamespace = substr($absoluteChildClass, 0, $slash);
-		$this->childClass = substr($absoluteChildClass, $slash + 1);
+		$namePhp = $class->getShortName();
+		$methodsPhp = $this->getMethodsListPhp($class);
+
+		return "class {$namePhp} extends \\{$namespacedClass}\n{\n{$methodsPhp}\n}";
 	}
 
-	public function getMock()
+	private function getMethodsListPhp(ReflectionClass $class)
 	{
-		$mockMethods = $this->getMockMethods();
-
-		return <<<EOS
-namespace {$this->childNamespace};
-
-class {$this->childClass} extends \\{$this->absoluteParentClass}
-{
-{$mockMethods}
-}
-EOS;
-	}
-
-	private function getMockMethods()
-	{
-		$mockMethods = array(
-			'__construct' => self::getMockMethod('__construct', '')
+		$methodsPhp = array(
+			'__construct' => $this->getMethodPhp('__construct', '')
 		);
 
-		$parentClass = new \ReflectionClass($this->absoluteParentClass);
-		$methods = $parentClass->getMethods(\ReflectionMethod::IS_PUBLIC);
+		$methods = $class->getMethods(ReflectionMethod::IS_PUBLIC);
 
-		/** @var \ReflectionMethod $method */
-		foreach ($methods as $method) {
+		foreach ($methods as $method) { /** @var ReflectionMethod $method */
 			if ($method->isStatic() || $method->isFinal()) {
 				continue;
 			}
 
-			$name = $method->getName();
+			$namePhp = $method->getShortName();
+			$methodPhp = &$methodsPhp[$namePhp];
 
-			if (isset($mockMethods[$name])) {
+			if (isset($methodPhp)) {
 				continue;
 			}
 
+			$parametersPhp = $this->getParametersListPhp($method);
+			$bodyPhp = $this->getBodyPhp('$this', "\t\t");
 
-			$mockParameters = self::getMockParameters($method);
-			$mockMethod = self::getMockMethod($name, $mockParameters);
-
-			$mockMethods[$name] = $mockMethod;
+			$methodPhp = "\tpublic function {$namePhp}({$parametersPhp})\n\t{\n{$bodyPhp}\n\t}";
 		}
 
-		return implode("\n\n", $mockMethods);
+		return implode("\n\n", $methodsPhp);
 	}
 
-	private static function getMockMethod($name, $parameters)
+	private function getMethodPhp($namePhp, $parametersPhp)
 	{
-		$code = <<<'EOS'
-	public function %s(%s)
-	{
-		\Lens\Evaluator\Agent::record($this, __FUNCTION__, func_get_args());
-		return eval(\Lens\Evaluator\Agent::play());
-	}
-EOS;
+		$bodyPhp = $this->getBodyPhp('$this', "\t\t");
 
-		return sprintf($code, $name, $parameters);
+		return "\tpublic function {$namePhp}({$parametersPhp})\n\t{\n{$bodyPhp}\n\t}";
 	}
 
-	private static function getMockParameters(\ReflectionMethod $method)
+	public function getMockFunctionPhp($namespacedFunction)
 	{
-		$mockParameters = array();
+		$function = new ReflectionFunction($namespacedFunction);
 
-		$parameters = $method->getParameters();
+		$namePhp = $function->getShortName();
+		$parametersPhp = $this->getParametersListPhp($function);
+		$bodyPhp = $this->getBodyPhp('null', "\t");
+
+		return "function {$namePhp}({$parametersPhp})\n{\n{$bodyPhp}\n}";
+	}
+
+	private function getParametersListPhp(ReflectionFunctionAbstract $function)
+	{
+		$mockParametersPhp = array();
+
+		$parameters = $function->getParameters();
 
 		foreach ($parameters as $parameter) {
-			$mockParameters[] = self::getMockParameter($parameter);
+			$mockParametersPhp[] = $this->getParameterPhp($parameter);
 		}
 
-		return implode(', ', $mockParameters);
+		return implode(', ', $mockParametersPhp);
 	}
 
-	private static function getMockParameter(\ReflectionParameter $parameter)
+	private function getParameterPhp(ReflectionParameter $parameter)
 	{
 		$name = $parameter->getName();
-		$hint = self::getParameterHint($parameter);
 
 		$definition = '$' . $name;
 
-		if ($hint !== null) {
+		if ($parameter->isPassedByReference()) {
+			$definition = '&' . $definition;
+		}
+
+		if ($this->getHintPhp($parameter, $hint)) {
 			$definition = "{$hint} {$definition}";
 		}
 
-		if ($parameter->isOptional()) {
-			$definition = "{$definition} = null";
+		if ($this->getDefaultValuePhp($parameter, $defaultValue)) {
+			$definition .= " = {$defaultValue}";
 		}
 
 		return $definition;
 	}
 
-	private static function getParameterHint(\ReflectionParameter $parameter)
+	private function getHintPhp(ReflectionParameter $parameter, &$php)
 	{
-		if ($parameter->isArray()) {
-			return 'array';
+		if (!$parameter->hasType()) {
+			return false;
 		}
 
-		if ($parameter->isCallable()) {
-			return 'callable';
+		$php = $parameter->getType();
+
+		if ($parameter->getClass() !== null) {
+			$php = '\\' . $php;
 		}
 
-		// TODO: support PHP-7 type hinting...
+		return true;
+	}
 
-		$class = $parameter->getClass();
-
-		if ($class === null) {
-			return null;
+	private function getDefaultValuePhp(ReflectionParameter $parameter, &$php)
+	{
+		if ($parameter->isDefaultValueAvailable()) {
+			$value = $parameter->getDefaultValue();
+			$php = var_export($value, true);
+			return true;
 		}
 
-		$className = $class->getName();
-		return '\\' . $className;
+		if ($parameter->isOptional()) {
+			$php = 'null';
+			return true;
+		}
+
+		return false;
+	}
+
+	private function getBodyPhp($contextPhp, $padding)
+	{
+		return "{$padding}\\Lens\\Evaluator\\Agent::record({$contextPhp}, __FUNCTION__, func_get_args());\n" .
+			"{$padding}return eval(\\Lens\\Evaluator\\Agent::play());";
 	}
 }
