@@ -2,10 +2,9 @@
 
 namespace Example;
 
-$math = new Math();
-
 
 // Test
+$math = new Math();
 $c = $math->add($a, $b);
 
 // Input
