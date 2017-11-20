@@ -117,10 +117,11 @@ class Command
 		$parser = new SuiteParser();
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
+		$verifier = new Verifier();
 		$console = new Console();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $console, $web);
+		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $verifier, $console, $web);
 		$runner->run($paths);
 	}
 

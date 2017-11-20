@@ -106,7 +106,7 @@ class Autoloader
 			'fgets'
 		);
 
-		// $functions = self::getDangerousFunctions();
+		// $functions = self::getMockedFunctions();
 
 		foreach ($functions as $function) {
 			$mock = "{$namespace}\\{$function}";
@@ -126,7 +126,7 @@ class Autoloader
 		return $php;
 	}
 
-	private static function getDangerousFunctions()
+	private static function getMockedFunctions()
 	{
 		return array(
 			// Program execution functions

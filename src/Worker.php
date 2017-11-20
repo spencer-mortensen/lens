@@ -52,8 +52,8 @@ class Worker
 				break;
 
 			case 'test':
-				list($srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script) = $arguments;
-				$job = new TestJob($this->executable, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script, $preState, $postState, $coverage);
+				list($srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
+				$job = new TestJob($this->executable, $srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp, $results, $coverage);
 				break;
 
 			default:

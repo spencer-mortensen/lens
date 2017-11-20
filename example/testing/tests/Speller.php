@@ -10,6 +10,6 @@ $speller = new Speller($terminal);
 $terminal = new Terminal();
 
 // Output
-$terminal->write("Type a word:");
+$terminal->write('Type a word:');
 $terminal->read(); // return 'cat';
-$terminal->write("The word \"cat\" is spelled: C-A-T");
+$terminal->write('The word "cat" is spelled: C-A-T');

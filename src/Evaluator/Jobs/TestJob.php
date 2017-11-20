@@ -40,43 +40,43 @@ class TestJob implements ShellJob
 	private $autoloadPath;
 
 	/** @var string */
-	private $contextPhp;
+	private $namespace;
+
+	/** @var array */
+	private $uses;
 
 	/** @var string */
-	private $beforePhp;
-
-	/** @var string */
-	private $afterPhp;
+	private $prePhp;
 
 	/** @var null|array */
 	private $script;
 
-	/** @var null|array */
-	private $preState;
+	/** @var string */
+	private $postPhp;
 
 	/** @var null|array */
-	private $postState;
+	private $results;
 
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, $autoloadPath, $contextPhp, $beforePhp, $afterPhp, $script, array &$preState = null, array &$postState = null, array &$coverage = null)
+	public function __construct($executable, $srcDirectory, $autoloadPath, $namespace, array $uses, $prePhp, array $script = null, $postPhp, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;
 		$this->autoloadPath = $autoloadPath;
-		$this->contextPhp = $contextPhp;
-		$this->beforePhp = $beforePhp;
-		$this->afterPhp = $afterPhp;
+		$this->namespace = $namespace;
+		$this->uses = $uses;
+		$this->prePhp = $prePhp;
 		$this->script = $script;
-		$this->preState = &$preState;
-		$this->postState = &$postState;
+		$this->postPhp = $postPhp;
+		$this->results = &$results;
 		$this->coverage = &$coverage;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->srcDirectory, $this->autoloadPath, $this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script);
+		$arguments = array($this->srcDirectory, $this->autoloadPath, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -89,20 +89,23 @@ class TestJob implements ShellJob
 		$test = new Test($this->srcDirectory, $this->autoloadPath);
 
 		$onShutdown = function () use ($test, $send) {
-			$preState = $test->getPreState();
-			$postState = $test->getPostState();
+			$results = array(
+				'pre' => $test->getPreState(),
+				'post' => $test->getPostState()
+			);
+
 			$coverage = $test->getCoverage();
 
-			$message = serialize(array($preState, $postState, $coverage));
+			$message = serialize(array($results, $coverage));
 
 			call_user_func($send, $message);
 		};
 
-		$test->run($this->contextPhp, $this->beforePhp, $this->afterPhp, $this->script, $onShutdown);
+		$test->run($this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp, $onShutdown);
 	}
 
 	public function receive($message)
 	{
-		list($this->preState, $this->postState, $this->coverage) = unserialize($message);
+		list($this->results, $this->coverage) = unserialize($message);
 	}
 }

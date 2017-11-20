@@ -135,11 +135,14 @@ class Evaluator
 					$this->startTest(
 						$srcDirectory,
 						$autoloadPath,
-						$suite['fixture'],
-						$case['input'],
-						$case['output'],
-						$test['subject'],
-						$case['results'],
+						$suite['namespace'],
+						$suite['uses'],
+						$case['code']['fixture'],
+						$test['actual'],
+						$case['code']['expected'],
+						$case['code']['script'],
+						$case['results']['actual'],
+						$case['results']['expected'],
 						$coverage[]
 					);
 				}
@@ -147,41 +150,40 @@ class Evaluator
 		}
 	}
 
-	private function startTest($srcDirectory, $autoloadPath, $fixturePhp, $inputPhp, $outputPhp, $testPhp, &$results, &$coverage)
+	private function startTest($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
-		$code = new Code();
-		$php = $code->getPhp($fixturePhp, $inputPhp, $outputPhp, $testPhp);
-		list($contextPhp, $beforePhp, $expectedPhp, $actualPhp, $script) = $php;
-
 		$actualJob = new TestJob(
 			$this->executable,
 			$srcDirectory,
 			$autoloadPath,
-			$contextPhp,
-			$beforePhp,
-			$actualPhp,
+			$namespace,
+			$uses,
+			$fixturePhp,
 			$script,
-			$results['fixture'],
-			$results['actual'],
-			$coverage
+			$actualPhp,
+			$actualResults,
+			$actualCoverage
 		);
 
 		$this->processor->start($actualJob);
 
-		$unused = null;
+		/*
+		$expectedCoverage = null;
 
 		$expectedJob = new TestJob(
 			$this->executable,
 			$srcDirectory,
 			$autoloadPath,
-			$contextPhp,
-			$beforePhp,
-			$expectedPhp,
+			$namespace,
+			$uses,
+			$fixturePhp,
 			null,
-			$unused,
-			$results['expected']
+			$expectedPhp,
+			$expectedResults,
+			$expectedCoverage
 		);
 
 		$this->processor->start($expectedJob);
+		*/
 	}
 }

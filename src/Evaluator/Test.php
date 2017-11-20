@@ -26,7 +26,6 @@
 namespace Lens\Evaluator;
 
 use Lens\Archivist\Archivist;
-use SpencerMortensen\RegularExpressions\Re;
 
 class Test
 {
@@ -42,9 +41,6 @@ class Test
 	/** @var null|string */
 	private $contextPhp;
 
-	/** @var null|array */
-	private $script;
-
 	/** @var callable */
 	private $onShutdown;
 
@@ -53,6 +49,9 @@ class Test
 
 	/** @var null|array */
 	private $preState;
+
+	/** @var null|array */
+	private $script;
 
 	/** @var null|array */
 	private $postState;
@@ -85,17 +84,17 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($contextPhp, $beforePhp, $afterPhp, $script, $onShutdown)
+	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp, $onShutdown)
 	{
-		$this->contextPhp = $contextPhp;
+		$this->contextPhp = self::getContextPhp($namespace, $uses);
+		$prePhp = self::combine($this->contextPhp, $prePhp);
+		$postPhp = self::combine($this->contextPhp, $postPhp);
+
 		$this->script = $script;
 		$this->onShutdown = $onShutdown;
 
-		$prePhp = self::combine($contextPhp, $beforePhp);
-		$postPhp = self::combine($contextPhp, $afterPhp);
-
 		$this->examiner = new Examiner();
-		$this->prepare();
+		$this->prepare($namespace);
 
 		$this->examiner->run($prePhp, array($this, 'onPreShutdown'));
 		$this->onPreShutdown();
@@ -104,15 +103,70 @@ class Test
 		$this->onPostShutdown();
 	}
 
+	private static function getContextPhp($namespace, array $uses)
+	{
+		$namespacePhp = self::getNamespacePhp($namespace);
+		// TODO: mock DateTime et. al.
+		$usesPhp = self::getUsesPhp($uses);
+
+		return self::combine($namespacePhp, $usesPhp);
+	}
+
+	private static function getNamespacePhp($namespace)
+	{
+		if ($namespace === null) {
+			return null;
+		}
+
+		return "namespace {$namespace};";
+	}
+
+	private static function getUsesPhp(array $uses)
+	{
+		if (count($uses) === 0) {
+			return null;
+		}
+
+		$usesPhp = array();
+
+		foreach ($uses as $name => $path) {
+			$usesPhp[] = self::getUsePhp($name, $path);
+		}
+
+		return implode("\n", $usesPhp);
+	}
+
+	private static function getUsePhp($name, $path)
+	{
+		$usePhp = "use {$path}";
+
+		if ($name !== self::getAlias($path)) {
+			$usePhp .= " as {$name}";
+		}
+
+		$usePhp .= ';';
+
+		return $usePhp;
+	}
+
+	private static function getAlias($path)
+	{
+		$slash = strrpos($path, '\\');
+
+		if (is_integer($slash)) {
+			return substr($path, $slash + 1);
+		}
+
+		return $path;
+	}
+
 	private static function combine()
 	{
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private function prepare()
+	private function prepare($namespace)
 	{
-		$namespace = $this->getNamespace();
-
 		$autoloader = new Autoloader();
 		$autoloader->register();
 
@@ -121,16 +175,6 @@ class Test
 		if (is_string($this->autoloadPath)) {
 			require $this->autoloadPath;
 		}
-	}
-
-	// TODO: Remove this:
-	private function getNamespace()
-	{
-		if (Re::match('^namespace ([^;]+);', $this->contextPhp, $match)) {
-			return $match[1];
-		}
-
-		return null;
 	}
 
 	public function onPreShutdown()

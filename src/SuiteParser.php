@@ -25,6 +25,8 @@
 
 namespace Lens;
 
+use SpencerMortensen\RegularExpressions\Re;
+use SpencerMortensen\Parser\String\Lexer;
 use SpencerMortensen\Parser\String\Parser;
 use SpencerMortensen\Parser\String\Rules;
 
@@ -34,29 +36,44 @@ suites: {
 }
 
 suite: {
-	"fixture": "..."
+	"namespace": "...",
+	"uses": {
+		<alias>: <namespace>
+	},
 	"tests": {
 		<line>: <test>
 	}
 }
 
 test: {
-	"subject": "...",
+	"actual": "...",
 	"cases": {
 		<line>: <case>
 	}
 }
 
 case: {
-	"input": "...",
-	"output": "...",
-	"result": <result>
+	"text": "...",
+	"code": {
+		"fixture": "...",
+		"expected": "...",
+		"script": [...]
+	},
+	"results": <results>|null
 }
 
-result: {
-	"fixture": <state>,
-	"expected": <state>|null,
-	"actual": <state>|null
+results: {
+	"expected": {
+		"pre": <state>|null,
+		"post": <state>|null,
+		"diff": <state>|null
+	},
+	"actual": {
+		"pre": <state>|null,
+		"post": <state>|null,
+		"diff": <state>|null
+	},
+	"pass": false|true
 }
 
 state: {...}
@@ -64,28 +81,43 @@ state: {...}
 
 class SuiteParser extends Parser
 {
+	/** @var string */
+	private $input;
+
 	public function __construct()
 	{
 		$grammar = <<<'EOS'
-suite: AND phpTag code tests
-phpTag: STRING <?php
-code: AND codeUnit codeGroups
-codeUnit: RE .*?(?=(?:\n// (?:Test|Input|Output))|/\*|$)\s?
-codeGroups: MANY codeGroup 0
-codeGroup: AND comment codeUnit
-comment: RE /\*.*?\*/
+suite: AND phpTag optionalNamespace optionalUses tests
+phpTag: AND phpTagLine optionalComments
+phpTagLine: RE <\?php\s+
+optionalComments: MANY comment 0
+comment: RE /\*.*?\*/\s*
+optionalNamespace: MANY namespace 0 1
+namespace: AND namespaceLine optionalComments
+namespaceLine: RE namespace\h+([a-zA-Z_0-9\\]+);\s*
+optionalUses: MANY use 0
+use: AND useLine optionalComments
+useLine: RE use\h+(?<namespace>[a-zA-Z_0-9\\]+)(?:\h+as\h+(?<alias>[a-zA-Z_0-9]+))?;\s*
 tests: MANY test 1
-test: AND subject cases
+test: AND position subject cases
+position: STRING
 subject: AND subjectLabel code
-subjectLabel: STRING // Test
+subjectLabel: AND subjectLine optionalComments
+subjectLine: RE // Test\s+
+code: MANY codeBlock 1
+codeBlock: AND codeUnit optionalComments
+codeUnit: RE (?!(?:// (?:Test|Input|Output))|/\*|$).+?(?=(?:// (?:Test|Input|Output))|/\*|$)
 cases: MANY case 1
-case: AND optionalInput output
+case: AND position optionalInput output position
 optionalInput: MANY input 0 1
 input: AND inputLabel code
-inputLabel:  STRING // Input
+inputLabel: AND inputLine optionalComments
+inputLine: RE // Input\s+
 output: AND outputLabel code
-outputLabel: STRING // Output
+outputLabel: AND outputLine optionalComments
+outputLine: RE // Output\s+
 EOS;
+
 
 		$rules = new Rules($this, $grammar);
 		$rule = $rules->getRule('suite');
@@ -93,90 +125,294 @@ EOS;
 		parent::__construct($rule);
 	}
 
-	public function getSuite(array $values)
+	public function parse($input)
 	{
+		$this->input = $input;
+
+		return parent::parse($input);
+	}
+
+	public function getSuite(array $match)
+	{
+		$namespace = $match[1];
+		$uses = $match[2];
+		$tests = $match[3];
+
+		self::useMocks($namespace, $uses, $tests);
+
 		return array(
-			'fixture' => $values[1],
-			'tests' => $values[2]
+			'namespace' => $namespace,
+			'uses' => $uses,
+			'tests' => $tests
 		);
 	}
 
-	public function getCode(array $values)
+	public function getOptionalNamespace(array $matches)
 	{
-		$values = array_filter($values, 'is_string');
+		return array_shift($matches);
+	}
 
+	public function getNamespace(array $matches)
+	{
+		return $matches[0][1];
+	}
 
-		if (count($values) === 0) {
-			return null;
+	public function getOptionalUses(array $matches)
+	{
+		return self::merge($matches);
+	}
+
+	private static function merge(array $input)
+	{
+		$output = array();
+
+		foreach ($input as $array) {
+			$output += $array;
 		}
 
-		return implode("\n", $values);
+		return $output;
+	}
+
+	public function getUse(array $matches)
+	{
+		return $matches[0];
+	}
+
+	public function getUseLine(array $match)
+	{
+		$namespace = $match['namespace'];
+		$alias = &$match['alias'];
+
+		if ($alias === null) {
+			$alias = self::getAliasName($namespace);
+		}
+
+		return array(
+			$alias => $namespace
+		);
+	}
+
+	private static function getAliasName($namespace)
+	{
+		$slash = strrpos($namespace, '\\');
+
+		if (is_integer($slash)) {
+			return substr($namespace, $slash + 1);
+		}
+
+		return $namespace;
+	}
+
+	public function getTests(array $matches)
+	{
+		return self::merge($matches);
+	}
+
+	public function getTest(array $matches)
+	{
+		$line = self::getLineNumber($this->input, $matches[0]);
+
+		return array(
+			$line => array(
+				'actual' => $matches[1],
+				'cases' => $matches[2]
+			)
+		);
+	}
+
+	private static function getLineNumber($input, $position)
+	{
+		$read = substr($input, 0, $position);
+
+		return substr_count($read, "\n") + 1;
+	}
+
+	public function getPosition()
+	{
+		/** @var Lexer $lexer */
+		$lexer = $this->getState();
+		return $lexer->getPosition();
+	}
+
+	public function getSubject(array $matches)
+	{
+		return $matches[1];
+	}
+
+	public function getCode(array $matches)
+	{
+		return implode("\n", $matches);
+	}
+
+	public function getCodeBlock(array $matches)
+	{
+		return $matches[0];
 	}
 
 	public function getCodeUnit($value)
 	{
-		$php = trim($value);
-
-		if (strlen($php) === 0) {
-			return null;
-		}
-
-		return $php;
+		return trim($value);
 	}
 
-	public function getCodeGroups(array $values)
+	public function getCases(array $matches)
 	{
-		$values = array_filter($values, 'is_string');
-
-		if (count($values) === 0) {
-			return null;
-		}
-
-		return implode("\n", $values);
+		return self::merge($matches);
 	}
 
-	public function getCodeGroup(array $values)
+	public function getCase(array $match)
 	{
-		return $values[1];
-	}
+		$begin = $match[0];
+		$end = $match[3];
 
-	public function getTest(array $values)
-	{
+		$line = self::getLineNumber($this->input, $begin);
+		$text = self::getText($this->input, $begin, $end);
+
+		$fixture = $match[1];
+		$expected = $match[2];
+		$script = self::extractScript($expected);
+
 		return array(
-			'subject' => $values[0],
-			'cases' => $values[1]
+			$line => array(
+				'text' => $text,
+				'code' => array(
+					'fixture' => $fixture,
+					'expected' => $expected,
+					'script' => $script
+				),
+				'results' => null
+			)
 		);
 	}
 
-	public function getSubject(array $values)
+	private static function getText($input, $begin, $end)
 	{
-		return trim($values[1]);
+		return trim(substr($input, $begin, $end - $begin));
 	}
 
-	public function getCase(array $values)
+	private static function extractScript(&$php)
 	{
-		return array(
-			'input' => $values[0],
-			'output' => $values[1]
-		);
+		$script = array();
+
+		$lines = Re::split('\\r?\\n', $php);
+		$expression = '^(?<call>(?:\\$[a-zA-Z_0-9]+->)?[a-zA-Z_0-9]+\(.*?\);)(?:\\s*//\\s+(?<body>.*?))?$';
+
+		foreach ($lines as &$line) {
+			if (!Re::match($expression, $line, $match)) {
+				continue;
+			}
+
+			$function = &$match['call'];
+			$body = &$match['body'];
+
+			$line = $function;
+			$script[] = $body;
+		}
+
+		$php = implode("\n", $lines);
+
+		return $script;
 	}
 
-	public function getOptionalInput(array $values)
+	public function getOptionalInput(array $matches)
 	{
-		if (count($values) === 0) {
+		return array_shift($matches);
+	}
+
+	public function getInput(array $matches)
+	{
+		return $matches[1];
+	}
+
+	public function getOutput(array $matches)
+	{
+		return $matches[1];
+	}
+
+	private static function useMocks($namespace, array $uses, array &$tests)
+	{
+		foreach ($tests as &$test) {
+			foreach ($test['cases'] as &$case) {
+				self::useFixtureMocks($namespace, $uses, $case['code']['fixture']);
+			}
+		}
+	}
+
+	private static function useFixtureMocks($namespace, array $uses, &$php)
+	{
+		$lines = Re::split('\\r?\\n', $php);
+
+		foreach ($lines as &$line) {
+			if (self::getMock($line, $name, $class, $arguments)) {
+				$absoluteClass = self::getAbsoluteClass($namespace, $uses, $class);
+				$mockClass = "\\Lens\\Mock{$absoluteClass}";
+				$line = self::getInstantiationPhp($name, $mockClass, $arguments);
+			}
+		}
+
+		$php = self::getValidString(implode("\n", $lines));
+	}
+
+	private static function getValidString($input)
+	{
+		$input = trim($input);
+
+		if (strlen($input) === 0) {
 			return null;
 		}
 
-		return $values[0];
+		return $input;
 	}
 
-	public function getInput(array $values)
+	private static function getMock(&$php, &$name, &$class, &$arguments)
 	{
-		return trim($values[1]);
+		$expression = '^\$(?<name>[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?<class>[a-zA-Z_0-9\\\\]+)\\h*\\((?<arguments>.*?)\\);$';
+
+		if (!Re::match($expression, $php, $match)) {
+			return false;
+		}
+
+		$name = $match['name'];
+		$class = $match['class'];
+		$arguments = $match['arguments'];
+
+		return true;
 	}
 
-	public function getOutput(array $values)
+	private static function getAbsoluteClass($namespace, array $uses, $class)
 	{
-		return trim($values[1]);
+		if (substr($class, 0, 1) === '\\') {
+			return $class;
+		}
+
+		if (self::resolveUses($uses, $class)) {
+			return $class;
+		}
+
+		if ($namespace === null) {
+			return "\\{$class}";
+		}
+
+		return "\\{$namespace}\\{$class}";
+	}
+
+	private static function resolveUses(array $uses, &$class)
+	{
+		$names = explode('\\', $class, 2);
+		$baseName = $names[0];
+		$basePath = &$uses[$baseName];
+
+		if ($basePath === null) {
+			return false;
+		}
+
+		$names[0] = $basePath;
+		$class = '\\' . implode('\\', $names);
+
+		return true;
+	}
+
+	private static function getInstantiationPhp($name, $class, $arguments)
+	{
+		return "\${$name} = new {$class}({$arguments});";
 	}
 }

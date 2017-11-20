@@ -58,13 +58,16 @@ class Runner
 	/** @var Evaluator */
 	private $evaluator;
 
+	/** @var Verifier */
+	private $verifier;
+
 	/** @var Console */
 	private $console;
 
 	/** @var Web */
 	private $web;
 
-	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Console $console, Web $web)
+	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Verifier $verifier, Console $console, Web $web)
 	{
 		$this->settings = $settings;
 		$this->filesystem = $filesystem;
@@ -72,6 +75,7 @@ class Runner
 		$this->browser = $browser;
 		$this->parser = $parser;
 		$this->evaluator = $evaluator;
+		$this->verifier = $verifier;
 		$this->console = $console;
 		$this->web = $web;
 	}
@@ -108,10 +112,14 @@ class Runner
 		}
 
 		$testFiles = $this->browser->browse($testsDirectory, $paths);
-
 		$suites = $this->getSuites($testsDirectory, $testFiles);
 
 		list($suites, $code, $coverage) = $this->evaluator->run($srcDirectory, $autoloadPath, $suites);
+
+		echo json_encode($suites), "\n";
+		exit;
+
+		$this->verifier->verify($suites);
 
 		echo $this->console->summarize($suites);
 

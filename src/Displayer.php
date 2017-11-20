@@ -31,14 +31,6 @@ use Lens\Archivist\Archives\ResourceArchive;
 
 class Displayer
 {
-	/** @var array */
-	private $objectNames;
-
-	public function __construct(array $objectNames = array())
-	{
-		$this->objectNames = $objectNames;
-	}
-
 	public function display($archive)
 	{
 		if (is_object($archive)) {

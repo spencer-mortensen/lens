@@ -29,6 +29,9 @@ use Lens\Archivist\Archives\ObjectArchive;
 
 class Formatter
 {
+	/** @var array */
+	private $objectNames;
+
 	/** @var Displayer */
 	private $displayer;
 
@@ -37,7 +40,8 @@ class Formatter
 
 	public function __construct(array $objectNames)
 	{
-		$this->displayer = new Displayer($objectNames);
+		$this->objectNames = $objectNames;
+		$this->displayer = new Displayer();
 		$this->currentDirectory = getcwd(); // TODO
 	}
 
@@ -167,22 +171,21 @@ class Formatter
 	{
 		list($object, $method, $arguments) = $call;
 
-		$objectText = $this->displayer->display($object);
-		$argumentsText = $this->getArgumentsText($arguments);
+		$functionText = $this->getFunctionText($method, $arguments);
 
-		return "{$objectText}->{$method}({$argumentsText})";
-	}
-
-	// TODO:
-	private static function getObjectText(ObjectArchive $objectArchive, array $names, Displayer $displayer)
-	{
-		$id = $objectArchive->getId();
-
-		if (isset($names[$id])) {
-			return "\${$names[$id]}";
+		if ($object === null) {
+			return $functionText;
 		}
 
-		return $displayer->display($objectArchive);
+		$objectText = $this->getObjectText($object);
+		return "{$objectText}->{$functionText}";
+	}
+
+	private function getFunctionText($function, array $arguments)
+	{
+		$argumentsText = $this->getArgumentsText($arguments);
+
+		return "{$function}({$argumentsText});";
 	}
 
 	private function getArgumentsText(array $argumentsArchive)
@@ -198,5 +201,17 @@ class Formatter
 		}
 
 		return implode(', ', $output);
+	}
+
+	private function getObjectText(ObjectArchive $objectArchive)
+	{
+		$id = $objectArchive->getId();
+
+		if (isset($this->objectNames[$id])) {
+			$objectName = $this->objectNames[$id];
+			return "\${$objectName}";
+		}
+
+		return $this->displayer->display($objectArchive);
 	}
 }

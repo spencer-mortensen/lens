@@ -50,19 +50,10 @@ class Console
 
 	public function summarize(array $suites)
 	{
-		foreach ($suites as $filePath => $suite) {
-			$tests = $suite['tests'];
-
-			foreach ($tests as $lineTest => $test) {
-				$subject = $test['subject'];
-				$cases = $test['cases'];
-
-				foreach ($cases as $lineCase => $case) {
-					$input = $case['input'];
-					$output = $case['output'];
-					$results = $case['results'];
-
-					$this->verify($subject, $input, $output, $results, $filePath);
+		foreach ($suites as $testFile => $suite) {
+			foreach ($suite['tests'] as $testLine => $test) {
+				foreach ($test['cases'] as $caseLine => $case) {
+					$this->summarizeCase($testFile, $testLine, $caseLine, $case);
 				}
 			}
 		}
@@ -81,42 +72,55 @@ class Console
 		return implode("\n", $output) . "\n";
 	}
 
-	private function verify($subject, $input, $output, array $results, $testFilePath)
+	private function summarizeCase($testFile, $testLine, $caseLine, array $case)
 	{
-		$fixture = $results['fixture'];
-		$expected = $results['expected'];
-		$actual = $results['actual'];
+		$results = $case['results'];
 
-		if (!is_array($expected) || !is_array($actual)) {
+		if ($results['pass']) {
+			++$this->passedTestsCount;
+			return;
+		}
+
+		$caseText = $case['text'];
+
+		$actual = $results['actual'];
+		$expected = $results['expected'];
+
+		if (!is_array($expected['diff'])) {
+/*
 			$fixtureFormatter = new Formatter(self::getObjectNames($fixture));
 			$issues = $this->getFixtureIssues($fixtureFormatter, $fixture);
 			$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues, $testFilePath);
-			return false;
+*/
+			return;
 		}
 
-		self::ignoreSetupVariables($expected, $actual);
-		$this->ignoreMutualValues($expected, $actual);
-
-		if (self::isEmptyState($expected) && self::isEmptyState($actual)) {
-			++$this->passedTestsCount;
-			return true;
+		if (!is_array($actual['diff'])) {
+/*
+(same as above)
+*/
+			return;
 		}
 
-		$issues = $this->getDifferenceIssues($expected, $actual);
-		$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues, $testFilePath);
-		return false;
+		$actualFormatter = self::getFormatter($actual['pre']);
+		$expectedFormatter = self::getFormatter($expected['pre']);
+		$issues = $this->getDifferenceIssues($actual['diff'], $expected['diff'], $actualFormatter, $expectedFormatter);
+
+		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testFile, $testLine, $caseLine);
 	}
 
-	private static function getObjectNames(array $state = null)
+	private static function getFormatter(array $state)
+	{
+		$objectNames = self::getObjectNames($state);
+		return new Formatter($objectNames);
+	}
+
+	private static function getObjectNames(array $state)
 	{
 		$names = array();
 
-		if (!is_array($state)) {
-			return $names;
-		}
-
-		/** @var ObjectArchive $value */
 		foreach ($state['variables'] as $name => $value) {
+			/** @var ObjectArchive $value */
 			if (!is_object($value) || $value->isResourceArchive()) {
 				continue;
 			}
@@ -126,55 +130,6 @@ class Console
 		}
 
 		return $names;
-	}
-
-	private static function isEmptyState($state)
-	{
-		foreach ($state as $key => $value) {
-			if (0 < count($value)) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	private static function ignoreSetupVariables(array $expected, array &$actual)
-	{
-		foreach ($actual['variables'] as $name => $value) {
-			if (!array_key_exists($name, $expected['variables'])) {
-				unset($actual['variables'][$name]);
-			}
-		}
-	}
-
-	private function ignoreMutualValues(array &$expected, array &$actual)
-	{
-		$this->removeMutualValue($expected['output'], $actual['output']);
-		$this->removeMutualArrayValues($expected['variables'], $actual['variables']);
-		$this->removeMutualArrayValues($expected['globals'], $actual['globals']);
-		$this->removeMutualArrayValues($expected['constants'], $actual['constants']);
-		$this->removeMutualValue($expected['exception'], $actual['exception']);
-		$this->removeMutualArrayValues($expected['errors'], $actual['errors']);
-		$this->removeMutualArrayValues($expected['calls'], $actual['calls']);
-	}
-
-	private function removeMutualValue(&$a, &$b)
-	{
-		if ($this->comparer->isSame($a, $b)) {
-			$a = $b = null;
-		}
-	}
-
-	private function removeMutualArrayValues(array &$a, array &$b)
-	{
-		$mutualKeys = array_intersect_key($a, $b);
-
-		foreach ($mutualKeys as $key => $value) {
-			if ($this->comparer->isSame($a[$key], $b[$key])) {
-				unset($a[$key], $b[$key]);
-			}
-		}
 	}
 
 	private function getFixtureIssues(Formatter $fixtureFormatter, array $fixture)
@@ -188,11 +143,8 @@ class Console
 		return implode("\n", call_user_func_array('array_merge', $sections));
 	}
 
-	private function getDifferenceIssues(array $expected, array $actual)
+	private function getDifferenceIssues(array $actual, array $expected, Formatter $actualFormatter, Formatter $expectedFormatter)
 	{
-		$expectedFormatter = new Formatter(self::getObjectNames($expected));
-		$actualFormatter = new Formatter(self::getObjectNames($actual));
-
 		$sections = array(
 			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actual['exception'])),
 			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expected['exception'])),
@@ -301,18 +253,12 @@ class Console
 		return array_map(array($formatter, 'getCall'), $calls);
 	}
 
-	private function getFailedTestText($subject, $input, $output, $issues, $testFilePath)
+	private function getFailedTestText($caseText, $issues, $testFile, $testLine, $caseLine)
 	{
 		$sections = array();
 
-		$sections[] = "   {$testFilePath}:";
-		$sections[] = "   // Test\n" . self::pad(self::wrap($subject), '   ');
-
-		if ($input !== null) {
-			$sections[] = "   // Input\n" . self::pad(self::wrap($input), '   ');
-		}
-
-		$sections[] = "   // Output\n" . self::pad(self::wrap($output), '   ');
+		$sections[] = "   {$testFile}:";
+		$sections[] = self::pad(self::wrap($caseText), '   ');
 		$sections[] = "   // Issues\n" . $issues;
 
 		return implode("\n\n", $sections);
