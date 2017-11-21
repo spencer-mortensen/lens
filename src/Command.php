@@ -25,9 +25,11 @@
 
 namespace Lens;
 
+use Exception;
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
 use SpencerMortensen\Paths\Paths;
+use Throwable;
 
 class Command
 {
@@ -44,7 +46,7 @@ class Command
 	private $logger;
 
 	/** @var boolean */
-	private $isInternalCommand;
+	private static $isInternalCommand;
 
 	public function __construct()
 	{
@@ -80,7 +82,7 @@ class Command
 			if (isset($options['version'])) {
 				$this->getVersion();
 			} else {
-				// TODO: error
+				// TODO: throw exception
 			}
 
 			return;
@@ -95,8 +97,6 @@ class Command
 
 	private function getWorker($name, $value)
 	{
-		$this->isInternalCommand = true;
-
 		$worker = new Worker($this->executable);
 		$worker->run($name, $value);
 	}
@@ -127,21 +127,21 @@ class Command
 
 	public function errorHandler($level, $message, $file, $line)
 	{
-		throw Exception::error($level, trim($message), $file, $line);
+		throw LensException::error($level, trim($message), $file, $line);
 	}
 
 	/**
-	 * @param \Throwable|\Exception $exception
+	 * @param Throwable|Exception $exception
 	 */
 	public function exceptionHandler($exception)
 	{
 		try {
 			throw $exception;
+		} catch (LensException $throwable) {
+		} catch (Throwable $throwable) {
+			$exception = LensException::exception($throwable);
 		} catch (Exception $throwable) {
-		} catch (\Throwable $throwable) {
-			$exception = Exception::exception($throwable);
-		} catch (\Exception $throwable) {
-			$exception = Exception::exception($throwable);
+			$exception = LensException::exception($throwable);
 		}
 
 		$severity = $exception->getSeverity();
@@ -152,7 +152,7 @@ class Command
 		$output = $this->getSyslogText($severity, $code, $message, $data);
 		$this->logger->log($severity, $output);
 
-		if ($this->isInternalCommand !== true) {
+		if (self::$isInternalCommand !== true) {
 			$help = $exception->getHelp();
 
 			$output = $this->getStderrText($severity, $code, $message, $help, $data);
@@ -191,10 +191,10 @@ class Command
 	private static function getSeverityText($severity)
 	{
 		switch ($severity) {
-			case Exception::SEVERITY_NOTICE:
+			case LensException::SEVERITY_NOTICE:
 				return 'Note';
 
-			case Exception::SEVERITY_WARNING:
+			case LensException::SEVERITY_WARNING:
 				return 'Warning';
 
 			default:
@@ -249,5 +249,10 @@ class Command
 		}
 
 		return implode("\n", $output);
+	}
+
+	public static function setIsInternalCommand($isInternalCommand)
+	{
+		self::$isInternalCommand = $isInternalCommand;
 	}
 }

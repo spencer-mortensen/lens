@@ -25,7 +25,10 @@
 
 namespace Lens;
 
-class Exception extends \Exception
+use Exception;
+use SpencerMortensen\ParallelProcessor\ParallelProcessorException;
+
+class LensException extends Exception
 {
 	/** @var string */
 	private static $lensExecutable = 'lens';
@@ -46,6 +49,7 @@ class Exception extends \Exception
 	const CODE_INVALID_AUTOLOADER_PATH = 4;
 	const CODE_INVALID_TESTS_PATH = 5;
 	const CODE_INVALID_TESTS_FILE_SYNTAX = 6;
+	const CODE_PROCESSOR = 7;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
 	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
@@ -147,7 +151,7 @@ class Exception extends \Exception
 
 	/**
 	 * @param \Throwable $throwable
-	 * @return Exception
+	 * @return LensException
 	 */
 	public static function exception($throwable)
 	{
@@ -434,7 +438,26 @@ class Exception extends \Exception
 				return "an output label ('// Output')";
 
 			default:
-				throw Exception::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
+				throw LensException::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
 		}
+	}
+
+	public static function processor(ParallelProcessorException $exception)
+	{
+		$code = self::CODE_PROCESSOR;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = 'An unexpected error occurred while processing the unit tests.';
+
+		$help = null;
+
+		$data = array(
+			'code' => $exception->getCode(),
+			'message' => $exception->getMessage(),
+			'processorData' => $exception->getData()
+		);
+
+		return new self($code, $severity, $message, $help, $data);
 	}
 }

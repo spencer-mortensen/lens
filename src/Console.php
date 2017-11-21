@@ -87,85 +87,58 @@ class Console
 		$expected = $results['expected'];
 
 		if (!is_array($expected['diff'])) {
-/*
-			$fixtureFormatter = new Formatter(self::getObjectNames($fixture));
-			$issues = $this->getFixtureIssues($fixtureFormatter, $fixture);
-			$this->failedTests[] = $this->getFailedTestText($subject, $input, $output, $issues, $testFilePath);
-*/
-			return;
+			$issues = $this->getFixtureIssues($expected['pre']);
+		} elseif (!is_array($actual['diff'])) {
+			$issues = $this->getFixtureIssues($actual['pre']);
+		} else {
+			$issues = $this->getDifferenceIssues($actual, $expected);
 		}
-
-		if (!is_array($actual['diff'])) {
-/*
-(same as above)
-*/
-			return;
-		}
-
-		$actualFormatter = self::getFormatter($actual['pre']);
-		$expectedFormatter = self::getFormatter($expected['pre']);
-		$issues = $this->getDifferenceIssues($actual['diff'], $expected['diff'], $actualFormatter, $expectedFormatter);
 
 		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testFile, $testLine, $caseLine);
 	}
 
-	private static function getFormatter(array $state)
+	private function getFixtureIssues(array $state)
 	{
-		$objectNames = self::getObjectNames($state);
-		return new Formatter($objectNames);
-	}
+		$formatter = self::getFormatter($state);
 
-	private static function getObjectNames(array $state)
-	{
-		$names = array();
-
-		foreach ($state['variables'] as $name => $value) {
-			/** @var ObjectArchive $value */
-			if (!is_object($value) || $value->isResourceArchive()) {
-				continue;
-			}
-
-			$id = $value->getId();
-			$names[$id] = $name;
-		}
-
-		return $names;
-	}
-
-	private function getFixtureIssues(Formatter $fixtureFormatter, array $fixture)
-	{
 		$sections = array(
-			self::getUnexpectedMessages($this->getExceptionMessages($fixtureFormatter, $fixture['exception'])),
-			self::getUnexpectedMessages($this->getErrorMessages($fixtureFormatter, $fixture['errors']))
+			self::getUnexpectedMessages($this->getExceptionMessages($formatter, $state['exception'])),
+			self::getUnexpectedMessages($this->getErrorMessages($formatter, $state['errors']))
 		);
 
 		// TODO: show a troubleshooting message when the $issuesText is empty
 		return implode("\n", call_user_func_array('array_merge', $sections));
 	}
 
-	private function getDifferenceIssues(array $actual, array $expected, Formatter $actualFormatter, Formatter $expectedFormatter)
+	private function getDifferenceIssues(array $actual, array $expected)
 	{
+		$actualDiff = $actual['diff'];
+		$expectedDiff = $expected['diff'];
+
+		$actualFormatter = self::getFormatter($actual['pre']);
+		$expectedFormatter = self::getFormatter($expected['pre']);
+
 		$sections = array(
-			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actual['exception'])),
-			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expected['exception'])),
+			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actualDiff['exception'])),
+			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expectedDiff['exception'])),
 
-			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actual['errors'])),
-			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expected['errors'])),
+			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
+			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
 
-			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actual['variables'])),
-			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expected['variables'])),
+			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
+			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
 
-			self::getUnexpectedMessages($this->getCallMessages($actualFormatter, $actual['calls'])),
-			self::getMissingMessages($this->getCallMessages($expectedFormatter, $expected['calls'])),
+			self::getUnexpectedMessages($this->getCallMessages($actualFormatter, $actualDiff['calls'])),
+			self::getMissingMessages($this->getCallMessages($expectedFormatter, $expectedDiff['calls'])),
 
-			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actual['globals'])),
-			self::getMissingMessages($this->getGlobalMessages($expectedFormatter, $expected['globals'])),
+			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actualDiff['globals'])),
+			self::getMissingMessages($this->getGlobalMessages($expectedFormatter, $expectedDiff['globals'])),
 
-			self::getUnexpectedMessages($this->getConstantMessages($actualFormatter, $actual['constants'])),
-			self::getMissingMessages($this->getConstantMessages($expectedFormatter, $expected['constants'])),
+			self::getUnexpectedMessages($this->getConstantMessages($actualFormatter, $actualDiff['constants'])),
+			self::getMissingMessages($this->getConstantMessages($expectedFormatter, $expectedDiff['constants'])),
 
-			self::getUnexpectedMessages($this->getOutputMessages($actualFormatter, $actual['output'])),
-			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expected['output']))
+			self::getUnexpectedMessages($this->getOutputMessages($actualFormatter, $actualDiff['output'])),
+			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expectedDiff['output']))
 		);
 
 		// TODO: show a troubleshooting message when the $issuesText is empty
@@ -283,6 +256,7 @@ class Console
 		return wordwrap($string, self::$maximumLineLength, "\n", true);
 	}
 
+	// TODO: use the regular expressions library
 	// TODO: this is duplicated elsewhere
 	private static function pad($string, $prefix)
 	{
@@ -297,5 +271,28 @@ class Console
 		$delimiter = "\x03";
 
 		return "{$delimiter}{$expression}{$delimiter}{$flags}";
+	}
+
+	private static function getFormatter(array $state)
+	{
+		$objectNames = self::getObjectNames($state);
+		return new Formatter($objectNames);
+	}
+
+	private static function getObjectNames(array $state)
+	{
+		$names = array();
+
+		foreach ($state['variables'] as $name => $value) {
+			/** @var ObjectArchive $value */
+			if (!is_object($value) || $value->isResourceArchive()) {
+				continue;
+			}
+
+			$id = $value->getId();
+			$names[$id] = $name;
+		}
+
+		return $names;
 	}
 }

@@ -25,6 +25,7 @@
 
 namespace Lens\Evaluator\Jobs;
 
+use Lens\Command;
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
 use Lens\Filesystem;
@@ -70,6 +71,8 @@ class EvaluatorJob implements ForkJob
 
 	public function run($send)
 	{
+		Command::setIsInternalCommand(true);
+
 		$evaluator = new Evaluator($this->executable, $this->filesystem, $this->processor);
 		$results = $evaluator->run($this->srcDirectory, $this->autoloadPath, $this->suites);
 		$message = serialize($results);

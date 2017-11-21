@@ -219,6 +219,7 @@ class Test
 		self::removeDuplicateKeys($pre['variables'], $post['variables']);
 		self::removeDuplicateKeys($pre['globals'], $post['globals']);
 		self::removeDuplicateKeys($pre['constants'], $post['constants']);
+		self::removeMockNamespaces($post['calls']);
 
 		return $post;
 	}
@@ -229,6 +230,15 @@ class Test
 			if (array_key_exists($key, $a)) {
 				unset($b[$key]);
 			}
+		}
+	}
+
+	private static function removeMockNamespaces(array $calls)
+	{
+		foreach ($calls as &$call) {
+			list($object, $function, $arguments) = $call;
+
+			// TODO: continue here
 		}
 	}
 

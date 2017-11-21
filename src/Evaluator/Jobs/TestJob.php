@@ -25,6 +25,7 @@
 
 namespace Lens\Evaluator\Jobs;
 
+use Lens\Command;
 use Lens\Evaluator\Test;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 
@@ -86,6 +87,8 @@ class TestJob implements ShellJob
 
 	public function run($send)
 	{
+		Command::setIsInternalCommand(true);
+
 		$test = new Test($this->srcDirectory, $this->autoloadPath);
 
 		$onShutdown = function () use ($test, $send) {

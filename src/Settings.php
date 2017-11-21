@@ -76,7 +76,7 @@ class Settings
 		$path = $this->file->getPath();
 		$message = $exception->getMessage();
 
-		return Exception::invalidSettingsFile($path, $message);
+		return LensException::invalidSettingsFile($path, $message);
 	}
 
 	private function writeNewFile(array $settings)

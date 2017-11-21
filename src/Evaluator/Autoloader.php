@@ -102,11 +102,7 @@ class Autoloader
 			self::getNamespacePhp($namespace)
 		);
 
-		$functions = array(
-			'fgets'
-		);
-
-		// $functions = self::getMockedFunctions();
+		$functions = PhpCore::getExternalFunctions();
 
 		foreach ($functions as $function) {
 			$mock = "{$namespace}\\{$function}";
@@ -124,98 +120,5 @@ class Autoloader
 		$php = $this->mockBuilder->getMockFunctionPhp($function);
 
 		return $php;
-	}
-
-	private static function getMockedFunctions()
-	{
-		return array(
-			// Program execution functions
-			'exec',
-			'passthru',
-			'proc_close',
-			'proc_get_status',
-			'proc_nice',
-			'proc_open',
-			'proc_terminate',
-			'shell_exec',
-			'system',
-
-			// Filesystem functions
-			'chgrp',
-			'chmod',
-			'clearstatcache',
-			'copy',
-			'disk_free_space',
-			'disk_total_space',
-			'diskfreespace',
-			'fclose',
-			'feof',
-			'fflush',
-			'fgetc',
-			'fgetcsv',
-			'fgets',
-			'fgetss',
-			'file_exists',
-			'file_get_contents',
-			'file_put_contents',
-			'file',
-			'fileatime',
-			'filectime',
-			'filegroup',
-			'fileinode',
-			'filemtime',
-			'fileowner',
-			'fileperms',
-			'filesize',
-			'filetype',
-			'flock',
-			'fopen',
-			'fpassthru',
-			'fputcsv',
-			'fputs',
-			'fread',
-			'fscanf',
-			'fseek',
-			'fstat',
-			'ftell',
-			'ftruncate',
-			'fwrite',
-			'glob',
-			'is_dir',
-			'is_executable',
-			'is_file',
-			'is_link',
-			'is_readable',
-			'is_uploaded_file',
-			'is_writable',
-			'is_writeable',
-			'lchgrp',
-			'lchown',
-			'link',
-			'linkinfo',
-			'lstat',
-			'mkdir',
-			'move_uploaded_file',
-			'parse_ini_file',
-			'pclose',
-			'popen',
-			'readfile',
-			'readlink',
-			'realpath_cache_get',
-			'realpath_cache_size',
-			'realpath',
-			'rename',
-			'rewind',
-			'rmdir',
-			// set_file_buffer
-			'stat',
-			'symlink',
-			'tempnam',
-			'tmpfile',
-			'tmpfile',
-			'touch',
-			'umask',
-			'unlink'
-		);
 	}
 }

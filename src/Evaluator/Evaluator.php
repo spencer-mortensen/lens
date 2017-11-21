@@ -28,6 +28,8 @@ namespace Lens\Evaluator;
 use Lens\Evaluator\Jobs\CoverageJob;
 use Lens\Evaluator\Jobs\TestJob;
 use Lens\Filesystem;
+use Lens\LensException;
+use SpencerMortensen\ParallelProcessor\ParallelProcessorException;
 
 class Evaluator
 {
@@ -50,9 +52,13 @@ class Evaluator
 	public function run($srcDirectory, $autoloadPath, array $suites)
 	{
 		// TODO: run this only if coverage is enabled:
-		$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
-		$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
-		$this->processor->finish();
+		try {
+			$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
+			$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
+			$this->processor->finish();
+		} catch (ParallelProcessorException $exception) {
+			throw LensException::processor($exception);
+		}
 
 		if (isset($executableLines, $executedLines)) {
 			$coverage = self::getCoverage($executableLines, $executedLines);
@@ -167,7 +173,6 @@ class Evaluator
 
 		$this->processor->start($actualJob);
 
-		/*
 		$expectedCoverage = null;
 
 		$expectedJob = new TestJob(
@@ -184,6 +189,5 @@ class Evaluator
 		);
 
 		$this->processor->start($expectedJob);
-		*/
 	}
 }

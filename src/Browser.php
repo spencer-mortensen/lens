@@ -55,13 +55,13 @@ class Browser
 		foreach ($paths as $path) {
 			if (($this->testsDirectory !== null) && !$this->paths->isChildPath($this->testsDirectory, $path)) {
 				// TODO: explain that this path is invalid because it lies outside the tests directory:
-				throw Exception::invalidTestsPath($path);
+				throw LensException::invalidTestsPath($path);
 			}
 
 			$contents = $this->filesystem->read($path);
 
 			if ($contents === null) {
-				throw Exception::invalidTestsPath($path);
+				throw LensException::invalidTestsPath($path);
 			}
 
 			$this->get($path, $contents);

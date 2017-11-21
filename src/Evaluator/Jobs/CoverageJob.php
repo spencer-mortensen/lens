@@ -25,6 +25,7 @@
 
 namespace Lens\Evaluator\Jobs;
 
+use Lens\Command;
 use Lens\Evaluator\Coverage;
 use Lens\Filesystem;
 use Lens\Logger;
@@ -73,8 +74,12 @@ class CoverageJob implements ShellJob
 
 	public function run($send)
 	{
+		Command::setIsInternalCommand(true);
+
 		// TODO: dependency injection:
 		$filesystem = new Filesystem();
+
+		// TODO: remove this logger (throw exceptions to the logger in the controller)
 		$logger = new Logger('lens');
 
 		$coverager = new Coverage($filesystem, $logger);

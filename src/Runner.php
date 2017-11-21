@@ -105,7 +105,7 @@ class Runner
 
 		if (count($paths) === 0) {
 			if ($testsDirectory === null) {
-				throw Exception::unknownTestsDirectory();
+				throw LensException::unknownTestsDirectory();
 			}
 
 			$paths[] = $testsDirectory;
@@ -115,9 +115,6 @@ class Runner
 		$suites = $this->getSuites($testsDirectory, $testFiles);
 
 		list($suites, $code, $coverage) = $this->evaluator->run($srcDirectory, $autoloadPath, $suites);
-
-		echo json_encode($suites), "\n";
-		exit;
 
 		$this->verifier->verify($suites);
 
@@ -152,7 +149,7 @@ class Runner
 
 		$position = $exception->getState();
 		$rule = $exception->getRule();
-		throw Exception::invalidTestsFileSyntax($relativePath, $contents, $position, $rule);
+		throw LensException::invalidTestsFileSyntax($relativePath, $contents, $position, $rule);
 	}
 
 	private function getAbsoluteTestsPath($relativePath)
@@ -160,7 +157,7 @@ class Runner
 		$absolutePath = $this->filesystem->getAbsolutePath($relativePath);
 
 		if ($absolutePath === null) {
-			throw Exception::invalidTestsPath($relativePath);
+			throw LensException::invalidTestsPath($relativePath);
 		}
 
 		return $absolutePath;
@@ -254,7 +251,7 @@ class Runner
 		$absolutePath = $this->filesystem->getAbsolutePath($relativePath);
 
 		if ($absolutePath === null) {
-			throw Exception::invalidSrcDirectory($relativePath);
+			throw LensException::invalidSrcDirectory($relativePath);
 		}
 
 		$output = $absolutePath;

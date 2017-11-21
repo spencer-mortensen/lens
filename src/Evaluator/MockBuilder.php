@@ -35,6 +35,7 @@ class MockBuilder
 {
 	public function getMockClassPhp($namespacedClass)
 	{
+		// TODO: check that the $namespacedClass exists
 		$class = new ReflectionClass($namespacedClass);
 
 		$namePhp = $class->getShortName();
