@@ -50,9 +50,19 @@ class ObjectArchive extends Archive
 		return $this->id;
 	}
 
+	public function setId($id)
+	{
+		$this->id = $id;
+	}
+
 	public function getClass()
 	{
 		return $this->class;
+	}
+
+	public function setClass($class)
+	{
+		$this->class = $class;
 	}
 
 	public function getProperties()

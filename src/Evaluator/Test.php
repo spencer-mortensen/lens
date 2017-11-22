@@ -26,6 +26,7 @@
 namespace Lens\Evaluator;
 
 use Lens\Archivist\Archivist;
+use Lens\Archivist\Archives\ObjectArchive;
 
 class Test
 {
@@ -140,7 +141,7 @@ class Test
 	{
 		$usePhp = "use {$path}";
 
-		if ($name !== self::getAlias($path)) {
+		if ($name !== self::getTail($path, '\\')) {
 			$usePhp .= " as {$name}";
 		}
 
@@ -149,15 +150,15 @@ class Test
 		return $usePhp;
 	}
 
-	private static function getAlias($path)
+	private static function getTail($haystack, $needle)
 	{
-		$slash = strrpos($path, '\\');
+		$position = strrpos($haystack, $needle);
 
-		if (is_integer($slash)) {
-			return substr($path, $slash + 1);
+		if (is_integer($position)) {
+			return substr($haystack, $position + 1);
 		}
 
-		return $path;
+		return $haystack;
 	}
 
 	private static function combine()
@@ -233,13 +234,36 @@ class Test
 		}
 	}
 
-	private static function removeMockNamespaces(array $calls)
+	private static function removeMockNamespaces(array &$calls)
 	{
 		foreach ($calls as &$call) {
-			list($object, $function, $arguments) = $call;
+			$object = &$call[0];
+			$function = &$call[1];
 
-			// TODO: continue here
+			if ($object === null) {
+				self::removeMockFunctionNamespace($function);
+			} else {
+				self::removeMockObjectNamespace($object);
+			}
 		}
+	}
+
+	private static function removeMockFunctionNamespace(&$function)
+	{
+		// TODO: this will remove the namespace prefix from all functions... including non-mocked functions
+		$function = self::getTail($function, '\\');
+	}
+
+	private static function removeMockObjectNamespace(ObjectArchive $object)
+	{
+		$class = $object->getClass();
+
+		if (strncmp($class, 'Lens\\Mock\\', 10) !== 0) {
+			return;
+		}
+
+		$class = substr($class, 10);
+		$object->setClass($class);
 	}
 
 	private function startCoverage()
