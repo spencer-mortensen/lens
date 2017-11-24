@@ -141,7 +141,7 @@ class Command
 			return false;
 		}
 
-		echo "lens 0.0.40\n";
+		echo "lens 0.0.41\n";
 
 		return true;
 	}
