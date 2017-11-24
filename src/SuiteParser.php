@@ -118,7 +118,6 @@ outputLabel: AND outputLine optionalComments
 outputLine: RE // Output\s+
 EOS;
 
-
 		$rules = new Rules($this, $grammar);
 		$rule = $rules->getRule('suite');
 

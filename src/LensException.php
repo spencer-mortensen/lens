@@ -419,23 +419,17 @@ class LensException extends Exception
 	private static function getExpectationText($expectation)
 	{
 		switch ($expectation) {
-			case 'phpTag':
-				return "an opening PHP tag ('<?php')";
+			case 'phpTagLine':
+				return "an opening PHP tag (\"<?php\\n\")";
 
 			case 'codeUnit':
 				return "PHP statements";
 
-			case 'comment':
-				return "a multiline comment (e.g. '/* Comment */')";
+			case 'subjectLine':
+				return "a test label (\"// Test\\n\")";
 
-			case 'subjectLabel':
-				return "a test label ('// Test')";
-
-			case 'inputLabel':
-				return "an input label ('// Input')";
-
-			case 'outputLabel':
-				return "an output label ('// Output')";
+			case 'outputLine':
+				return "an output label (\"// Output\\n\")";
 
 			default:
 				throw LensException::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
