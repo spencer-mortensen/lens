@@ -26,6 +26,7 @@
 namespace Lens;
 
 use Lens\Evaluator\Evaluator;
+use Lens\Reports\Report;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
 
@@ -61,13 +62,13 @@ class Runner
 	/** @var Verifier */
 	private $verifier;
 
-	/** @var Console */
-	private $console;
+	/** @var Report */
+	private $report;
 
 	/** @var Web */
 	private $web;
 
-	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Verifier $verifier, Console $console, Web $web)
+	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Verifier $verifier, Report $report, Web $web)
 	{
 		$this->settings = $settings;
 		$this->filesystem = $filesystem;
@@ -76,7 +77,7 @@ class Runner
 		$this->parser = $parser;
 		$this->evaluator = $evaluator;
 		$this->verifier = $verifier;
-		$this->console = $console;
+		$this->report = $report;
 		$this->web = $web;
 	}
 
@@ -118,7 +119,7 @@ class Runner
 
 		$this->verifier->verify($suites);
 
-		echo $this->console->summarize($suites);
+		echo $this->report->getReport($suites);
 
 		if (isset($code, $coverage)) {
 			$this->web->coverage($srcDirectory, $coverageDirectory, $code, $coverage);

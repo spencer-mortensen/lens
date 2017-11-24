@@ -28,6 +28,8 @@ namespace Lens;
 use Exception;
 use Lens\Evaluator\Evaluator;
 use Lens\Evaluator\Processor;
+use Lens\Reports\Tap;
+use Lens\Reports\Text;
 use SpencerMortensen\Paths\Paths;
 use Throwable;
 
@@ -63,6 +65,10 @@ class Command
 		restore_error_handler();
 	}
 
+	// lens --version  # get the installed version of Lens
+	// lens --report=text|tap|xunit --coverage=none|html|clover|crap4j|text $path $path ...  # run the specified tests
+	// lens --internal-coverage=... # INTERNAL: get code coverage
+	// lens --internal-test=... # INTERNAL: get test results
 	private function run()
 	{
 		$options = array();
@@ -78,7 +84,6 @@ class Command
 		}
 
 		if ($parser->getLongFlag($options)) {
-			// lens --version  # get the installed version of Lens
 			if (isset($options['version'])) {
 				$this->getVersion();
 			} else {
@@ -118,10 +123,10 @@ class Command
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$verifier = new Verifier();
-		$console = new Console();
+		$report = new Text();
 		$web = new Web($filesystem);
 
-		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $verifier, $console, $web);
+		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $verifier, $report, $web);
 		$runner->run($paths);
 	}
 

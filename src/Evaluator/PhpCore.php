@@ -28,6 +28,11 @@ namespace Lens\Evaluator;
 class PhpCore
 {
 	private static $externalFunctions = array(
+		// TODO: Finish the date/time functions <http://php.net/manual/en/ref.datetime.php>
+		// Time functions
+		'microtime' => 'microtime',
+		'time' => 'time',
+
 		// Program execution functions
 		'exec' => 'exec',
 		'passthru' => 'passthru',
@@ -38,6 +43,17 @@ class PhpCore
 		'proc_terminate' => 'proc_terminate',
 		'shell_exec' => 'shell_exec',
 		'system' => 'system',
+
+		// Directory functions
+		'chdir' => 'chdir',
+		'chroot' => 'chroot',
+		'closedir' => 'closedir',
+		'dir' => 'dir',
+		'getcwd' => 'getcwd',
+		'opendir' => 'opendir',
+		'readdir' => 'readdir',
+		'rewinddir' => 'rewinddir',
+		'scandir' => 'scandir',
 
 		// Filesystem functions
 		'chgrp' => 'chgrp',

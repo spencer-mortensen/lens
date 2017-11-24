@@ -264,7 +264,7 @@ EOS;
 		$begin = $match[0];
 		$end = $match[3];
 
-		$line = self::getLineNumber($this->input, $begin);
+		$line = self::getLineNumber($this->input, $begin) + 1;
 		$text = self::getText($this->input, $begin, $end);
 
 		$fixture = $match[1];

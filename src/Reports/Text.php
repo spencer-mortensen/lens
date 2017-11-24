@@ -23,12 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens;
+namespace Lens\Reports;
 
 use Lens\Archivist\Archives\ObjectArchive;
 use Lens\Archivist\Comparer;
+use Lens\Formatter;
 
-class Console
+class Text implements Report
 {
 	private static $maximumLineLength = 96;
 
@@ -38,6 +39,9 @@ class Console
 	/** @var integer */
 	private $passedTestsCount;
 
+	/** @var integer */
+	private $failedTestsCount;
+
 	/** @var array */
 	private $failedTests;
 
@@ -45,34 +49,32 @@ class Console
 	{
 		$this->comparer = new Comparer();
 		$this->passedTestsCount = 0;
+		$this->failedTestsCount = 0;
 		$this->failedTests = array();
 	}
 
-	public function summarize(array $suites)
+	public function getReport(array $suites)
 	{
-		foreach ($suites as $testFile => $suite) {
+		foreach ($suites as $testsFile => $suite) {
 			foreach ($suite['tests'] as $testLine => $test) {
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->summarizeCase($testFile, $testLine, $caseLine, $case);
+					$this->summarizeCase($testsFile, $testLine, $caseLine, $case);
 				}
 			}
 		}
 
 		$output = array();
 
-		if (0 < count($this->failedTests)) {
+		if (0 < $this->failedTestsCount) {
 			$output[] = $this->showFailedTests();
 		}
 
-		if (0 < $this->passedTestsCount) {
-			$output[] = $this->showPassedTests();
-		}
+		$output[] = $this->showSummary();
 
-
-		return implode("\n", $output) . "\n";
+		return implode("\n\n\n", $output) . "\n";
 	}
 
-	private function summarizeCase($testFile, $testLine, $caseLine, array $case)
+	private function summarizeCase($testsFile, $testLine, $caseLine, array $case)
 	{
 		$results = $case['results'];
 
@@ -94,7 +96,8 @@ class Console
 			$issues = $this->getDifferenceIssues($actual, $expected);
 		}
 
-		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testFile, $testLine, $caseLine);
+		++$this->failedTestsCount;
+		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
 	}
 
 	private function getFixtureIssues(array $state)
@@ -125,11 +128,11 @@ class Console
 			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
 			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
 
-			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
-			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
-
 			self::getUnexpectedMessages($this->getCallMessages($actualFormatter, $actualDiff['calls'])),
 			self::getMissingMessages($this->getCallMessages($expectedFormatter, $expectedDiff['calls'])),
+
+			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
+			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
 
 			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actualDiff['globals'])),
 			self::getMissingMessages($this->getGlobalMessages($expectedFormatter, $expectedDiff['globals'])),
@@ -226,11 +229,11 @@ class Console
 		return array_map(array($formatter, 'getCall'), $calls);
 	}
 
-	private function getFailedTestText($caseText, $issues, $testFile, $testLine, $caseLine)
+	private function getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine)
 	{
 		$sections = array();
 
-		$sections[] = "   {$testFile}:";
+		$sections[] = "{$testsFile} (Line {$caseLine}):";
 		$sections[] = self::pad(self::wrap($caseText), '   ');
 		$sections[] = "   // Issues\n" . $issues;
 
@@ -239,15 +242,18 @@ class Console
 
 	private function showFailedTests()
 	{
-		$failedTestsCount = count($this->failedTests);
-
-		return implode("\n\n\n", $this->failedTests) . "\n\n\n" .
-			"Failed tests: {$failedTestsCount}";
+		return implode("\n\n\n", $this->failedTests);
 	}
 
-	private function showPassedTests()
+	private function showSummary()
 	{
-		return "Passed tests: {$this->passedTestsCount}";
+		$output = "Passed tests: {$this->passedTestsCount}";
+
+		if ($this->failedTests) {
+			$output .= "\nFailed tests: {$this->failedTestsCount}";
+		}
+
+		return $output;
 	}
 
 	// TODO: this is duplicated elsewhere
