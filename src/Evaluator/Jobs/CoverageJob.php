@@ -69,7 +69,7 @@ class CoverageJob implements ShellJob
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
 
-		return "{$this->executable} --coverage={$encoded}";
+		return "{$this->executable} --internal-coverage={$encoded}";
 	}
 
 	public function run($send)

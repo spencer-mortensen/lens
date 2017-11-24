@@ -82,7 +82,7 @@ class TestJob implements ShellJob
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
 
-		return "{$this->executable} --test={$encoded}";
+		return "{$this->executable} --internal-test={$encoded}";
 	}
 
 	public function run($send)

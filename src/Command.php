@@ -27,9 +27,13 @@ namespace Lens;
 
 use Exception;
 use Lens\Evaluator\Evaluator;
+use Lens\Evaluator\Jobs\CoverageJob;
+use Lens\Evaluator\Jobs\TestJob;
 use Lens\Evaluator\Processor;
 use Lens\Reports\Tap;
 use Lens\Reports\Text;
+use SpencerMortensen\RegularExpressions\Re;
+use SpencerMortensen\ParallelProcessor\Shell\ShellSlave;
 use SpencerMortensen\Paths\Paths;
 use Throwable;
 
@@ -38,14 +42,20 @@ class Command
 	/** @var integer */
 	private static $maximumLineLength = 96;
 
-	/** @var string */
-	private $executable;
+	/** @var Logger */
+	private $logger;
 
 	/** @var Displayer */
 	private $displayer;
 
-	/** @var Logger */
-	private $logger;
+	/** @var string */
+	private $executable;
+
+	/** @var array */
+	private $options;
+
+	/** @var array */
+	private $values;
 
 	/** @var boolean */
 	private static $isInternalCommand;
@@ -55,9 +65,13 @@ class Command
 		set_error_handler(array($this, 'errorHandler'));
 		set_exception_handler(array($this, 'exceptionHandler'));
 
-		$this->displayer = new Displayer();
+		$arguments = new Arguments();
+
 		$this->logger = new Logger('lens');
-		$this->executable = $GLOBALS['argv'][0];
+		$this->displayer = new Displayer();
+		$this->executable = $arguments->getExecutable();
+		$this->options = $arguments->getOptions();
+		$this->values = $arguments->getValues();
 
 		$this->run();
 
@@ -65,55 +79,79 @@ class Command
 		restore_error_handler();
 	}
 
-	// lens --version  # get the installed version of Lens
-	// lens --report=text|tap|xunit --coverage=none|html|clover|crap4j|text $path $path ...  # run the specified tests
 	// lens --internal-coverage=... # INTERNAL: get code coverage
 	// lens --internal-test=... # INTERNAL: get test results
+	// lens --version  # get the installed version of Lens
+	// lens --report=$report --coverage=$coverage $path ...  # run the specified tests
 	private function run()
 	{
-		$options = array();
-
-		$parser = new OptionsParser($GLOBALS['argv']);
-
-		if ($parser->getLongKeyValue($options)) {
-			list($key, $value) = each($options);
-
-			$this->getWorker($key, $value);
-
-			return;
-		}
-
-		if ($parser->getLongFlag($options)) {
-			if (isset($options['version'])) {
-				$this->getVersion();
-			} else {
-				// TODO: throw exception
-			}
-
-			return;
-		}
-
-		$paths = array();
-
-		while ($parser->getValue($paths));
-
-		$this->getRunner($paths);
+		$this->getInternalCoverage() ||
+		$this->getInternalTest() ||
+		$this->getVersion() ||
+		$this->getRunner();
 	}
 
-	private function getWorker($name, $value)
+	private function getInternalCoverage()
 	{
-		$worker = new Worker($this->executable);
-		$worker->run($name, $value);
+		if (!$this->getArguments('internal-coverage', $arguments)) {
+			return false;
+		}
+
+		list($srcDirectory, $relativePaths, $autoloadPath) = $arguments;
+		$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $autoloadPath, $code, $coverage);
+
+		$slave = new ShellSlave($job);
+		$slave->run();
+
+		return true;
+	}
+
+	private function getInternalTest()
+	{
+		if (!$this->getArguments('internal-test', $arguments)) {
+			return false;
+		}
+
+		list($srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
+		$job = new TestJob($this->executable, $srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp, $results, $coverage);
+
+		$slave = new ShellSlave($job);
+		$slave->run();
+
+		return true;
+	}
+
+	private function getArguments($key, &$arguments)
+	{
+		if (!isset($this->options[$key])) {
+			return false;
+		}
+
+		$data = $this->options[$key];
+		$decoded = base64_decode($data);
+		$decompressed = gzinflate($decoded);
+		$arguments = unserialize($decompressed);
+
+		return true;
 	}
 
 	private function getVersion()
 	{
+		if (!isset($this->options['version'])) {
+			return false;
+		}
+
 		echo "lens 0.0.39\n";
-		exit(0);
+
+		return true;
 	}
 
-	private function getRunner(array $paths)
+	private function getRunner()
 	{
+		$reportType = $this->getReportType();
+		$coverageType = $this->getCoverageType();
+		$paths = $this->values;
+
 		$filesystem = new Filesystem();
 		$platform = Paths::getPlatformPaths();
 		$settingsFile = new IniFile($filesystem);
@@ -123,11 +161,54 @@ class Command
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$verifier = new Verifier();
-		$report = new Text();
+		$report = $this->getReport($reportType);
+
 		$web = new Web($filesystem);
 
 		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $verifier, $report, $web);
 		$runner->run($paths);
+	}
+
+	private function getReportType()
+	{
+		$options = $this->options;
+		$type = &$options['report'];
+
+		switch ($type) {
+			// TODO: case 'xunit'
+
+			case 'tap':
+				return 'tap';
+
+			default:
+				return 'text';
+		}
+	}
+
+	private function getReport($type)
+	{
+		if ($type === 'text') {
+			return new Text();
+		}
+
+		return new Tap();
+	}
+
+	private function getCoverageType()
+	{
+		$options = $this->options;
+		$type = &$options['coverage'];
+
+		switch ($type) {
+			// TODO: case 'none'
+			// TODO: case 'clover'
+			// TODO: case 'crap4j'
+			// TODO: case 'text'
+
+			default:
+				return 'html';
+		}
+
 	}
 
 	public function errorHandler($level, $message, $file, $line)
