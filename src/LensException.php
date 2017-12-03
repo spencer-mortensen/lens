@@ -385,7 +385,13 @@ class LensException extends Exception
 			$message .= "unexpected text ({$tailText}) at the end of the file.";
 		} else {
 			$expectationText = self::getExpectationText($expectation);
-			$message .= "expected {$expectationText}, but read {$tailText} at line {$line} character {$character}.";
+			$message .= "expected {$expectationText}";
+
+			if (0 < strlen($tail)) {
+				$message .= ", but read {$tailText}";
+			}
+
+			$message .= " at line {$line} character {$character}.";
 		}
 
 		return $message;
@@ -425,10 +431,10 @@ class LensException extends Exception
 			case 'codeUnit':
 				return "PHP statements";
 
-			case 'subjectLine':
+			case 'subjectLabel':
 				return "a test label (\"// Test\\n\")";
 
-			case 'outputLine':
+			case 'outputLabel':
 				return "an output label (\"// Output\\n\")";
 
 			default:
