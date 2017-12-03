@@ -99,23 +99,20 @@ optionalUses: MANY use 0
 use: AND useLine optionalComments
 useLine: RE use\h+(?<namespace>[a-zA-Z_0-9\\]+)(?:\h+as\h+(?<alias>[a-zA-Z_0-9]+))?;\s*
 tests: MANY test 1
-test: AND position subject cases
-position: STRING
-subject: AND subjectLabel code
-subjectLabel: AND subjectLine optionalComments
-subjectLine: RE // Test\s+
+test: AND subject cases
+subject: AND subjectLabel optionalComments lineNumber code
+subjectLabel: RE // Test\s+
+lineNumber: STRING
 code: MANY codeBlock 1
 codeBlock: AND codeUnit optionalComments
 codeUnit: RE (?!(?:// (?:Test|Input|Output))|/\*|$).+?(?=(?:// (?:Test|Input|Output))|/\*|$)
 cases: MANY case 1
-case: AND position optionalInput output position
+case: AND optionalInput output
 optionalInput: MANY input 0 1
-input: AND inputLabel code
-inputLabel: AND inputLine optionalComments
-inputLine: RE // Input\s+
-output: AND outputLabel code
-outputLabel: AND outputLine optionalComments
-outputLine: RE // Output\s+
+input: AND inputLabel optionalComments code
+inputLabel: RE // Input\s+
+output: AND outputLabel optionalComments lineNumber code
+outputLabel: RE // Output\s+
 EOS;
 
 		$rules = new Rules($this, $grammar);
@@ -209,33 +206,32 @@ EOS;
 
 	public function getTest(array $matches)
 	{
-		$line = self::getLineNumber($this->input, $matches[0]);
+		list($subject, $cases) = $matches;
+		list($line, $code) = $subject;
 
 		return array(
 			$line => array(
-				'actual' => $matches[1],
-				'cases' => $matches[2]
+				'code' => $code,
+				'cases' => $cases
 			)
 		);
 	}
 
-	private static function getLineNumber($input, $position)
-	{
-		$read = substr($input, 0, $position);
-
-		return substr_count($read, "\n") + 1;
-	}
-
-	public function getPosition()
+	public function getLineNumber()
 	{
 		/** @var Lexer $lexer */
 		$lexer = $this->getState();
-		return $lexer->getPosition();
+		$position = $lexer->getPosition();
+		$text = substr($this->input, 0, $position);
+		return substr_count($text, "\n") + 1;
 	}
 
 	public function getSubject(array $matches)
 	{
-		return $matches[1];
+		$line = $matches[2];
+		$code = $matches[3];
+
+		return array($line, $code);
 	}
 
 	public function getCode(array $matches)
@@ -260,25 +256,24 @@ EOS;
 
 	public function getCase(array $match)
 	{
-		$begin = $match[0];
-		$end = $match[3];
+		$input = $match[0];
+		$line = $match[1][0];
+		$output = $match[1][1];
 
-		$line = self::getLineNumber($this->input, $begin) + 1;
-		$text = self::getText($this->input, $begin, $end);
-
-		$fixture = $match[1];
-		$expected = $match[2];
+		$expected = $output;
 		$script = self::extractScript($expected);
 
 		return array(
 			$line => array(
-				'text' => $text,
-				'code' => array(
-					'fixture' => $fixture,
-					'expected' => $expected,
-					'script' => $script
+				'input' => array(
+					'text' => $input,
+					'code' => $input
 				),
-				'results' => null
+				'output' => array(
+					'text' => $output,
+					'code' => $expected
+				),
+				'script' => $script
 			)
 		);
 	}
@@ -319,12 +314,15 @@ EOS;
 
 	public function getInput(array $matches)
 	{
-		return $matches[1];
+		return $matches[2];
 	}
 
 	public function getOutput(array $matches)
 	{
-		return $matches[1];
+		$line = $matches[2];
+		$code = $matches[3];
+
+		return array($line, $code);
 	}
 
 	private static function useMocks($namespace, array $uses, array &$tests)

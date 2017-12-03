@@ -57,8 +57,10 @@ class Text implements Report
 	{
 		foreach ($suites as $testsFile => $suite) {
 			foreach ($suite['tests'] as $testLine => $test) {
+				$testText = $test['code'];
+
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->summarizeCase($testsFile, $testLine, $caseLine, $case);
+					$this->summarizeCase($testsFile, $testLine, $testText, $caseLine, $case);
 				}
 			}
 		}
@@ -74,7 +76,7 @@ class Text implements Report
 		return implode("\n\n\n", $output) . "\n";
 	}
 
-	private function summarizeCase($testsFile, $testLine, $caseLine, array $case)
+	private function summarizeCase($testsFile, $testLine, $testText, $caseLine, array $case)
 	{
 		$results = $case['results'];
 
@@ -83,7 +85,7 @@ class Text implements Report
 			return;
 		}
 
-		$caseText = $case['text'];
+		$caseText = $this->getCaseText($testText, $case['input']['text'], $case['output']['text']);
 
 		$actual = $results['actual'];
 		$expected = $results['expected'];
@@ -98,6 +100,28 @@ class Text implements Report
 
 		++$this->failedTestsCount;
 		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
+	}
+
+	private function getCaseText($testText, $inputText, $outputText)
+	{
+		$sections = array(
+			$this->getSectionText('// Test', $testText),
+			$this->getSectionText('// Input', $inputText),
+			$this->getSectionText('// Output', $outputText)
+		);
+
+		$sections = array_filter($sections, 'is_string');
+
+		return implode("\n\n", $sections);
+	}
+
+	private function getSectionText($label, $code)
+	{
+		if ($code === null) {
+			return null;
+		}
+
+		return "{$label}\n{$code}";
 	}
 
 	private function getFixtureIssues(array $state)
@@ -247,13 +271,17 @@ class Text implements Report
 
 	private function showSummary()
 	{
-		$output = "Passed tests: {$this->passedTestsCount}";
+		$output = array();
 
-		if ($this->failedTests) {
-			$output .= "\nFailed tests: {$this->failedTestsCount}";
+		if (0 < $this->passedTestsCount) {
+			$output[] = "Passed tests: {$this->passedTestsCount}";
 		}
 
-		return $output;
+		if (0 < $this->failedTestsCount) {
+			$output[] = "Failed tests: {$this->failedTestsCount}";
+		}
+
+		return implode("\n", $output);
 	}
 
 	// TODO: this is duplicated elsewhere
