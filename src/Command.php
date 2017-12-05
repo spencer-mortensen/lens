@@ -32,13 +32,16 @@ use Lens\Evaluator\Jobs\TestJob;
 use Lens\Evaluator\Processor;
 use Lens\Reports\Tap;
 use Lens\Reports\Text;
-use SpencerMortensen\RegularExpressions\Re;
+use Lens\Reports\XUnit;
 use SpencerMortensen\ParallelProcessor\Shell\ShellSlave;
 use SpencerMortensen\Paths\Paths;
 use Throwable;
 
 class Command
 {
+	/** @var string */
+	const LENS_VERSION = '0.0.43';
+
 	/** @var integer */
 	private static $maximumLineLength = 96;
 
@@ -148,8 +151,6 @@ class Command
 
 	private function getRunner()
 	{
-		$reportType = $this->getReportType();
-		$coverageType = $this->getCoverageType();
 		$paths = $this->values;
 
 		$filesystem = new Filesystem();
@@ -161,7 +162,7 @@ class Command
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
 		$verifier = new Verifier();
-		$report = $this->getReport($reportType);
+		$report = $this->getReport();
 
 		$web = new Web($filesystem);
 
@@ -169,32 +170,29 @@ class Command
 		$runner->run($paths);
 	}
 
-	private function getReportType()
+	private function getReport()
 	{
 		$options = $this->options;
 		$type = &$options['report'];
 
-		switch ($type) {
-			// TODO: case 'xunit'
-
-			case 'tap':
-				return 'tap';
-
-			default:
-				return 'text';
-		}
-	}
-
-	private function getReport($type)
-	{
-		if ($type === 'text') {
+		if ($type === null) {
 			return new Text();
 		}
 
-		return new Tap();
+		switch ($type) {
+			case 'xunit':
+				return new XUnit();
+
+			case 'tap':
+				return new Tap();
+
+			default:
+				throw LensException::invalidReport($type);
+		}
 	}
 
-	private function getCoverageType()
+	/*
+	private function getCoverage()
 	{
 		$options = $this->options;
 		$type = &$options['coverage'];
@@ -210,6 +208,7 @@ class Command
 		}
 
 	}
+	*/
 
 	public function errorHandler($level, $message, $file, $line)
 	{

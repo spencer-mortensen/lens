@@ -25,10 +25,6 @@
 
 namespace Lens\Reports;
 
-use Lens\Archivist\Archives\ObjectArchive;
-use Lens\Archivist\Comparer;
-use Lens\Formatter;
-
 class Tap implements Report
 {
 	public function getReport(array $suites)

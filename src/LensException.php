@@ -37,7 +37,13 @@ class LensException extends Exception
 	private static $lensGuideUrl = 'http://lens.guide/#guide';
 
 	/** @var string */
+	private static $lensReportsUrl = 'http://lens.guide/command/';
+
+	/** @var string */
 	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
+
+	/** @var string */
+	private static $lensInstallationUrl = 'http://lens.guide/installation/';
 
 	/** @var string */
 	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
@@ -49,7 +55,8 @@ class LensException extends Exception
 	const CODE_INVALID_AUTOLOADER_PATH = 4;
 	const CODE_INVALID_TESTS_PATH = 5;
 	const CODE_INVALID_TESTS_FILE_SYNTAX = 6;
-	const CODE_PROCESSOR = 7;
+	const CODE_INVALID_REPORT = 7;
+	const CODE_PROCESSOR = 8;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
 	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
@@ -440,6 +447,30 @@ class LensException extends Exception
 			default:
 				throw LensException::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
 		}
+	}
+
+	public static function invalidReport($reportType)
+	{
+		$code = self::CODE_INVALID_REPORT;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$displayer = new Displayer();
+		$reportText = $displayer->display($reportType);
+		$message = "There is no report called {$reportText}.";
+
+		$version = Command::LENS_VERSION;
+
+		$help = array(
+			"Here are the supported reports: " . self::$lensReportsUrl,
+			"Are you running the latest version of Lens? You have \"lens {$version}.\" You can update your Lens here: " . self::$lensInstallationUrl
+		);
+
+		$data = array(
+			'type' => $reportType
+		);
+
+		return new self($code, $severity, $message, $help, $data);
 	}
 
 	public static function processor(ParallelProcessorException $exception)
