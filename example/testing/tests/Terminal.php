@@ -8,4 +8,4 @@ $output = $terminal->read();
 
 // Output
 fgets(STDIN); // return "text\n";
-$output = "text";
+$output = "texte";

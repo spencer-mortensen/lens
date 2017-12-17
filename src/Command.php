@@ -161,12 +161,12 @@ class Command
 		$parser = new SuiteParser();
 		$processor = new Processor();
 		$evaluator = new Evaluator($this->executable, $filesystem, $processor);
-		$verifier = new Verifier();
+		$summarizer = new Summarizer();
 		$report = $this->getReport();
 
 		$web = new Web($filesystem);
 
-		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $verifier, $report, $web);
+		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $summarizer, $report, $web);
 		$runner->run($paths);
 	}
 

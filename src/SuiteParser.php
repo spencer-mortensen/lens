@@ -31,8 +31,15 @@ use SpencerMortensen\Parser\String\Parser;
 use SpencerMortensen\Parser\String\Rules;
 
 /*
-suites: {
-	<file>: <suite>
+project: {
+	"name": <name>
+	"suites": {
+		<file>: <suite>
+	},
+	"summary": {
+		"passed": ...,
+		"failed": ...
+	}
 }
 
 suite: {
@@ -42,6 +49,10 @@ suite: {
 	},
 	"tests": {
 		<line>: <test>
+	},
+	"summary": {
+		"passed": ...
+		"failed": ...
 	}
 }
 
@@ -49,6 +60,10 @@ test: {
 	"actual": "...",
 	"cases": {
 		<line>: <case>
+	}
+	"summary": {
+		"passed": ...
+		"failed": ...
 	}
 }
 
@@ -59,7 +74,11 @@ case: {
 		"expected": "...",
 		"script": [...]
 	},
-	"results": <results>|null
+	"results": <results>|null,
+	"summary": {
+		"pass": false|true,
+		"issues": "..."|null
+	}
 }
 
 results: {
@@ -72,11 +91,8 @@ results: {
 		"pre": <state>|null,
 		"post": <state>|null,
 		"diff": <state>|null
-	},
-	"pass": false|true
+	}
 }
-
-state: {...}
 */
 
 class SuiteParser extends Parser

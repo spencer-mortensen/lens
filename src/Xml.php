@@ -25,28 +25,44 @@
 
 namespace Lens;
 
+use SpencerMortensen\RegularExpressions\Re;
+
 class Xml
 {
-	public static function getElementXml($name, array $attributes = null, $innerHtml = null)
+	public static function getElementXml($name, array $attributes = null, $innerXml = null)
 	{
-		$attributesHtml = self::getAttributesXml($attributes);
-		return "<{$name}{$attributesHtml}>{$innerHtml}</{$name}>";
+		$attributesXml = self::getAttributesXml($attributes);
+
+		$xml = "<{$name}";
+
+		if ($attributesXml !== null) {
+			$xml .= " {$attributesXml}";
+		}
+
+		if ($innerXml === null) {
+			$xml .= "/>";
+		} else {
+			$xml .= ">\n" . self::indent($innerXml) . "\n</{$name}>";
+		}
+
+		return $xml;
 	}
 
 	private static function getAttributesXml($attributes)
 	{
 		if (count($attributes) === 0) {
-			return '';
+			return null;
 		}
 
-		$xml = '';
+		$output = array();
 
 		foreach ($attributes as $name => $value) {
-			$valuXml = self::attributeEncode($value);
-			$xml .= " {$name}=\"{$valuXml}\"";
+			$valueXml = self::attributeEncode($value);
+
+			$output[] = "{$name}=\"{$valueXml}\"";
 		}
 
-		return $xml;
+		return implode(' ', $output);
 	}
 
 	public static function getTextXml($text)
@@ -61,5 +77,11 @@ class Xml
 	private static function attributeEncode($attribute)
 	{
 		return htmlspecialchars($attribute, ENT_XML1 | ENT_COMPAT | ENT_DISALLOWED | ENT_QUOTES, 'UTF-8');
+	}
+
+	// TODO: move this elsewhere
+	private static function indent($text)
+	{
+		return Re::replace('^(.+?)$', "\t\$1", $text, 'm');
 	}
 }

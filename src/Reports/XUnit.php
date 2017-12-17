@@ -29,24 +29,11 @@ use Lens\Xml;
 
 class XUnit implements Report
 {
-	public function getReport(array $suites)
+	public function getReport(array $project)
 	{
-		foreach ($suites as $testsFile => $suite) {
-			foreach ($suite['tests'] as $testLine => $test) {
-				foreach ($test['cases'] as $caseLine => $case) {
-					$cases[] = array($testsFile, $caseLine, $case['results']['pass']);
-				}
-			}
-		}
-
-		$project = 'MyProject';
-		$passedTestsCount = 1;
-		$failedTestsCount = 1;
-		$innerXml = null;
-
 		$output = array(
 			self::getXmlTag(),
-			self::getTestSuitesTag($project, $passedTestsCount, $failedTestsCount, $innerXml)
+			self::getProjectXml($project)
 		);
 
 		return implode("\n\n", $output) . "\n";
@@ -57,16 +44,83 @@ class XUnit implements Report
 		return '<?xml version="1.0" encoding="UTF-8"?>';
 	}
 
-	private static function getTestSuitesTag($name, $passedTestsCount, $failedTestsCount, $innerXml)
+	private static function getProjectXml($project)
 	{
+		$element = 'testsuites';
+
 		$attributes = array(
-			'name' => $name,
-			'tests' => $passedTestsCount,
-			'failures' => $failedTestsCount
+			'name' => $project['name'],
+			'tests' => $project['summary']['passed'],
+			'failures' => $project['summary']['failed']
 		);
 
-		$innerXml = "\n{$innerXml}\n";
+		$children = array();
 
-		return Xml::getElementXml('testsuites', $attributes, $innerXml);
+		foreach ($project['suites'] as $file => $suite) {
+			$children[] = self::getSuiteXml($file, $suite);
+		}
+
+		$innerXml = implode("\n", $children);
+
+		return Xml::getElementXml($element, $attributes, $innerXml);
+	}
+
+	private static function getSuiteXml($name, array $suite)
+	{
+		$element = 'testsuite';
+
+		$attributes = array(
+			'name' => $name,
+			'tests' => $suite['summary']['passed'],
+			'failures' => $suite['summary']['failed']
+		);
+
+		$children = array();
+
+		foreach ($suite['tests'] as $line => $test) {
+			$children[] = self::getTestXml($line, $test);
+		}
+
+		$innerXml = implode("\n", $children);
+
+		return Xml::getElementXml($element, $attributes, $innerXml);
+	}
+
+	private static function getTestXml($testLine, array $test)
+	{
+		$children = array();
+
+		foreach ($test['cases'] as $caseLine => $case) {
+			$children[] = self::getCaseXml("Line {$caseLine}", $case);
+		}
+
+		// TODO: return null if there are no test cases
+		return implode("\n", $children);
+	}
+
+	private static function getCaseXml($name, array $case)
+	{
+		if ($case['summary']['pass']) {
+			$innerXml = null;
+		} else {
+			$innerXml = self::getTestFailureXml($case);
+		}
+
+		return self::getTestCaseXml($name, $innerXml);
+	}
+
+	private static function getTestFailureXml(array $case)
+	{
+		// TODO: show the actual test issues
+		return Xml::getElementXml('failure', array(), 'The test failed!');
+	}
+
+	private static function getTestCaseXml($name, $innerXml)
+	{
+		$attributes = array(
+			'name' => $name
+		);
+
+		return Xml::getElementXml('testcase', $attributes, $innerXml);
 	}
 }

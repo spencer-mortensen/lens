@@ -53,9 +53,9 @@ class Text implements Report
 		$this->failedTests = array();
 	}
 
-	public function getReport(array $suites)
+	public function getReport(array $project)
 	{
-		foreach ($suites as $testsFile => $suite) {
+		foreach ($project['suites'] as $testsFile => $suite) {
 			foreach ($suite['tests'] as $testLine => $test) {
 				$testText = $test['code'];
 
@@ -80,7 +80,8 @@ class Text implements Report
 	{
 		$results = $case['results'];
 
-		if ($results['pass']) {
+		if ($case['summary']['pass']) {
+			// TODO: use the counts from the $project array (rather than recompute them)
 			++$this->passedTestsCount;
 			return;
 		}

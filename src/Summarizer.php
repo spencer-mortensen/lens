@@ -27,32 +27,67 @@ namespace Lens;
 
 use Lens\Archivist\Comparer;
 
-class Verifier
+class Summarizer
 {
 	public function __construct()
 	{
 		$this->comparer = new Comparer();
 	}
 
-	public function verify(array &$suites)
+	public function summarize(array &$project)
 	{
-		foreach ($suites as &$suite) {
-			foreach ($suite['tests'] as &$test) {
-				foreach ($test['cases'] as &$case) {
-					$this->verifyCase($case);
-				}
-			}
+		$passed = 0;
+		$failed = 0;
+
+		foreach ($project['suites'] as &$suite) {
+			$this->summarizeSuite($suite, $suitePassed, $suiteFailed);
+
+			$passed += $suitePassed;
+			$failed += $suiteFailed;
 		}
+
+		$project['summary']['passed'] = $passed;
+		$project['summary']['failed'] = $failed;
 	}
 
-	private function verifyCase(array &$case)
+	private function summarizeSuite(array &$suite, &$passed, &$failed)
 	{
-		$results = &$case['results'];
+		$passed = 0;
+		$failed = 0;
 
-		$results['pass'] = $this->isPassing($results['expected'], $results['actual']);
+		foreach ($suite['tests'] as &$test) {
+			$this->summarizeTest($test, $testPassed, $testFailed);
+
+			$passed += $testPassed;
+			$failed += $testFailed;
+		}
+
+		$suite['summary']['passed'] = $passed;
+		$suite['summary']['failed'] = $failed;
 	}
 
-	private function isPassing(array &$expectedResults, array &$actualResults)
+	private function summarizeTest(array &$test, &$passed, &$failed)
+	{
+		$passed = 0;
+		$failed = 0;
+
+		foreach ($test['cases'] as &$case) {
+			$isPassed = $this->isPassed($case['results']['expected'], $case['results']['actual']);
+
+			if ($isPassed) {
+				++$passed;
+			} else {
+				++$failed;
+			}
+
+			$case['summary']['pass'] = $isPassed;
+		}
+
+		$test['summary']['passed'] = $passed;
+		$test['summary']['failed'] = $failed;
+	}
+
+	private function isPassed(array &$expectedResults, array &$actualResults)
 	{
 		$expected = &$expectedResults['diff'];
 		$actual = &$actualResults['diff'];

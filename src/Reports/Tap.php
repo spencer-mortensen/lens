@@ -27,9 +27,9 @@ namespace Lens\Reports;
 
 class Tap implements Report
 {
-	public function getReport(array $suites)
+	public function getReport(array $project)
 	{
-		$cases = self::getCases($suites);
+		$cases = self::getCases($project['suites']);
 
 		$output = array(
 			self::getVersion(),
@@ -48,7 +48,7 @@ class Tap implements Report
 		foreach ($suites as $testsFile => $suite) {
 			foreach ($suite['tests'] as $testLine => $test) {
 				foreach ($test['cases'] as $caseLine => $case) {
-					$cases[] = array($testsFile, $caseLine, $case['results']['pass']);
+					$cases[] = array($testsFile, $caseLine, $case['summary']['pass']);
 				}
 			}
 		}

@@ -27,5 +27,5 @@ namespace Lens\Reports;
 
 interface Report
 {
-	public function getReport(array $suites);
+	public function getReport(array $project);
 }
