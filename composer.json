@@ -1,7 +1,7 @@
 {
     "name": "lens/lens",
     "type": "library",
-    "description": "Lens is a PHP unit-testing framework that catches more issues, and with simpler tests",
+    "description": "Lens is a unit-testing framework for PHP with readable tests that catch everything.",
     "keywords": [
         "unit",
         "test",
