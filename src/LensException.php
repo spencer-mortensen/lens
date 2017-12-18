@@ -48,15 +48,16 @@ class LensException extends Exception
 	/** @var string */
 	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
 
-	const CODE_INTERNAL = 0;
-	const CODE_UNKNOWN_TESTS_DIRECTORY = 1;
-	const CODE_INVALID_SETTINGS_FILE = 2;
-	const CODE_INVALID_SRC_DIRECTORY = 3;
-	const CODE_INVALID_AUTOLOADER_PATH = 4;
-	const CODE_INVALID_TESTS_PATH = 5;
-	const CODE_INVALID_TESTS_FILE_SYNTAX = 6;
-	const CODE_INVALID_REPORT = 7;
-	const CODE_PROCESSOR = 8;
+	const CODE_FAILURES = 1;
+	const CODE_UNKNOWN_TESTS_DIRECTORY = 2;
+	const CODE_INVALID_SETTINGS_FILE = 3;
+	const CODE_INVALID_SRC_DIRECTORY = 4;
+	const CODE_INVALID_AUTOLOADER_PATH = 5;
+	const CODE_INVALID_TESTS_PATH = 6;
+	const CODE_INVALID_TESTS_FILE_SYNTAX = 7;
+	const CODE_INVALID_REPORT = 8;
+	const CODE_PROCESSOR = 9;
+	const CODE_INTERNAL = 255;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
 	const SEVERITY_WARNING = 2; // Definitely abnormal, but we can recover without human intervention (e.g. a configuration file is corrupt, and we can replace it with a clean one)
@@ -115,7 +116,7 @@ class LensException extends Exception
 	{
 		$code = self::CODE_INTERNAL;
 
-		$severity = self::getSeverityFromErrorLevel($errorLevel);
+		$severity = self::SEVERITY_ERROR;
 
 		$message = "Lens encountered an unexpected error.";
 
@@ -134,6 +135,7 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help, $data);
 	}
 
+	/*
 	private static function getSeverityFromErrorLevel($level)
 	{
 		switch ($level) {
@@ -155,6 +157,7 @@ class LensException extends Exception
 				return self::SEVERITY_ERROR;
 		}
 	}
+	*/
 
 	/**
 	 * @param \Throwable $throwable

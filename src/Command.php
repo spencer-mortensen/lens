@@ -167,7 +167,10 @@ class Command
 		$web = new Web($filesystem);
 
 		$runner = new Runner($settings, $filesystem, $platform, $browser, $parser, $evaluator, $summarizer, $report, $web);
-		$runner->run($paths);
+
+		if (!$runner->run($paths)) {
+			exit(LensException::CODE_FAILURES);
+		}
 	}
 
 	private function getReport()

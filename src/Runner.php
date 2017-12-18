@@ -130,6 +130,8 @@ class Runner
 		if (isset($code, $coverage)) {
 			$this->web->coverage($srcDirectory, $coverageDirectory, $code, $coverage);
 		}
+
+		return $project['summary']['failed'] === 0;
 	}
 
 	private function getSuites($testsDirectory, array $files)
