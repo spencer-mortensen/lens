@@ -30,6 +30,7 @@ use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionParameter;
+use SpencerMortensen\RegularExpressions\Re;
 
 class MockBuilder
 {
@@ -127,6 +128,15 @@ class MockBuilder
 
 	private function getHintPhp(ReflectionParameter $parameter, &$php)
 	{
+		if (method_exists($parameter, 'hasType')) {
+			return $this->getHintPhp7($parameter, $php);
+		}
+
+		return $this->getHintPhp5($parameter, $php);
+	}
+
+	private function getHintPhp7(ReflectionParameter $parameter, &$php)
+	{
 		if (!$parameter->hasType()) {
 			return false;
 		}
@@ -137,6 +147,28 @@ class MockBuilder
 			$php = '\\' . $php;
 		}
 
+		return true;
+	}
+
+	private function getHintPhp5(ReflectionParameter $parameter, &$php)
+	{
+		$parameterExpression = '<(?<status>required|optional)> (?<type>[a-zA-Z_0-9\\\\]+)?';
+
+		Re::match($parameterExpression, (string)$parameter, $match);
+
+		$type = &$match['type'];
+
+		if ($type === null) {
+			return false;
+		}
+
+		$firstLetter = substr($type, 0, 1);
+
+		if ($firstLetter === strtoupper($firstLetter)) {
+			$type = '\\' . $type;
+		}
+
+		$php = $type;
 		return true;
 	}
 
