@@ -33,7 +33,7 @@ class Version implements Command
 	private $arguments;
 
 	/** @var string */
-	const VERSION = '0.0.48';
+	const VERSION = '0.0.49';
 
 	public function __construct(Arguments $arguments)
 	{
