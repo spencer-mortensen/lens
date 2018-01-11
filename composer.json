@@ -22,10 +22,12 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "spencer-mortensen/regular-expressions": "~1.2",
-        "spencer-mortensen/parallel-processor": "~2.0",
+        "spencer-mortensen/exceptions": "~2.0",
+        "spencer-mortensen/parallel-processor": "~3.0",
         "spencer-mortensen/parser": "~3.0",
-        "spencer-mortensen/paths": "~0.0"
+        "spencer-mortensen/paths": "~0.0",
+        "spencer-mortensen/regular-expressions": "~1.2",
+        "monolog/monolog": "~1.23"
     },
     "bin": [
         "bin/lens"

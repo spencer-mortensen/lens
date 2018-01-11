@@ -29,6 +29,7 @@ use Closure;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 
+// TODO: move this to an external library
 class Filesystem
 {
 	const TYPE_DIRECTORY = 1;
@@ -93,6 +94,7 @@ class Filesystem
 
 	private function readDirectory($path)
 	{
+		// TODO: use the "Exceptions" class
 		set_error_handler($this->errorHandler);
 
 		$files = scandir($path, SCANDIR_SORT_NONE);

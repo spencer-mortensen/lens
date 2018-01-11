@@ -27,6 +27,7 @@ namespace Lens\Evaluator;
 
 use Lens\Archivist\Archivist;
 use Lens\Archivist\Archives\ObjectArchive;
+use SpencerMortensen\Exceptions\Exceptions;
 
 class Test
 {
@@ -41,9 +42,6 @@ class Test
 
 	/** @var null|string */
 	private $contextPhp;
-
-	/** @var callable */
-	private $onShutdown;
 
 	/** @var Examiner */
 	private $examiner;
@@ -85,23 +83,52 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp, $onShutdown)
+	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp)
 	{
 		$this->contextPhp = self::getContextPhp($namespace, $uses);
 		$prePhp = self::combine($this->contextPhp, $prePhp);
 		$postPhp = self::combine($this->contextPhp, $postPhp);
 
 		$this->script = $script;
-		$this->onShutdown = $onShutdown;
 
 		$this->examiner = new Examiner();
 		$this->prepare($namespace);
 
-		$this->examiner->run($prePhp, array($this, 'onPreShutdown'));
-		$this->onPreShutdown();
+		Exceptions::on(array($this, 'prePhp'));
 
-		$this->examiner->run($postPhp, array($this, 'onPostShutdown'));
-		$this->onPostShutdown();
+		$this->examiner->run($prePhp);
+
+		Exceptions::off();
+
+		$this->prePhp();
+
+		if (!$this->examiner->isUsable()) {
+			return;
+		}
+
+		Agent::start($this->contextPhp, $this->script);
+		$this->startCoverage();
+
+		Exceptions::on(array($this, 'postPhp'));
+
+		$this->examiner->run($postPhp);
+
+		Exceptions::off();
+
+		$this->postPhp();
+	}
+
+	public function prePhp()
+	{
+		$this->preState = $this->getState();
+	}
+
+	public function postPhp()
+	{
+		$this->stopCoverage();
+		$calls = Agent::stop();
+
+		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
 	}
 
 	private static function getContextPhp($namespace, array $uses)
@@ -178,18 +205,6 @@ class Test
 		}
 	}
 
-	public function onPreShutdown()
-	{
-		$this->preState = $this->getState();
-
-		if ($this->examiner->isTerminated()) {
-			call_user_func($this->onShutdown);
-		}
-
-		Agent::start($this->contextPhp, $this->script);
-		$this->startCoverage();
-	}
-
 	private function getState($calls = null)
 	{
 		$state = $this->examiner->getState();
@@ -199,16 +214,6 @@ class Test
 		}
 
 		return $this->archivist->archive($state);
-	}
-
-	public function onPostShutdown()
-	{
-		$this->stopCoverage();
-		$calls = Agent::stop();
-
-		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
-
-		call_user_func($this->onShutdown);
 	}
 
 	private static function getCleanPostState(array $pre, array $post = null)

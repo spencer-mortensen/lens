@@ -25,6 +25,8 @@
 
 namespace Lens\Evaluator;
 
+use SpencerMortensen\RegularExpressions\Re;
+
 class CoverageExtractor
 {
 	/** @var boolean */
@@ -103,16 +105,7 @@ class CoverageExtractor
 
 	private static function isEvaluated($path)
 	{
-		$pattern = self::getPattern('\\([0-9]+\\) : eval\\(\\)\'d code$');
-
-		return preg_match($pattern, $path) === 1;
-	}
-
-	private static function getPattern($expression, $flags = '')
-	{
-		$delimiter = "\x03";
-
-		return "{$delimiter}{$expression}{$delimiter}{$flags}";
+		return Re::match('\\([0-9]+\\) : eval\\(\\)\'d code$', $path, $match);
 	}
 
 	private static function getCleanLines(array $input)

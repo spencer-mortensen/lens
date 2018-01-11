@@ -27,6 +27,7 @@ namespace Lens\Evaluator;
 
 use Lens\Filesystem;
 use Lens\Logger;
+use SpencerMortensen\RegularExpressions\Re;
 
 class Coverage
 {
@@ -42,9 +43,6 @@ class Coverage
 	/** @var string */
 	private $php;
 
-	/** @var callable */
-	private $onShutdown;
-
 	/** @var Logger */
 	private $logger;
 
@@ -54,18 +52,14 @@ class Coverage
 		$this->logger = $logger;
 	}
 
-	public function run($srcDirectory, array $relativePaths, $autoloadPath, $onShutdown)
+	public function run($srcDirectory, array $relativePaths, $autoloadPath)
 	{
 		if (!function_exists('xdebug_start_code_coverage')) {
 			return null;
 		}
 
-		$this->onShutdown = $onShutdown;
-
 		$this->readCode($srcDirectory, $relativePaths);
 		$this->readCoverage($srcDirectory, $relativePaths, $autoloadPath);
-
-		call_user_func($onShutdown);
 	}
 
 	private function readCode($srcDirectory, array $relativePaths)
@@ -97,9 +91,7 @@ class Coverage
 
 	private static function getLines($text)
 	{
-		$pattern = self::getPattern('\\r?\\n');
-
-		return preg_split($pattern, $text);
+		return Re::split('\\r?\\n', $text);
 	}
 
 	private function getRawCoverage($srcDirectory, array $relativePaths, $autoloadPath)
@@ -116,9 +108,6 @@ class Coverage
 		$this->php = implode("\n", $statements);
 
 		// TODO: Can we use the "CoverageExtractor" here?
-		ini_set('display_errors', 'Off');
-		// TODO: handle a fatal error caused by requiring a file:
-		// register_shutdown_function($callable);
 		xdebug_start_code_coverage(XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE);
 
 		$this->evaluate();
@@ -208,12 +197,5 @@ class Coverage
 		}
 
 		return true;
-	}
-
-	private static function getPattern($expression, $flags = '')
-	{
-		$delimiter = "\x03";
-
-		return "{$delimiter}{$expression}{$delimiter}{$flags}";
 	}
 }

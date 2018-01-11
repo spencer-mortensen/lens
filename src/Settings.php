@@ -56,7 +56,8 @@ class Settings
 		try {
 			$settings = $this->file->read();
 		} catch (ErrorException $exception) {
-			throw $this->invalidSettingsFileException($exception);
+			$path = $this->file->getPath();
+			throw LensException::invalidSettingsFile($path, $exception);
 		}
 
 		if ($settings === null) {
@@ -69,14 +70,6 @@ class Settings
 		// TODO: preserve unrecognized keys (with a warning-level message)
 
 		return $settings;
-	}
-
-	private function invalidSettingsFileException(ErrorException $exception)
-	{
-		$path = $this->file->getPath();
-		$message = $exception->getMessage();
-
-		return LensException::invalidSettingsFile($path, $message);
 	}
 
 	private function writeNewFile(array $settings)

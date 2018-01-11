@@ -25,8 +25,10 @@
 
 namespace Lens;
 
+use ErrorException;
 use Exception;
-use SpencerMortensen\ParallelProcessor\ParallelProcessorException;
+use Lens\Commands\Version;
+use Throwable;
 
 class LensException extends Exception
 {
@@ -34,29 +36,24 @@ class LensException extends Exception
 	private static $lensExecutable = 'lens';
 
 	/** @var string */
+	private static $lensCommandUrl = 'http://lens.guide/command/';
+	private static $lensTestsFileUrl = 'http://lens.guide/tests-file/';
 	private static $lensGuideUrl = 'http://lens.guide/#guide';
-
-	/** @var string */
 	private static $lensReportsUrl = 'http://lens.guide/command/';
-
-	/** @var string */
 	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
-
-	/** @var string */
 	private static $lensInstallationUrl = 'http://lens.guide/installation/';
-
-	/** @var string */
 	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
 
 	const CODE_FAILURES = 1;
-	const CODE_UNKNOWN_TESTS_DIRECTORY = 2;
-	const CODE_INVALID_SETTINGS_FILE = 3;
-	const CODE_INVALID_SRC_DIRECTORY = 4;
-	const CODE_INVALID_AUTOLOADER_PATH = 5;
-	const CODE_INVALID_TESTS_PATH = 6;
-	const CODE_INVALID_TESTS_FILE_SYNTAX = 7;
-	const CODE_INVALID_REPORT = 8;
-	const CODE_PROCESSOR = 9;
+	const CODE_USAGE = 2;
+	const CODE_UNKNOWN_TESTS_DIRECTORY = 3;
+	const CODE_INVALID_SETTINGS_FILE = 4;
+	const CODE_INVALID_SRC_DIRECTORY = 5;
+	const CODE_INVALID_AUTOLOADER_PATH = 6;
+	const CODE_INVALID_TESTS_PATH = 7;
+	const CODE_INVALID_TESTS_FILE_SYNTAX = 8;
+	const CODE_INVALID_REPORT = 9;
+	const CODE_PROCESSOR = 10;
 	const CODE_INTERNAL = 255;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
@@ -66,22 +63,23 @@ class LensException extends Exception
 	/** @var integer */
 	private $severity;
 
-	/** @var null|array */
+	/** @var array|null */
 	private $help;
 
-	/** @var null|array */
+	/** @var array|null */
 	private $data;
 
 	/**
 	 * @param integer $code
 	 * @param integer $severity
 	 * @param string $message
-	 * @param null|array $help
-	 * @param null|array $data
+	 * @param array|null $help
+	 * @param array|null $data
+	 * @param Throwable|Exception|null $previous
 	 */
-	public function __construct($code, $severity, $message, array $help = null, array $data = null)
+	public function __construct($code, $severity, $message, array $help = null, array $data = null, $previous = null)
 	{
-		parent::__construct($message, $code);
+		parent::__construct($message, $code, $previous);
 
 		$this->severity = $severity;
 		$this->help = $help;
@@ -104,89 +102,45 @@ class LensException extends Exception
 		return $this->help;
 	}
 
-	/**
-	 * @return null|array
-	 */
 	public function getData()
 	{
 		return $this->data;
 	}
 
-	public static function error($errorLevel, $errorMessage, $file, $line)
+	public static function usage()
 	{
-		$code = self::CODE_INTERNAL;
+		$code = self::CODE_USAGE;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Lens encountered an unexpected error.";
+		$message = "Unknown Lens command.";
 
 		$help = array(
-			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
+			"Here is a list of the Lens commands that you can use:\n" . self::$lensCommandUrl
 		);
 
-		$data = array(
-			'code' => $code,
-			'message' => $errorMessage,
-			'file' => $file,
-			'line' => $line,
-			'level' => $errorLevel
-		);
-
-		return new self($code, $severity, $message, $help, $data);
+		return new self($code, $severity, $message, $help);
 	}
-
-	/*
-	private static function getSeverityFromErrorLevel($level)
-	{
-		switch ($level) {
-			case E_STRICT:
-			case E_DEPRECATED:
-			case E_USER_DEPRECATED:
-			case E_NOTICE:
-			case E_USER_NOTICE:
-				return self::SEVERITY_NOTICE;
-
-			case E_WARNING:
-			case E_CORE_WARNING:
-			case E_COMPILE_WARNING:
-			case E_USER_WARNING:
-			case E_RECOVERABLE_ERROR:
-				return self::SEVERITY_WARNING;
-
-			default:
-				return self::SEVERITY_ERROR;
-		}
-	}
-	*/
 
 	/**
-	 * @param \Throwable $throwable
+	 * @param Throwable|Exception $exception
 	 * @return LensException
 	 */
-	public static function exception($throwable)
+	public static function exception($exception)
 	{
 		$code = self::CODE_INTERNAL;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Lens encountered an unexpected exception.";
+		$message = "Lens encountered an unpleasant error.";
 
 		$help = array(
 			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
 		);
 
-		$errorMessage = $throwable->getMessage();
-		$file = $throwable->getFile();
-		$line = $throwable->getLine();
+		$data = null;
 
-		$data = array(
-			'code' => $code,
-			'message' => $errorMessage,
-			'file' => $file,
-			'line' => $line
-		);
-
-		return new self($code, $severity, $message, $help, $data);
+		return new self($code, $severity, $message, $help, $data, $exception);
 	}
 
 	public static function unknownTestsDirectory()
@@ -204,34 +158,29 @@ class LensException extends Exception
 			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/tests"
 		);
 
-		$data = null;
-
-		return new self($code, $severity, $message, $help, $data);
+		return new self($code, $severity, $message, $help);
 	}
 
-	public static function invalidSettingsFile($path, $errorMessage = null)
+	public static function invalidSettingsFile($path, ErrorException $exception)
 	{
 		$code = self::CODE_INVALID_SETTINGS_FILE;
 
 		$severity = self::SEVERITY_WARNING;
 
-		// TODO: include the file path in this message:
 		$message = "The settings file isn't a valid INI file.";
 
 		$help = array(
-			"Here's an overview of the INI file format:\n" . self::$iniSyntaxUrl
+			"Here is an article about the INI file format:\n" . self::$iniSyntaxUrl
 		);
 
 		// TODO: convert this absolute path into a relative path (based on the current working directory)
+		$error = trim($exception->getMessage());
 		$data = array(
-			'file' => $path
+			'file' => $path,
+			'error' => $error
 		);
 
-		if (isset($errorMessage)) {
-			$data['error'] = $errorMessage;
-		}
-
-		return new self($code, $severity, $message, $help, $data);
+		return new self($code, $severity, $message, $help, $data, $exception);
 	}
 
 	public static function invalidSrcDirectory($path)
@@ -366,14 +315,11 @@ class LensException extends Exception
 
 		$message = self::getTestsFileInvalidSyntaxMessage($path, $contents, $position, $expectation);
 
-		// TODO:
-		/*
-		$help = array(
-			"There's an article about the syntax of a tests file:\n" . self::$lensTestsSyntaxUrl
-		);
-		*/
+		// TODO: add $data array with "expected" and "actual"
 
-		$help = null;
+		$help = array(
+			"Here is an article about the syntax of a tests file:\n" . self::$lensTestsFileUrl
+		);
 
 		return new self($code, $severity, $message, $help);
 	}
@@ -448,7 +394,7 @@ class LensException extends Exception
 				return "an output label (\"// Output\\n\")";
 
 			default:
-				throw LensException::error(E_USER_ERROR, "Undefined expectation ({$expectation})", __FILE__, __LINE__);
+				throw new ErrorException("Undefined expectation ({$expectation})", null, E_USER_ERROR, __FILE__, __LINE__);
 		}
 	}
 
@@ -460,38 +406,15 @@ class LensException extends Exception
 
 		$displayer = new Displayer();
 		$reportText = $displayer->display($reportType);
-		$message = "There is no report called {$reportText}.";
+		$message = "There is no report called {$reportText}!";
 
-		$version = Command::LENS_VERSION;
+		$version = Version::VERSION;
 
 		$help = array(
-			"Here are the supported reports: " . self::$lensReportsUrl,
-			"Are you running the latest version of Lens? You have \"lens {$version}.\" You can update your Lens here: " . self::$lensInstallationUrl
+			"Make sure that the report name is spelled correctly. Here is a list of the supported reports:\n" . self::$lensReportsUrl,
+			"Are you using the current version of Lens? (Your version is \"lens {$version}.\") If you need it, you can get the current version here:\n" . self::$lensInstallationUrl
 		);
 
-		$data = array(
-			'type' => $reportType
-		);
-
-		return new self($code, $severity, $message, $help, $data);
-	}
-
-	public static function processor(ParallelProcessorException $exception)
-	{
-		$code = self::CODE_PROCESSOR;
-
-		$severity = self::SEVERITY_ERROR;
-
-		$message = 'An unexpected error occurred while processing the unit tests.';
-
-		$help = null;
-
-		$data = array(
-			'code' => $exception->getCode(),
-			'message' => $exception->getMessage(),
-			'processorData' => $exception->getData()
-		);
-
-		return new self($code, $severity, $message, $help, $data);
+		return new self($code, $severity, $message, $help);
 	}
 }

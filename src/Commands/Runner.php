@@ -23,14 +23,27 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens;
+namespace Lens\Commands;
 
+use Lens\Arguments;
+use Lens\Browser;
 use Lens\Evaluator\Evaluator;
-use Lens\Reports\Report;
+use Lens\Filesystem;
+use Lens\IniFile;
+use Lens\LensException;
+use Lens\Logger;
+use Lens\Reports\Tap;
+use Lens\Reports\Text;
+use Lens\Reports\XUnit;
+use Lens\Settings;
+use Lens\SuiteParser;
+use Lens\Summarizer;
+use Lens\Web;
+use SpencerMortensen\ParallelProcessor\Processor;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
 
-class Runner
+class Runner implements Command
 {
 	/** @var string */
 	private static $testsDirectoryName = 'tests';
@@ -41,8 +54,11 @@ class Runner
 	/** @var string */
 	private static $settingsFileName = 'settings.ini';
 
-	/** @var Settings */
-	private $settings;
+	/** @var Arguments */
+	private $arguments;
+
+	/** @var Logger */
+	private $logger;
 
 	/** @var Filesystem */
 	private $filesystem;
@@ -50,39 +66,23 @@ class Runner
 	/** @var Paths */
 	private $paths;
 
-	/** @var Browser */
-	private $browser;
-
-	/** @var SuiteParser */
-	private $parser;
-
-	/** @var Evaluator */
-	private $evaluator;
-
-	/** @var Summarizer */
-	private $summarizer;
-
-	/** @var Report */
-	private $report;
-
-	/** @var Web */
-	private $web;
-
-	public function __construct(Settings $settings, Filesystem $filesystem, Paths $paths, Browser $browser, SuiteParser $parser, Evaluator $evaluator, Summarizer $summarizer, Report $report, Web $web)
+	public function __construct(Arguments $arguments, Logger $logger)
 	{
-		$this->settings = $settings;
-		$this->filesystem = $filesystem;
-		$this->paths = $paths;
-		$this->browser = $browser;
-		$this->parser = $parser;
-		$this->evaluator = $evaluator;
-		$this->summarizer = $summarizer;
-		$this->report = $report;
-		$this->web = $web;
+		$this->arguments = $arguments;
+		$this->logger = $logger;
+		$this->filesystem = new Filesystem();
+		$this->paths = Paths::getPlatformPaths();
 	}
 
-	public function run(array $paths)
+	public function run(&$stdout, &$stderr, &$exitCode)
 	{
+		$options = $this->arguments->getOptions();
+		$paths = $this->arguments->getValues();
+
+		$report = $this->getReport($options);
+
+		// TODO: if there are any options other than "report", then throw a usage exception
+
 		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
 
 		if ($this->findTests($paths, $testsDirectory)) {
@@ -90,11 +90,13 @@ class Runner
 			$coverageDirectory = $this->paths->join($lensDirectory, 'coverage');
 
 			$settingsFilePath = $this->paths->join($lensDirectory, self::$settingsFileName);
-			$this->settings->setPath($settingsFilePath);
-			$settings = $this->settings->read();
+			$settingsFile = new IniFile($this->filesystem);
+			$settings = new Settings($settingsFile, $this->logger);
+			$settings->setPath($settingsFilePath); // TODO: move this to the constructor
+			$options = $settings->read();
 
-			$this->findSrc($settings, $lensDirectory, $srcDirectory);
-			$this->findAutoloader($settings, $lensDirectory, $srcDirectory, $autoloadPath);
+			$this->findSrc($options, $lensDirectory, $srcDirectory);
+			$this->findAutoloader($options, $lensDirectory, $srcDirectory, $autoloadPath);
 		} else {
 			$lensDirectory = null;
 			$testsDirectory = null;
@@ -112,27 +114,81 @@ class Runner
 			$paths[] = $testsDirectory;
 		}
 
-		$testFiles = $this->browser->browse($testsDirectory, $paths);
+		$browser = new Browser($this->filesystem, $this->paths);
+		$testFiles = $browser->browse($testsDirectory, $paths);
 
 		$suites = $this->getSuites($testsDirectory, $testFiles);
 
-		list($suites, $code, $coverage) = $this->evaluator->run($srcDirectory, $autoloadPath, $suites);
+		$executable = $this->arguments->getExecutable();
+		$processor = new Processor();
+		$evaluator = new Evaluator($executable, $this->filesystem, $processor);
+		list($suites, $code, $coverage) = $evaluator->run($srcDirectory, $autoloadPath, $suites);
 
 		$project = array(
 			'name' => 'Lens', // TODO: let the user provide the project name
 			'suites' => $suites
 		);
 
-		$this->summarizer->summarize($project);
+		$summarizer = new Summarizer();
+		$summarizer->summarize($project);
 
-		echo $this->report->getReport($project);
+		$stdout = $report->getReport($project);
+		$stderr = null;
 
 		if (isset($code, $coverage)) {
-			$this->web->coverage($srcDirectory, $coverageDirectory, $code, $coverage);
+			$web = new Web($this->filesystem);
+			$web->coverage($srcDirectory, $coverageDirectory, $code, $coverage);
 		}
 
-		return $project['summary']['failed'] === 0;
+		$isSuccessful = ($project['summary']['failed'] === 0);
+
+		if ($isSuccessful) {
+			$exitCode = 0;
+		} else {
+			$exitCode = LensException::CODE_FAILURES;
+		}
+
+		return true;
 	}
+
+	private function getReport(array $options)
+	{
+		$type = &$options['report'];
+
+		if ($type === null) {
+			return new Text();
+		}
+
+		switch ($type) {
+			case 'xunit':
+				return new XUnit();
+
+			case 'tap':
+				return new Tap();
+
+			default:
+				throw LensException::invalidReport($type);
+		}
+	}
+
+	/*
+	private function getCoverage()
+	{
+		$options = $this->options;
+		$type = &$options['coverage'];
+
+		switch ($type) {
+			// TODO: case 'none'
+			// TODO: case 'clover'
+			// TODO: case 'crap4j'
+			// TODO: case 'text'
+
+			default:
+				return 'html';
+		}
+
+	}
+	*/
 
 	private function getSuites($testsDirectory, array $files)
 	{
@@ -140,7 +196,8 @@ class Runner
 
 		foreach ($files as $path => $contents) {
 			try {
-				$suites[$path] = $this->parser->parse($contents);
+				$parser = new SuiteParser();
+				$suites[$path] = $parser->parse($contents);
 			} catch (ParserException $exception) {
 				$absolutePath = $this->paths->join($testsDirectory, $path);
 

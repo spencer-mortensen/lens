@@ -25,11 +25,14 @@
 
 namespace Lens\Evaluator\Jobs;
 
-use Lens\Command;
+use Lens\Lens;
 use Lens\Evaluator\Test;
+use SpencerMortensen\Exceptions\Exceptions;
+use SpencerMortensen\ParallelProcessor\Fork\ForkJob;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
+use SpencerMortensen\ParallelProcessor\ServerProcess;
 
-class TestJob implements ShellJob
+class TestJob implements ForkJob, ShellJob
 {
 	/** @var string */
 	private $executable;
@@ -55,13 +58,16 @@ class TestJob implements ShellJob
 	/** @var string */
 	private $postPhp;
 
+	/** @var null|ServerProcess */
+	private $process;
+
 	/** @var null|array */
 	private $results;
 
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, $autoloadPath, $namespace, array $uses, $prePhp, array $script = null, $postPhp, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $srcDirectory, $autoloadPath, $namespace, array $uses, $prePhp, array $script = null, $postPhp, &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;
@@ -71,6 +77,7 @@ class TestJob implements ShellJob
 		$this->prePhp = $prePhp;
 		$this->script = $script;
 		$this->postPhp = $postPhp;
+		$this->process = &$process;
 		$this->results = &$results;
 		$this->coverage = &$coverage;
 	}
@@ -85,13 +92,12 @@ class TestJob implements ShellJob
 		return "{$this->executable} --internal-test={$encoded}";
 	}
 
-	public function run($send)
+	public function start()
 	{
-		Command::setIsInternalCommand(true);
-
+		$worker = $this->process;
 		$test = new Test($this->srcDirectory, $this->autoloadPath);
 
-		$onShutdown = function () use ($test, $send) {
+		$sendResults = function () use ($worker, $test) {
 			$results = array(
 				'pre' => $test->getPreState(),
 				'post' => $test->getPostState()
@@ -99,16 +105,20 @@ class TestJob implements ShellJob
 
 			$coverage = $test->getCoverage();
 
-			$message = serialize(array($results, $coverage));
-
-			call_user_func($send, $message);
+			$worker->sendResult(array($results, $coverage));
 		};
 
-		$test->run($this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp, $onShutdown);
+		Exceptions::on($sendResults);
+
+		$test->run($this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
+
+		Exceptions::off();
+
+		call_user_func($sendResults);
 	}
 
-	public function receive($message)
+	public function stop($message)
 	{
-		list($this->results, $this->coverage) = unserialize($message);
+		list($this->results, $this->coverage) = $message;
 	}
 }

@@ -25,13 +25,15 @@
 
 namespace Lens\Evaluator\Jobs;
 
-use Lens\Command;
 use Lens\Evaluator\Coverage;
 use Lens\Filesystem;
 use Lens\Logger;
+use SpencerMortensen\Exceptions\Exceptions;
+use SpencerMortensen\ParallelProcessor\Fork\ForkJob;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
+use SpencerMortensen\ParallelProcessor\ServerProcess;
 
-class CoverageJob implements ShellJob
+class CoverageJob implements ForkJob, ShellJob
 {
 	/** @var string */
 	private $executable;
@@ -45,18 +47,22 @@ class CoverageJob implements ShellJob
 	/** @var string */
 	private $autoloadPath;
 
+	/** @var null|ServerProcess */
+	private $process;
+
 	/** @var array */
 	private $code;
 
 	/** @var Coverage */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, &$code, &$coverage)
+	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, &$process = null, &$code, &$coverage)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;
 		$this->relativePaths = $relativePaths;
 		$this->autoloadPath = $autoloadPath;
+		$this->process = &$process;
 
 		$this->code = &$code;
 		$this->coverage = &$coverage;
@@ -72,32 +78,33 @@ class CoverageJob implements ShellJob
 		return "{$this->executable} --internal-coverage={$encoded}";
 	}
 
-	public function run($send)
+	public function start() // TODO: start($send)
 	{
-		Command::setIsInternalCommand(true);
-
+		$process = $this->process;
 		// TODO: dependency injection:
 		$filesystem = new Filesystem();
-
 		// TODO: remove this logger (throw exceptions to the logger in the controller)
 		$logger = new Logger('lens');
-
 		$coverager = new Coverage($filesystem, $logger);
 
-		$onShutdown = function () use ($coverager, $send) {
+		$sendResult = function () use ($process, $coverager) {
 			$code = $coverager->getCode();
 			$coverage = $coverager->getCoverage();
 
-			$message = serialize(array($code, $coverage));
-
-			call_user_func($send, $message);
+			$process->sendResult(array($code, $coverage));
 		};
 
-		$coverager->run($this->srcDirectory, $this->relativePaths, $this->autoloadPath, $onShutdown);
+		Exceptions::on($sendResult);
+
+		$coverager->run($this->srcDirectory, $this->relativePaths, $this->autoloadPath);
+
+		Exceptions::off();
+
+		call_user_func($sendResult);
 	}
 
-	public function receive($message)
+	public function stop($message)
 	{
-		list($this->code, $this->coverage) = unserialize($message);
+		list($this->code, $this->coverage) = $message;
 	}
 }

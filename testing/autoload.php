@@ -2,13 +2,17 @@
 
 call_user_func(function () {
 	$projectDirectory = dirname(__DIR__);
+	$vendorDirectory = "{$projectDirectory}/vendor";
 
 	$classes = array(
 		'Lens' => "{$projectDirectory}/src",
-		'SpencerMortensen\\ParallelProcessor' => "{$projectDirectory}/vendor/spencer-mortensen/parallel-processor/src",
-		'SpencerMortensen\\Parser' => "{$projectDirectory}/vendor/spencer-mortensen/parser/src",
-		'SpencerMortensen\\Paths' => "{$projectDirectory}/vendor/spencer-mortensen/paths/src",
-		'SpencerMortensen\\RegularExpressions' => "{$projectDirectory}/vendor/spencer-mortensen/regular-expressions/src"
+		'Monolog' => "{$vendorDirectory}/monolog/monolog/src/Monolog",
+		'Psr\\Log' => "{$vendorDirectory}/psr/log/Psr/Log",
+		'SpencerMortensen\\Exceptions' => "{$vendorDirectory}/spencer-mortensen/exceptions/src",
+		'SpencerMortensen\\ParallelProcessor' => "{$vendorDirectory}/spencer-mortensen/parallel-processor/src",
+		'SpencerMortensen\\Parser' => "{$vendorDirectory}/spencer-mortensen/parser/src",
+		'SpencerMortensen\\Paths' => "{$vendorDirectory}/spencer-mortensen/paths/src",
+		'SpencerMortensen\\RegularExpressions' => "{$vendorDirectory}/spencer-mortensen/regular-expressions/src"
 	);
 
 	foreach ($classes as $namespacePrefix => $libraryPath) {

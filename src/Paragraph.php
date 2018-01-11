@@ -23,38 +23,20 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Evaluator;
+namespace Lens;
 
-use SpencerMortensen\ParallelProcessor;
-use SpencerMortensen\ParallelProcessor\Fork\ForkWorker;
-use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
-use SpencerMortensen\ParallelProcessor\Shell\ShellWorker;
+use SpencerMortensen\RegularExpressions\Re;
 
-class Processor extends ParallelProcessor\Processor
+class Paragraph
 {
-	/** @var boolean */
-	private $useForks;
-
-	public function __construct()
+	public static function wrap($input, $maximumLineLength = 96)
 	{
-		parent::__construct();
-
-		$this->useForks = function_exists('pcntl_fork');
+		return wordwrap($input, $maximumLineLength, "\n", true);
 	}
 
-	public function start(ShellJob $job)
+	public static function indent($input, $padding)
 	{
-		if ($this->useForks) {
-			$worker = new ForkWorker($job);
-		} else {
-			$worker = new ShellWorker($job);
-		}
-
-		$this->run($worker);
-	}
-
-	public function isUsingForks()
-	{
-		return $this->useForks;
+		$replacement = Re::quote($padding) . '$1';
+		return Re::replace('([^\\v]+)', $replacement, $input);
 	}
 }

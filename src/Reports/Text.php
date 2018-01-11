@@ -28,11 +28,11 @@ namespace Lens\Reports;
 use Lens\Archivist\Archives\ObjectArchive;
 use Lens\Archivist\Comparer;
 use Lens\Formatter;
+use Lens\Paragraph;
+use SpencerMortensen\RegularExpressions\Re;
 
 class Text implements Report
 {
-	private static $maximumLineLength = 96;
-
 	/** @var Comparer */
 	private $comparer;
 
@@ -73,7 +73,7 @@ class Text implements Report
 
 		$output[] = $this->showSummary();
 
-		return implode("\n\n\n", $output) . "\n";
+		return implode("\n\n\n", $output);
 	}
 
 	private function summarizeCase($testsFile, $testLine, $testText, $caseLine, array $case)
@@ -256,11 +256,14 @@ class Text implements Report
 
 	private function getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine)
 	{
-		$sections = array();
+		$caseText = Paragraph::wrap($caseText);
+		$caseText = Paragraph::indent($caseText, '   ');
 
-		$sections[] = "{$testsFile} (Line {$caseLine}):";
-		$sections[] = self::pad(self::wrap($caseText), '   ');
-		$sections[] = "   // Issues\n" . $issues;
+		$sections = array(
+			"{$testsFile} (Line {$caseLine}):",
+			$caseText,
+			"   // Issues\n" . $issues
+		);
 
 		return implode("\n\n", $sections);
 	}
@@ -283,29 +286,6 @@ class Text implements Report
 		}
 
 		return implode("\n", $output);
-	}
-
-	// TODO: this is duplicated elsewhere
-	private static function wrap($string)
-	{
-		return wordwrap($string, self::$maximumLineLength, "\n", true);
-	}
-
-	// TODO: use the regular expressions library
-	// TODO: this is duplicated elsewhere
-	private static function pad($string, $prefix)
-	{
-		$pattern = self::getPattern('^(.+)$', 'm');
-		$replacement = preg_quote($prefix) . '$1';
-
-		return preg_replace($pattern, $replacement, $string);
-	}
-
-	private static function getPattern($expression, $flags = null)
-	{
-		$delimiter = "\x03";
-
-		return "{$delimiter}{$expression}{$delimiter}{$flags}";
 	}
 
 	private static function getFormatter(array $state)

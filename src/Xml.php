@@ -25,8 +25,6 @@
 
 namespace Lens;
 
-use SpencerMortensen\RegularExpressions\Re;
-
 class Xml
 {
 	public static function getElementXml($name, array $attributes = null, $innerXml = null)
@@ -42,7 +40,7 @@ class Xml
 		if ($innerXml === null) {
 			$xml .= "/>";
 		} else {
-			$xml .= ">\n" . self::indent($innerXml) . "\n</{$name}>";
+			$xml .= ">\n" . Paragraph::indent($innerXml, "\t") . "\n</{$name}>";
 		}
 
 		return $xml;
@@ -77,11 +75,5 @@ class Xml
 	private static function attributeEncode($attribute)
 	{
 		return htmlspecialchars($attribute, ENT_XML1 | ENT_COMPAT | ENT_DISALLOWED | ENT_QUOTES, 'UTF-8');
-	}
-
-	// TODO: move this elsewhere
-	private static function indent($text)
-	{
-		return Re::replace('^(.+?)$', "\t\$1", $text, 'm');
 	}
 }

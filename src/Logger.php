@@ -25,6 +25,7 @@
 
 namespace Lens;
 
+// TODO: use "Monolog," so our end-users can do odd things with their logs
 class Logger
 {
 	const SEVERITY_EMERGENCY = 0;

@@ -36,7 +36,7 @@ class XUnit implements Report
 			self::getProjectXml($project)
 		);
 
-		return implode("\n\n", $output) . "\n";
+		return implode("\n\n", $output);
 	}
 
 	private static function getXmlTag()

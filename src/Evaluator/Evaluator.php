@@ -28,8 +28,9 @@ namespace Lens\Evaluator;
 use Lens\Evaluator\Jobs\CoverageJob;
 use Lens\Evaluator\Jobs\TestJob;
 use Lens\Filesystem;
-use Lens\LensException;
-use SpencerMortensen\ParallelProcessor\ParallelProcessorException;
+use SpencerMortensen\ParallelProcessor\Fork\ForkProcess;
+use SpencerMortensen\ParallelProcessor\Processor;
+use SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
 
 class Evaluator
 {
@@ -42,23 +43,23 @@ class Evaluator
 	/** @var Processor */
 	private $processor;
 
-	public function __construct($executable, $filesystem, $processor)
+	/** @var boolean */
+	private $useForks;
+
+	public function __construct($executable, $filesystem, Processor $processor)
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
 		$this->processor = $processor;
+		$this->useForks = function_exists('pcntl_fork');
 	}
 
 	public function run($srcDirectory, $autoloadPath, array $suites)
 	{
 		// TODO: run this only if coverage is enabled:
-		try {
-			$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
-			$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
-			$this->processor->finish();
-		} catch (ParallelProcessorException $exception) {
-			throw LensException::processor($exception);
-		}
+		$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
+		$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
+		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
 			$coverage = self::getCoverage($executableLines, $executedLines);
@@ -82,11 +83,14 @@ class Evaluator
 			$srcDirectory,
 			$relativePaths,
 			$autoloadPath,
+			$process,
 			$code,
 			$coverage
 		);
 
-		$this->processor->start($job);
+		$process = $this->getProcess($job);
+
+		$this->processor->start($process);
 	}
 
 	private function getRelativePaths($srcDirectory)
@@ -156,10 +160,9 @@ class Evaluator
 		}
 	}
 
-	private function startTest($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script, &$actualResults, &$expectedResults, &$actualCoverage)
+	private function startTest($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
-		$actualJob = new TestJob(
-			$this->executable,
+		$this->startTestJob(
 			$srcDirectory,
 			$autoloadPath,
 			$namespace,
@@ -171,12 +174,7 @@ class Evaluator
 			$actualCoverage
 		);
 
-		$this->processor->start($actualJob);
-
-		$expectedCoverage = null;
-
-		$expectedJob = new TestJob(
-			$this->executable,
+		$this->startTestJob(
 			$srcDirectory,
 			$autoloadPath,
 			$namespace,
@@ -184,10 +182,37 @@ class Evaluator
 			$fixturePhp,
 			null,
 			$expectedPhp,
-			$expectedResults,
-			$expectedCoverage
+			$expectedResults
+		);
+	}
+
+	private function startTestJob($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
+	{
+		$job = new TestJob(
+			$this->executable,
+			$srcDirectory,
+			$autoloadPath,
+			$namespace,
+			$uses,
+			$fixturePhp,
+			$script,
+			$php,
+			$process,
+			$results,
+			$coverage
 		);
 
-		$this->processor->start($expectedJob);
+		$process = $this->getProcess($job);
+
+		$this->processor->start($process);
+	}
+
+	private function getProcess($job)
+	{
+		if ($this->useForks) {
+			return new ForkProcess($job);
+		}
+
+		return new ShellClientProcess($job);
 	}
 }

@@ -5,4 +5,4 @@ namespace Lens;
 
 require dirname(__DIR__) . '/testing/autoload.php';
 
-new Command();
+new Lens();

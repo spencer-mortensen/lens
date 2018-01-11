@@ -38,7 +38,7 @@ class Tap implements Report
 
 		self::addTestLines($cases, $output);
 
-		return implode("\n", $output) . "\n";
+		return implode("\n", $output);
 	}
 
 	private static function getCases(array $suites)

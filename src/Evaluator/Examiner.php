@@ -26,30 +26,25 @@
 namespace Lens\Evaluator;
 
 use Exception;
+use SpencerMortensen\Exceptions\Exceptions;
 use Throwable;
 
 class Examiner
 {
 	/** @var boolean */
-	private $isTerminated;
+	private $isUsable;
 
 	/** @var string */
 	private $code;
-
-	/** @var callable */
-	private $onShutdown;
 
 	/** @var array */
 	private $state;
 
 	public function __construct()
 	{
-		ini_set('display_errors', 'Off');
-		set_error_handler(array($this, 'errorHandler'));
-		register_shutdown_function(array($this, 'shutdownFunction'));
 		self::unsetGlobals();
 
-		$this->isTerminated = false;
+		$this->isUsable = true;
 		$this->state = array(
 			'output' => null,
 			'variables' => array(),
@@ -60,16 +55,22 @@ class Examiner
 		);
 	}
 
-	public function run($code, $onShutdown)
+	public function run($code)
 	{
-		if ($this->isTerminated()) {
+		if (!$this->isUsable) {
 			return;
 		}
 
 		$this->code = $code;
-		$this->onShutdown = $onShutdown;
+
+		$onFatalError =  array($this, 'onFatalError');
+		$onError = array($this, 'onError');
+
+		Exceptions::on($onFatalError, $onError);
 
 		$this->evaluateCode();
+
+		Exceptions::off();
 	}
 
 	private function evaluateCode()
@@ -83,11 +84,11 @@ class Examiner
 		try {
 			eval($this->code);
 		} catch (Throwable $LENS_EXCEPTION) {
-			$this->isTerminated = true;
+			$this->isUsable = false;
 			$this->state['exception'] = $LENS_EXCEPTION;
 			unset($LENS_EXCEPTION);
 		} catch (Exception $LENS_EXCEPTION) {
-			$this->isTerminated = true;
+			$this->isUsable = false;
 			$this->state['exception'] = $LENS_EXCEPTION;
 			unset($LENS_EXCEPTION);
 		}
@@ -95,8 +96,6 @@ class Examiner
 		$this->state['variables'] = get_defined_vars();
 		ksort($this->state['variables'], SORT_NATURAL);
 		$this->setGlobalState();
-
-		$this->onShutdown = null;
 	}
 
 	private function setGlobalState()
@@ -106,22 +105,15 @@ class Examiner
 		$this->state['constants'] = self::getConstants();
 	}
 
-	public function shutdownFunction()
+	public function onFatalError()
 	{
-		if ($this->onShutdown === null) {
-			return;
-		}
-
-		$this->isTerminated = true;
-
+		$this->isUsable = false;
 		$this->state['variables'] = array();
 		$this->getLastError();
 		$this->setGlobalState();
-
-		call_user_func($this->onShutdown);
 	}
 
-	public function errorHandler($level, $message, $file, $line)
+	public function onError($level, $message, $file, $line)
 	{
 		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
 	}
@@ -232,9 +224,9 @@ class Examiner
 		return true;
 	}
 
-	public function isTerminated()
+	public function isUsable()
 	{
-		return $this->isTerminated;
+		return $this->isUsable;
 	}
 
 	public function getState()
