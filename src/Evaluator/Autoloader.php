@@ -107,7 +107,7 @@ class Autoloader
 		foreach ($functions as $function) {
 			$mock = "{$namespace}\\{$function}";
 
-			if (!function_exists($mock)) {
+			if (function_exists($function) && !function_exists($mock)) {
 				$sections[] = $this->getMockFunctionPhp($function);
 			}
 		}
