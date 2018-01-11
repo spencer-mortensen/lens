@@ -185,7 +185,10 @@ class Examiner
 	private function getLastError()
 	{
 		$error = error_get_last();
-		error_clear_last();
+
+		if (function_exists('error_clear_last')) {
+			error_clear_last();
+		}
 
 		if (is_array($error)) {
 			$this->state['errors'][] = self::getErrorValue($error['type'], $error['message'], $error['file'], $error['line']);
