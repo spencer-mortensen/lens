@@ -105,7 +105,7 @@ class CoverageExtractor
 
 	private static function isEvaluated($path)
 	{
-		return Re::match('\\([0-9]+\\) : eval\\(\\)\'d code$', $path, $match);
+		return Re::match('\\([0-9]+\\) : eval\\(\\)\'d code$', $path);
 	}
 
 	private static function getCleanLines(array $input)
