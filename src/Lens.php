@@ -25,6 +25,7 @@
 
 namespace Lens;
 
+use Error;
 use Exception;
 use Lens\Exceptions\TerminalMessage;
 use Lens\Exceptions\LogMessage;
@@ -33,7 +34,6 @@ use Lens\Commands\Runner;
 use Lens\Commands\Test;
 use Lens\Commands\Version;
 use SpencerMortensen\Exceptions\Exceptions;
-use Throwable;
 
 class Lens
 {
@@ -60,9 +60,9 @@ class Lens
 			if (!$this->run($stdout, $stderr, $exitCode)) {
 				throw LensException::usage();
 			}
-		} catch (Throwable $exception) {
-			list($stdout, $stderr, $exitCode) = $this->handleException($exception);
 		} catch (Exception $exception) {
+			list($stdout, $stderr, $exitCode) = $this->handleException($exception);
+		} catch (Error $exception) {
 			list($stdout, $stderr, $exitCode) = $this->handleException($exception);
 		}
 
@@ -117,7 +117,7 @@ class Lens
 	}
 
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 */
 	public function onError($exception)
 	{
@@ -127,7 +127,7 @@ class Lens
 	}
 
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 * @return array
 	 */
 	private function handleException($exception)

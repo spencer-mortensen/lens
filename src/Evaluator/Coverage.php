@@ -91,7 +91,10 @@ class Coverage
 
 	private static function getLines($text)
 	{
-		return Re::split('\\r?\\n', $text);
+		$expression = '\\r?\\n';
+		$pattern = "\x03{$expression}\x03XDs";
+
+		return preg_split($pattern, $text);
 	}
 
 	private function getRawCoverage($srcDirectory, array $relativePaths, $autoloadPath)

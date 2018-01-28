@@ -25,10 +25,10 @@
 
 namespace Lens;
 
+use Error;
 use ErrorException;
 use Exception;
 use Lens\Commands\Version;
-use Throwable;
 
 class LensException extends Exception
 {
@@ -75,7 +75,7 @@ class LensException extends Exception
 	 * @param string $message
 	 * @param array|null $help
 	 * @param array|null $data
-	 * @param Throwable|Exception|null $previous
+	 * @param Exception|Error|null $previous
 	 */
 	public function __construct($code, $severity, $message, array $help = null, array $data = null, $previous = null)
 	{
@@ -123,7 +123,7 @@ class LensException extends Exception
 	}
 
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 * @return LensException
 	 */
 	public static function exception($exception)

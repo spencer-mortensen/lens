@@ -25,12 +25,12 @@
 
 namespace Lens\Exceptions;
 
+use Error;
 use Exception;
 use Lens\Displayer;
 use Lens\LensException;
 use Lens\Paragraph;
 use SpencerMortensen\RegularExpressions\Re;
-use Throwable;
 
 class TerminalMessage
 {
@@ -115,7 +115,7 @@ class TerminalMessage
 	}
 
 	/**
-	 * @param Throwable|Exception|null $exception
+	 * @param Exception|Error|null $exception
 	 * @param string $output
 	 * @return string
 	 */

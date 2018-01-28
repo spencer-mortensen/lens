@@ -25,15 +25,15 @@
 
 namespace Lens\Exceptions;
 
+use Error;
 use Exception;
 use ReflectionClass;
 use ReflectionProperty;
-use Throwable;
 
 class DataExtractor
 {
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 * @return array
 	 */
 	public function getData($exception)
@@ -50,7 +50,7 @@ class DataExtractor
 	}
 
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 * @return array
 	 */
 	private function getExceptionProperties($exception)
@@ -86,7 +86,7 @@ class DataExtractor
 	}
 
 	/**
-	 * @param Throwable|Exception $exception
+	 * @param Exception|Error $exception
 	 * @return array|null
 	 */
 	private function getPreviousExceptionData($exception)

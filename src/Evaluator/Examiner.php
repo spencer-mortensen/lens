@@ -25,9 +25,9 @@
 
 namespace Lens\Evaluator;
 
+use Error;
 use Exception;
 use SpencerMortensen\Exceptions\Exceptions;
-use Throwable;
 
 class Examiner
 {
@@ -83,11 +83,11 @@ class Examiner
 
 		try {
 			eval($this->code);
-		} catch (Throwable $LENS_EXCEPTION) {
+		} catch (Exception $LENS_EXCEPTION) {
 			$this->isUsable = false;
 			$this->state['exception'] = $LENS_EXCEPTION;
 			unset($LENS_EXCEPTION);
-		} catch (Exception $LENS_EXCEPTION) {
+		} catch (Error $LENS_EXCEPTION) {
 			$this->isUsable = false;
 			$this->state['exception'] = $LENS_EXCEPTION;
 			unset($LENS_EXCEPTION);

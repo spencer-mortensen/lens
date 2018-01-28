@@ -9,6 +9,7 @@ call_user_func(function () {
 		'Monolog' => "{$vendorDirectory}/monolog/monolog/src/Monolog",
 		'Psr\\Log' => "{$vendorDirectory}/psr/log/Psr/Log",
 		'SpencerMortensen\\Exceptions' => "{$vendorDirectory}/spencer-mortensen/exceptions/src",
+		'SpencerMortensen\\Html5' => "{$vendorDirectory}/spencer-mortensen/html5/src",
 		'SpencerMortensen\\ParallelProcessor' => "{$vendorDirectory}/spencer-mortensen/parallel-processor/src",
 		'SpencerMortensen\\Parser' => "{$vendorDirectory}/spencer-mortensen/parser/src",
 		'SpencerMortensen\\Paths' => "{$vendorDirectory}/spencer-mortensen/paths/src",
