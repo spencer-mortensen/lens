@@ -22,6 +22,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
+        "spencer-mortensen/autoloader": "~1.0",
         "spencer-mortensen/exceptions": "~2.0",
         "spencer-mortensen/html5": "~1.0",
         "spencer-mortensen/parallel-processor": "~3.0",

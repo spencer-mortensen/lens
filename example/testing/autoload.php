@@ -1,19 +1,13 @@
 <?php
 
-spl_autoload_register(
-    function ($class) {
-        $namespacePrefix = 'Example\\';
-        $namespacePrefixLength = strlen($namespacePrefix);
+namespace SpencerMortensen\Autoloader;
 
-        if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
-            return;
-        }
+$project = dirname(dirname(__DIR__));
 
-        $relativeClassName = substr($class, $namespacePrefixLength);
-        $filePath = dirname(__DIR__) . '/src/' . strtr($relativeClassName, '\\', '/') . '.php';
-
-        if (is_file($filePath)) {
-            include $filePath;
-        }
-    }
+$classes = array(
+	'Example' => 'example/src'
 );
+
+require "{$project}/vendor/spencer-mortensen/autoloader/src/Autoloader.php";
+
+new Autoloader($project, $classes);
