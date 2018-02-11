@@ -46,11 +46,11 @@ class Evaluator
 	/** @var boolean */
 	private $useForks;
 
-	public function __construct($executable, $filesystem, Processor $processor)
+	public function __construct($executable, $filesystem)
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
-		$this->processor = $processor;
+		$this->processor = new Processor();
 		$this->useForks = function_exists('pcntl_fork');
 	}
 

@@ -3,6 +3,6 @@
 
 namespace Lens;
 
-require dirname(__DIR__) . '/testing/autoload.php';
+require dirname(__DIR__) . '/lens/autoload.php';
 
 new Lens();

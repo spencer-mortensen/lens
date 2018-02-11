@@ -32,16 +32,12 @@ class IniFile
 	/** @var Filesystem */
 	private $filesystem;
 
-	/** @var null|string */
+	/** @var string */
 	private $path;
 
-	public function __construct(Filesystem $filesystem)
+	public function __construct(Filesystem $filesystem, $path)
 	{
 		$this->filesystem = $filesystem;
-	}
-
-	public function setPath($path)
-	{
 		$this->path = $path;
 	}
 
@@ -96,7 +92,7 @@ class IniFile
 			$lines[] = "{$key} = {$valueText}";
 		}
 
-		return implode(PHP_EOL, $lines);
+		return implode(PHP_EOL, $lines) . PHP_EOL;
 	}
 
 	private static function getValueText($value)

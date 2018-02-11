@@ -35,9 +35,6 @@ class Browser
 	/** @var Paths */
 	private $paths;
 
-	/** @var string */
-	private $testsDirectory;
-
 	/** @var array */
 	private $files;
 
@@ -48,16 +45,9 @@ class Browser
 		$this->files = array();
 	}
 
-	public function browse($testsDirectory, array $paths)
+	public function browse(array $paths)
 	{
-		$this->testsDirectory = $testsDirectory;
-
 		foreach ($paths as $path) {
-			if (($this->testsDirectory !== null) && !$this->paths->isChildPath($this->testsDirectory, $path)) {
-				// TODO: explain that this path is invalid because it lies outside the tests directory:
-				throw LensException::invalidTestsPath($path);
-			}
-
 			$contents = $this->filesystem->read($path);
 
 			if ($contents === null) {
@@ -88,19 +78,13 @@ class Browser
 		}
 	}
 
-	private function getFile($absolutePath, $contents)
+	private function getFile($path, $contents)
 	{
-		if (!$this->isTestsFile($absolutePath)) {
+		if (!$this->isTestsFile($path)) {
 			return;
 		}
 
-		if ($this->testsDirectory === null) {
-			$relativePath = basename($absolutePath);
-		} else {
-			$relativePath = $this->paths->getRelativePath($this->testsDirectory, $absolutePath);
-		}
-
-		$this->files[$relativePath] = $contents;
+		$this->files[$path] = $contents;
 	}
 
 	private function isTestsFile($path)
@@ -108,4 +92,3 @@ class Browser
 		return substr($path, -4) === '.php';
 	}
 }
-

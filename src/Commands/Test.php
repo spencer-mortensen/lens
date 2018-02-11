@@ -57,7 +57,7 @@ class Test implements Command
 		$executable = $this->arguments->getExecutable();
 		list($srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
 
-		$job = new TestJob($executable, $srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp, $worker, $results, $coverage);
+		$job = new TestJob($executable, $srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp, $process, $results, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

@@ -57,7 +57,7 @@ class DataExtractor
 	{
 		$properties = $this->getObjectProperties($exception);
 
-		unset($properties['Throwable'], $properties['Exception']);
+		unset($properties['Exception'], $properties['Error']);
 
 		return $properties;
 	}

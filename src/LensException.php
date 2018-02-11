@@ -29,6 +29,9 @@ use Error;
 use ErrorException;
 use Exception;
 use Lens\Commands\Version;
+use Lens\Filesystem;
+use SpencerMortensen\Parser\ParserException;
+use SpencerMortensen\Paths\Paths;
 
 class LensException extends Exception
 {
@@ -46,7 +49,7 @@ class LensException extends Exception
 
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
-	const CODE_UNKNOWN_TESTS_DIRECTORY = 3;
+	const CODE_UNKNOWN_LENS_DIRECTORY = 3;
 	const CODE_INVALID_SETTINGS_FILE = 4;
 	const CODE_INVALID_SRC_DIRECTORY = 5;
 	const CODE_INVALID_AUTOLOADER_PATH = 6;
@@ -132,7 +135,7 @@ class LensException extends Exception
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Lens encountered an unpleasant error.";
+		$message = "Lens encountered an error.";
 
 		$help = array(
 			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
@@ -143,19 +146,19 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help, $data, $exception);
 	}
 
-	public static function unknownTestsDirectory()
+	public static function unknownLensDirectory()
 	{
-		$code = self::CODE_UNKNOWN_TESTS_DIRECTORY;
+		$code = self::CODE_UNKNOWN_LENS_DIRECTORY;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = 'Unable to find the tests directory.';
+		$message = "Unable to find the \"lens\" directory.";
 
 		$help = array(
-			"Do you have a tests directory? If not, you should check out this short guide to get started:\n" . self::$lensGuideUrl,
-			"Is your tests directory called \"tests\"? You need to use that name exactly, without any spelling or capitalization differences.",
-			"Is your tests directory directly under your project directory, or in a Lens directory that is directly under your project directory? Lens will find your tests directory only if it's pretty near the surface.",
-			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/tests"
+			"Do you have a \"lens\" directory? If not, you should check out this short guide to get started:\n" . self::$lensGuideUrl,
+			"Is your lens directory called \"lens\"? You should use that name exactly, without any spelling or capitalization differences.",
+			"Is your \"lens\" directory located right inside your project directory?",
+			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/lens/tests"
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -307,13 +310,13 @@ class LensException extends Exception
 		}
 	}
 
-	public static function invalidTestsFileSyntax($path, $contents, $position, $expectation)
+	public static function invalidTestsFileSyntax($path, $contents, ParserException $exception)
 	{
 		$code = self::CODE_INVALID_TESTS_FILE_SYNTAX;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = self::getTestsFileInvalidSyntaxMessage($path, $contents, $position, $expectation);
+		$message = self::getTestsFileInvalidSyntaxMessage($path, $contents, $exception);
 
 		// TODO: add $data array with "expected" and "actual"
 
@@ -324,11 +327,19 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help);
 	}
 
-	private static function getTestsFileInvalidSyntaxMessage($path, $contents, $position, $expectation)
+	private static function getTestsFileInvalidSyntaxMessage($absolutePath, $contents, ParserException $exception)
 	{
-		$displayer = new Displayer();
+		$position = $exception->getState();
+		$expectation = $exception->getRule();
 
-		$pathText = $displayer->display($path);
+		$filesystem = new Filesystem();
+		$paths = Paths::getPlatformPaths();
+
+		$currentDirectory = $filesystem->getCurrentDirectory();
+		$relativePath = $paths->getRelativePath($currentDirectory, $absolutePath);
+
+		$displayer = new Displayer();
+		$pathText = $displayer->display($relativePath);
 
 		$message = "Syntax error in {$pathText}: ";
 
