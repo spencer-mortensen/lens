@@ -196,13 +196,14 @@ class Test
 	private function prepare($namespace)
 	{
 		$autoloader = new Autoloader();
-		$autoloader->register();
 
 		eval($autoloader->getMockFunctionsPhp($namespace));
 
 		if (is_string($this->autoloadPath)) {
 			require $this->autoloadPath;
 		}
+
+		$autoloader->register();
 	}
 
 	private function getState($calls = null)

@@ -119,7 +119,6 @@ class Runner implements Command
 		$summarizer = new Summarizer();
 		$summarizer->summarize($project);
 
-
 		$stdout = $report->getReport($project);
 		$stderr = null;
 

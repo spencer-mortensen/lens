@@ -345,7 +345,7 @@ EOS;
 	{
 		foreach ($tests as &$test) {
 			foreach ($test['cases'] as &$case) {
-				self::useFixtureMocks($namespace, $uses, $case['code']['fixture']);
+				self::useFixtureMocks($namespace, $uses, $case['input']['code']);
 			}
 		}
 	}
@@ -355,7 +355,7 @@ EOS;
 		$lines = Re::split('\\r?\\n', $php);
 
 		foreach ($lines as &$line) {
-			if (self::getMock($line, $name, $class, $arguments)) {
+			if (self::isInstantiation($line, $name, $class, $arguments)) {
 				$absoluteClass = self::getAbsoluteClass($namespace, $uses, $class);
 				$mockClass = "\\Lens\\Mock{$absoluteClass}";
 				$line = self::getInstantiationPhp($name, $mockClass, $arguments);
@@ -365,18 +365,7 @@ EOS;
 		$php = self::getValidString(implode("\n", $lines));
 	}
 
-	private static function getValidString($input)
-	{
-		$input = trim($input);
-
-		if (strlen($input) === 0) {
-			return null;
-		}
-
-		return $input;
-	}
-
-	private static function getMock(&$php, &$name, &$class, &$arguments)
+	private static function isInstantiation($php, &$name, &$class, &$arguments)
 	{
 		$expression = '^\$(?<name>[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?<class>[a-zA-Z_0-9\\\\]+)\\h*\\((?<arguments>.*?)\\);$';
 
@@ -427,5 +416,16 @@ EOS;
 	private static function getInstantiationPhp($name, $class, $arguments)
 	{
 		return "\${$name} = new {$class}({$arguments});";
+	}
+
+	private static function getValidString($input)
+	{
+		$input = trim($input);
+
+		if (strlen($input) === 0) {
+			return null;
+		}
+
+		return $input;
 	}
 }
