@@ -1,0 +1,10 @@
+# Before: <lens> <-- optional
+# After: "lens"
+
+# Before: settings.ini: "src" and "autoload" were relative to <lens>
+# After: settings.ini: "src" and "autoload" are relative to <project>
+
+# TODO: add a ".version" file
+# TODO: add an "Updater" class
+
+# TODO: When there is a PHP error, convert the absolute "file" path to a relative path (relative to the current directory)
