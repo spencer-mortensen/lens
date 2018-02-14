@@ -29,7 +29,6 @@ use Error;
 use ErrorException;
 use Exception;
 use Lens\Commands\Version;
-use Lens\Filesystem;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
 
@@ -46,17 +45,21 @@ class LensException extends Exception
 	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
 	private static $lensInstallationUrl = 'http://lens.guide/installation/';
 	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
+	private static $lensSettingsFileUrl = 'http://lens.guide/organization/testing/settings.ini/';
+	private static $lensAutoloadFileUrl = 'http://lens.guide/organization/testing/autoload.php/';
 
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
 	const CODE_UNKNOWN_LENS_DIRECTORY = 3;
-	const CODE_INVALID_SETTINGS_FILE = 4;
-	const CODE_INVALID_SRC_DIRECTORY = 5;
-	const CODE_INVALID_AUTOLOADER_PATH = 6;
-	const CODE_INVALID_TESTS_PATH = 7;
-	const CODE_INVALID_TESTS_FILE_SYNTAX = 8;
-	const CODE_INVALID_REPORT = 9;
-	const CODE_PROCESSOR = 10;
+	const CODE_UNKNOWN_SRC_DIRECTORY = 4;
+	const CODE_UNKNOWN_AUTOLOAD_FILE = 5;
+	const CODE_INVALID_SETTINGS_FILE = 5;
+	const CODE_INVALID_SRC_DIRECTORY = 6;
+	const CODE_INVALID_AUTOLOADER_PATH = 7;
+	const CODE_INVALID_TESTS_PATH = 8;
+	const CODE_INVALID_TESTS_FILE_SYNTAX = 9;
+	const CODE_INVALID_REPORT = 10;
+	const CODE_PROCESSOR = 11;
 	const CODE_INTERNAL = 255;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
@@ -159,6 +162,36 @@ class LensException extends Exception
 			"Is your lens directory called \"lens\"? You should use that name exactly, without any spelling or capitalization differences.",
 			"Is your \"lens\" directory located right inside your project directory?",
 			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/lens/tests"
+		);
+
+		return new self($code, $severity, $message, $help);
+	}
+
+	public static function unknownSrcDirectory()
+	{
+		$code = self::CODE_UNKNOWN_SRC_DIRECTORY;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = "Unable to find the source-code directory.";
+
+		$help = array(
+			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.ini\" file and customize the \"src\" path. You can read more about the \"settings.ini\" file here:\n" . self::$lensSettingsFileUrl
+		);
+
+		return new self($code, $severity, $message, $help);
+	}
+
+	public static function unknownAutoloadFile()
+	{
+		$code = self::CODE_UNKNOWN_AUTOLOAD_FILE;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = "Unable to find the autoload file.";
+
+		$help = array(
+			"You will need an autoloader to load your classes. Read more here\n" . self::$lensAutoloadFileUrl
 		);
 
 		return new self($code, $severity, $message, $help);

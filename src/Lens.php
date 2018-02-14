@@ -99,7 +99,7 @@ class Lens
 
 	private function runRunner(&$stdout, &$stderr, &$exitCode)
 	{
-		$runner = new Runner($this->arguments, $this->logger);
+		$runner = new Runner($this->arguments);
 		return $runner->run($stdout, $stderr, $exitCode);
 	}
 

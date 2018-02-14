@@ -59,6 +59,10 @@ class IniFile
 		$settings = parse_ini_string($contents, false);
 		restore_error_handler();
 
+		if (!is_array($settings)) {
+			return null;
+		}
+
 		foreach ($settings as &$setting) {
 			if ($setting === '') {
 				$setting = null;

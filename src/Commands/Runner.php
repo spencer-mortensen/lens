@@ -29,13 +29,11 @@ use Lens\Arguments;
 use Lens\Browser;
 use Lens\Evaluator\Evaluator;
 use Lens\Filesystem;
-use Lens\IniFile;
+use Lens\Finder;
 use Lens\LensException;
-use Lens\Logger;
 use Lens\Reports\Tap;
 use Lens\Reports\Text;
 use Lens\Reports\XUnit;
-use Lens\Settings;
 use Lens\SuiteParser;
 use Lens\Summarizer;
 use Lens\Web;
@@ -44,39 +42,24 @@ use SpencerMortensen\Paths\Paths;
 
 class Runner implements Command
 {
-	/** @var string */
-	private static $srcDirectoryName = 'src';
-
-	/** @var string */
-	private static $lensDirectoryName = 'lens';
-
-	/** @var string */
-	private static $testsDirectoryName = 'tests';
-
-	/** @var string */
-	private static $coverageDirectoryName = 'coverage';
-
-	/** @var string */
-	private static $settingsFileName = 'settings.ini';
-
 	/** @var Arguments */
 	private $arguments;
-
-	/** @var Logger */
-	private $logger;
-
-	/** @var Filesystem */
-	private $filesystem;
 
 	/** @var Paths */
 	private $paths;
 
-	public function __construct(Arguments $arguments, Logger $logger)
+	/** @var Filesystem */
+	private $filesystem;
+
+	/** @var Finder */
+	private $finder;
+
+	public function __construct(Arguments $arguments)
 	{
 		$this->arguments = $arguments;
-		$this->logger = $logger;
-		$this->filesystem = new Filesystem();
 		$this->paths = Paths::getPlatformPaths();
+		$this->filesystem = new Filesystem();
+		$this->finder = new Finder($this->paths, $this->filesystem);
 	}
 
 	public function run(&$stdout, &$stderr, &$exitCode)
@@ -87,33 +70,22 @@ class Runner implements Command
 
 		// TODO: if there are any options other than "report", then throw a usage exception
 
-		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
-
-		if (count($paths) === 0) {
-			$lensDirectoryPath = $this->findLensByCurrentDirectory();
-
-			if ($lensDirectoryPath === null) {
-				throw LensException::unknownLensDirectory();
-			}
-
-			$testsDirectoryPath = $this->paths->join($lensDirectoryPath, self::$testsDirectoryName);
-			$paths[] = $testsDirectoryPath;
-
-			$this->findPaths($lensDirectoryPath, $projectDirectoryPath, $srcDirectoryPath, $autoloadFilePath, $coverageDirectoryPath);
-		} else {
-			$this->findByPaths($paths, $lensDirectoryPath, $testsDirectoryPath);
-			$this->findPaths($lensDirectoryPath, $projectDirectoryPath, $srcDirectoryPath, $autoloadFilePath, $coverageDirectoryPath);
-		}
+		$this->findPaths($paths);
 
 		$executable = $this->arguments->getExecutable();
+		$evaluator = new Evaluator($executable, $this->filesystem);
+
+		$srcPath = $this->finder->getSrc();
+		$autoloadPath = $this->finder->getAutoload();
+		$testsPath = $this->finder->getTests();
+
 		$suites = $this->getSuites($paths);
 
-		$evaluator = new Evaluator($executable, $this->filesystem);
-		list($suites, $code, $coverage) = $evaluator->run($srcDirectoryPath, $autoloadFilePath, $suites);
+		list($suites, $code, $coverage) = $evaluator->run($srcPath, $autoloadPath, $suites);
 
 		$project = array(
 			'name' => 'Lens', // TODO: let the user provide the project name in the configuration file
-			'suites' => $this->useRelativePaths($testsDirectoryPath, $suites)
+			'suites' => $this->useRelativePaths($testsPath, $suites)
 		);
 
 		$summarizer = new Summarizer();
@@ -124,7 +96,8 @@ class Runner implements Command
 
 		if (isset($code, $coverage)) {
 			$web = new Web($this->filesystem);
-			$web->coverage($srcDirectoryPath, $coverageDirectoryPath, $code, $coverage);
+			$coveragePath = $this->finder->getCoverage();
+			$web->coverage($srcPath, $coveragePath, $code, $coverage);
 		}
 
 		$isSuccessful = ($project['summary']['failed'] === 0);
@@ -177,6 +150,23 @@ class Runner implements Command
 	}
 	*/
 
+	private function findPaths(array &$paths)
+	{
+		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
+
+		try {
+			$this->finder->find($paths);
+		} catch (LensException $exception) {
+			// The simple test produces an unknown-lens-directory error, but the runner should continue anyway
+			if (
+				(count($paths) === 0) ||
+				($exception->getCode() !== LensException::CODE_UNKNOWN_LENS_DIRECTORY)
+			) {
+				throw $exception;
+			}
+		}
+	}
+
 	private function getAbsoluteTestsPath($relativePath)
 	{
 		$absolutePath = $this->filesystem->getAbsolutePath($relativePath);
@@ -186,192 +176,6 @@ class Runner implements Command
 		}
 
 		return $absolutePath;
-	}
-
-	private function findLensByCurrentDirectory()
-	{
-		$basePath = $this->filesystem->getCurrentDirectory();
-
-		$data = $this->paths->deserialize($basePath);
-		$atoms = $data->getAtoms();
-		$atoms[] = self::$lensDirectoryName;
-
-		$i = count($atoms) - 2;
-
-		do {
-			$data->setAtoms($atoms);
-			$path = $this->paths->serialize($data);
-
-			if ($this->filesystem->isDirectory($path)) {
-				return $path;
-			}
-
-			unset($atoms[$i]);
-		} while (0 <= $i--);
-
-		return null;
-	}
-
-	private function findByPaths(array $paths, &$lensDirectory, &$testsDirectory)
-	{
-		foreach ($paths as &$path) {
-			$data = $this->paths->deserialize($path);
-			$path = $data->getAtoms();
-		}
-
-		$parent = $this->getParent($paths);
-
-		if ($this->getTarget($parent, $atoms)) {
-			$data->setAtoms($atoms);
-			$lensDirectory = $this->paths->serialize($data);
-
-			$atoms[] = self::$testsDirectoryName;
-			$data->setAtoms($atoms);
-			$testsDirectory = $this->paths->serialize($data);
-		} else {
-			$atoms = $this->getDirectory($parent);
-			$data->setAtoms($atoms);
-
-			$lensDirectory = null;
-			$testsDirectory = $this->paths->serialize($data);
-		}
-	}
-
-	private function getParent(array $paths)
-	{
-		$n = count($paths);
-
-		if ($n === 1) {
-			return $paths[0];
-		}
-
-		$m = min(array_map('count', $paths));
-
-		$parent = array();
-
-		for ($i = 0; $i < $m; ++$i) {
-			$atom = $paths[0][$i];
-
-			for ($j = 1; $j < $n; ++$j) {
-				if ($paths[$j][$i] !== $atom) {
-					return $parent;
-				}
-			}
-
-			$parent[$i] = $atom;
-		}
-
-		return $parent;
-	}
-
-	private function getTarget(array $atoms, &$output)
-	{
-		for ($i = count($atoms) - 1; 0 < $i; --$i) {
-			if (($atoms[$i - 1] === self::$lensDirectoryName) && ($atoms[$i] === self::$testsDirectoryName)) {
-				$output = array_slice($atoms, 0, $i);
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private function getDirectory(array $atoms)
-	{
-		$atom = end($atoms);
-
-		if (is_string($atom) && (substr($atom, -4) === '.php')) {
-			return array_slice($atoms, 0, -1);
-		}
-
-		return $atoms;
-	}
-
-	public function findPaths($lensDirectoryPath, &$projectDirectoryPath, &$srcDirectoryPath, &$autoloadFilePath, &$coverageDirectoryPath)
-	{
-		if ($lensDirectoryPath === null) {
-			return;
-		}
-
-		$projectDirectoryPath = dirname($lensDirectoryPath);
-		$coverageDirectoryPath = $this->paths->join($lensDirectoryPath, self::$coverageDirectoryName);
-		$settingsFilePath = $this->paths->join($lensDirectoryPath, self::$settingsFileName);
-
-		$settingsFile = new IniFile($this->filesystem, $settingsFilePath);
-		$oldSettings = $settingsFile->read();
-		$newSettings = $oldSettings;
-
-		$this->findSrcDirectory($newSettings, $projectDirectoryPath, $srcDirectoryPath);
-		$this->findAutoloadFile($newSettings, $projectDirectoryPath, $lensDirectoryPath, $autoloadFilePath);
-
-		if ($newSettings !== $oldSettings) {
-			$settingsFile->write($newSettings);
-		}
-	}
-
-	private function findSrcDirectory(array &$settings = null, $projectDirectoryPath, &$output)
-	{
-		$src = &$settings['src'];
-
-		if (is_string($src) && $this->getAbsoluteDirectoryPath($projectDirectoryPath, $src, $output)) {
-			return true;
-		}
-
-		$src = self::$srcDirectoryName;
-
-		if ($this->getAbsoluteDirectoryPath($projectDirectoryPath, $src, $output)) {
-			return true;
-		}
-
-		$src = null;
-		return false;
-	}
-
-	private function getAbsoluteDirectoryPath($basePath, $relativePath, &$output)
-	{
-		$absolutePath = $this->paths->join($basePath, $relativePath);
-
-		if (!$this->filesystem->isDirectory($absolutePath)) {
-			return false;
-		}
-
-		$output = $absolutePath;
-		return true;
-	}
-
-	private function findAutoloadFile(array &$settings = null, $projectDirectoryPath, $lensDirectoryPath, &$output)
-	{
-		$autoload = &$settings['autoload'];
-
-		if (is_string($autoload) && $this->getAbsoluteFilePath($projectDirectoryPath, $autoload, $output)) {
-			return true;
-		}
-
-		$autoload = $this->paths->join('vendor', 'autoload.php');
-
-		if ($this->getAbsoluteFilePath($projectDirectoryPath, $autoload, $output)) {
-			return true;
-		}
-
-		if ($this->getAbsoluteFilePath($lensDirectoryPath, 'autoload.php', $output)) {
-			$autoload = $this->paths->getRelativePath($projectDirectoryPath, $output);
-			return true;
-		}
-
-		$autoload = null;
-		return false;
-	}
-
-	private function getAbsoluteFilePath($basePath, $relativePath, &$output)
-	{
-		$absolutePath = $this->paths->join($basePath, $relativePath);
-
-		if (!$this->filesystem->isFile($absolutePath)) {
-			return false;
-		}
-
-		$output = $absolutePath;
-		return true;
 	}
 
 	private function getSuites(array $paths)

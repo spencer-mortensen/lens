@@ -25,69 +25,63 @@
 
 namespace Lens;
 
-use ErrorException;
+use SpencerMortensen\Paths\Paths;
 
 class Settings
 {
+	/** @var Paths */
+	private $paths;
+
+	/** @var Filesystem */
+	private $filesystem;
+
 	/** @var IniFile */
 	private $file;
 
-	/** @var Logger */
-	private $logger;
+	/** @var array|null */
+	private $input;
 
-	public function __construct(IniFile $file, Logger $logger)
+	public function __construct(Paths $paths, Filesystem $filesystem, $path)
 	{
-		$this->file = $file;
-		$this->logger = $logger;
+		$this->paths = $paths;
+		$this->filesystem = $filesystem;
+		$this->file = new IniFile($this->filesystem, $path);
+		$this->input = $this->file->read();
+		$this->data = self::getValidData($this->input);
 	}
 
-	public function setPath($filePath)
+	public function __destruct()
 	{
-		$this->file->setPath($filePath);
-	}
-
-	public function getPath()
-	{
-		return $this->file->getPath();
-	}
-
-	public function read()
-	{
-		try {
-			$settings = $this->file->read();
-		} catch (ErrorException $exception) {
-			$path = $this->file->getPath();
-			throw LensException::invalidSettingsFile($path, $exception);
+		if ($this->data !== $this->input) {
+			$this->file->write($this->data);
 		}
-
-		if ($settings === null) {
-			$settings = self::getDefaultSettings();
-			$this->writeNewFile($settings);
-		}
-
-		// TODO: validate recognized keys (e.g. the autoload path)
-		// TODO: insert missing keys (with a note-level message): map missing key to a null value
-		// TODO: preserve unrecognized keys (with a warning-level message)
-
-		return $settings;
 	}
 
-	private function writeNewFile(array $settings)
-	{
-		$path = $this->file->getPath();
-		$pathText = json_encode($path);
-
-		$this->logger->note("Settings file missing ({$pathText})");
-		$this->logger->note("Creating settings file ({$pathText})");
-
-		$this->file->write($settings);
-	}
-
-	private static function getDefaultSettings()
+	private static function getValidData(array $input = null)
 	{
 		return array(
-			'src' => null,
-			'autoload' => null
+			'src' => &$input['src'],
+			'autoload' => &$input['autoload']
 		);
+	}
+
+	public function getSrc()
+	{
+		return $this->data['src'];
+	}
+
+	public function setSrc($value)
+	{
+		$this->data['src'] = $value;
+	}
+
+	public function getAutoload()
+	{
+		return $this->data['autoload'];
+	}
+
+	public function setAutoload($value)
+	{
+		$this->data['autoload'] = $value;
 	}
 }
