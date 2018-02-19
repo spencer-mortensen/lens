@@ -176,6 +176,24 @@ class Filesystem
 		return $this->deleteFile($path);
 	}
 
+	public function createEmptyDirectory($path)
+	{
+		set_error_handler($this->errorHandler);
+		$result = mkdir($path, 0777, true);
+		restore_error_handler();
+
+		return $result;
+	}
+
+	public function deleteEmptyDirectory($path)
+	{
+		set_error_handler($this->errorHandler);
+		$result = rmdir($path);
+		restore_error_handler();
+
+		return $result;
+	}
+
 	private function deleteFile($path)
 	{
 		return unlink($path);
@@ -204,6 +222,15 @@ class Filesystem
 		}
 
 		return rmdir($directoryPath);
+	}
+
+	public function rename($oldPath, $newPath)
+	{
+		// TODO:
+		// $oldPath might not exist:
+		// If renaming a file and newname exists, it will be overwritten:
+		// If renaming a directory and newname exists, this function will emit a warning:
+		return rename($oldPath, $newPath);
 	}
 
 	public function search($expression)

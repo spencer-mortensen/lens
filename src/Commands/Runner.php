@@ -36,6 +36,7 @@ use Lens\Reports\Text;
 use Lens\Reports\XUnit;
 use Lens\SuiteParser;
 use Lens\Summarizer;
+use Lens\Updates\Updater;
 use Lens\Web;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
@@ -51,6 +52,9 @@ class Runner implements Command
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Updater */
+	private $updater;
+
 	/** @var Finder */
 	private $finder;
 
@@ -59,6 +63,7 @@ class Runner implements Command
 		$this->arguments = $arguments;
 		$this->paths = Paths::getPlatformPaths();
 		$this->filesystem = new Filesystem();
+		$this->updater = new Updater($this->paths, $this->filesystem);
 		$this->finder = new Finder($this->paths, $this->filesystem);
 	}
 
@@ -70,7 +75,10 @@ class Runner implements Command
 
 		// TODO: if there are any options other than "report", then throw a usage exception
 
-		$this->findPaths($paths);
+		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
+
+		$this->updater->update($paths);
+		$this->finder->find($paths);
 
 		$executable = $this->arguments->getExecutable();
 		$evaluator = new Evaluator($executable, $this->filesystem);
@@ -149,23 +157,6 @@ class Runner implements Command
 
 	}
 	*/
-
-	private function findPaths(array &$paths)
-	{
-		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
-
-		try {
-			$this->finder->find($paths);
-		} catch (LensException $exception) {
-			// The simple test produces an unknown-lens-directory error, but the runner should continue anyway
-			if (
-				(count($paths) === 0) ||
-				($exception->getCode() !== LensException::CODE_UNKNOWN_LENS_DIRECTORY)
-			) {
-				throw $exception;
-			}
-		}
-	}
 
 	private function getAbsoluteTestsPath($relativePath)
 	{

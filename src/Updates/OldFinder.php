@@ -23,32 +23,35 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens;
+namespace Lens\Updates;
 
+use Lens\Filesystem;
+use Lens\LensException;
+use Lens\Settings;
 use SpencerMortensen\Paths\Paths;
 
-class Finder
+class OldFinder
 {
 	/** @var string */
-	const LENS = 'lens';
+	private static $lensDirectoryName = 'lens';
 
 	/** @var string */
-	const COVERAGE = 'coverage';
+	private static $coverageDirectoryName = 'coverage';
 
 	/** @var string */
-	const TESTS = 'tests';
+	private static $testsDirectoryName = 'tests';
 
 	/** @var string */
-	const AUTOLOAD = 'autoload.php';
+	private static $autoloadFileName = 'autoload.php';
 
 	/** @var string */
-	const SETTINGS = 'settings.ini';
+	private static $settingsFileName = 'settings.ini';
 
 	/** @var string */
-	const SRC = 'src';
+	private static $srcDirectoryName = 'src';
 
 	/** @var string */
-	const VENDOR = 'vendor';
+	private static $vendorDirectoryName = 'vendor';
 
 	/** @var Paths */
 	private $paths;
@@ -71,7 +74,7 @@ class Finder
 	/** @var string|null */
 	private $autoload;
 
-	/** @var Settings */
+	/** @var string|null */
 	private $settings;
 
 	/** @var string|null */
@@ -86,18 +89,12 @@ class Finder
 	public function find(array &$paths)
 	{
 		$this->findLensTests($paths);
-
-		// Simple tests might not exist within a Lens directory
-		if ($this->lens === null) {
-			return;
-		}
-
-		$this->findProject();
 		$this->findSettings();
 
 		$settings = new Settings($this->paths, $this->filesystem, $this->settings);
 
 		$this->findSrc($settings);
+		$this->findProject();
 		$this->findAutoload($settings);
 		$this->findCoverage();
 	}
@@ -125,14 +122,11 @@ class Finder
 			$data->setAtoms($atoms);
 			$this->lens = $this->paths->serialize($data);
 
-			$atoms[] = self::TESTS;
+			$atoms[] = self::$testsDirectoryName;
 			$data->setAtoms($atoms);
 			$this->tests = $this->paths->serialize($data);
 		} else {
-			$atoms = $this->getDirectory($parent);
-			$data->setAtoms($atoms);
-
-			$this->tests = $this->paths->serialize($data);
+			throw LensException::unknownLensDirectory();
 		}
 	}
 
@@ -165,8 +159,8 @@ class Finder
 
 	private function getTarget(array $atoms, &$output)
 	{
-		for ($i = count($atoms) - 1; 0 < $i; --$i) {
-			if (($atoms[$i - 1] === self::LENS) && ($atoms[$i] === self::TESTS)) {
+		for ($i = count($atoms) - 1; 0 <= $i; --$i) {
+			if ($atoms[$i] === self::$testsDirectoryName) {
 				$output = array_slice($atoms, 0, $i);
 				return true;
 			}
@@ -175,63 +169,69 @@ class Finder
 		return false;
 	}
 
-	private function getDirectory(array $atoms)
-	{
-		$atom = end($atoms);
-
-		if (is_string($atom) && (substr($atom, -4) === '.php')) {
-			return array_slice($atoms, 0, -1);
-		}
-
-		return $atoms;
-	}
-
 	private function findLensAndTestsByCurrentDirectory()
 	{
 		$basePath = $this->filesystem->getCurrentDirectory();
 
-		$data = $this->paths->deserialize($basePath);
-		$atoms = $data->getAtoms();
-		$atoms[] = self::LENS;
+		if (!$this->findTestsFromDirectory($basePath, $this->tests)) {
+			throw LensException::unknownLensDirectory();
+		}
 
-		$i = count($atoms) - 2;
-
-		do {
-			$data->setAtoms($atoms);
-			$path = $this->paths->serialize($data);
-
-			if ($this->filesystem->isDirectory($path)) {
-				$this->lens = $path;
-				$this->tests = $this->paths->join($this->lens, self::TESTS);
-				return;
-			}
-
-			unset($atoms[$i]);
-		} while (0 <= $i--);
-
-		throw LensException::unknownLensDirectory();
+		$this->lens = dirname($this->tests);
 	}
 
-	private function findProject()
+	private function findTestsFromDirectory($directory, &$output)
 	{
-		$this->project = dirname($this->lens);
+		$data = $this->paths->deserialize($directory);
+		$atoms = $data->getAtoms();
+
+		return (0 < count($atoms)) && (
+			$this->findChild($directory, self::$testsDirectoryName, $output) ||
+			$this->findGrandchild($directory, self::$testsDirectoryName, $output) ||
+			$this->findTestsFromDirectory(dirname($directory), $output)
+		);
+	}
+
+	private function findChild($basePath, $targetName, &$output)
+	{
+		$path = $this->paths->join($basePath, $targetName);
+
+		if (!$this->filesystem->isDirectory($path)) {
+			return false;
+		}
+
+		$output = $path;
+		return true;
+	}
+
+	private function findGrandchild($basePath, $targetName, &$output)
+	{
+		$targetPath = $this->paths->join($basePath, '*', $targetName);
+		$paths = $this->filesystem->search($targetPath);
+		$paths = array_filter($paths, array($this->filesystem, 'isDirectory'));
+
+		if (count($paths) !== 1) {
+			return false;
+		}
+
+		$output = $paths[0];
+		return true;
 	}
 
 	private function findSettings()
 	{
-		$this->settings = $this->paths->join($this->lens, self::SETTINGS);
+		$this->settings = $this->paths->join($this->lens, self::$settingsFileName);
 	}
 
 	private function findSrc(Settings $settings)
 	{
 		$this->findSrcFromSettings($settings) ||
-		$this->findSrcFromProject();
+		$this->findSrcFromLensParent() ||
+		$this->findSrcFromLens();
 
 		if ($this->src === null) {
 			throw LensException::unknownSrcDirectory();
 		}
-
-		$this->setSrc($settings);
 	}
 
 	private function findSrcFromSettings(Settings $settings)
@@ -242,14 +242,22 @@ class Finder
 			return false;
 		}
 
-		$srcPath = $this->paths->join($this->project, $srcValue);
+		$srcPath = $this->paths->join($this->lens, $srcValue);
 		$srcPath = $this->filesystem->getAbsolutePath($srcPath);
+
 		return $this->isDirectory($srcPath, $this->src);
 	}
 
-	private function findSrcFromProject()
+	private function findSrcFromLens()
 	{
-		$srcPath = $this->paths->join($this->project, self::SRC);
+		$srcPath = $this->paths->join($this->lens, self::$srcDirectoryName);
+
+		return $this->isDirectory($srcPath, $this->src);
+	}
+
+	private function findSrcFromLensParent()
+	{
+		$srcPath = $this->paths->join(dirname($this->lens), self::$srcDirectoryName);
 
 		return $this->isDirectory($srcPath, $this->src);
 	}
@@ -264,11 +272,9 @@ class Finder
 		return true;
 	}
 
-	private function setSrc(Settings $settings)
+	private function findProject()
 	{
-		$srcValue = $this->paths->getRelativePath($this->project, $this->src);
-
-		$settings->setSrc($srcValue);
+		$this->project = dirname($this->src);
 	}
 
 	private function findAutoload(Settings $settings)
@@ -280,8 +286,6 @@ class Finder
 		if ($this->autoload === null) {
 			throw LensException::unknownAutoloadFile();
 		}
-
-		$this->setAutoload($settings);
 	}
 
 	private function findAutoloadFromSettings(Settings $settings)
@@ -292,20 +296,20 @@ class Finder
 			return false;
 		}
 
-		$autoloadPath = $this->paths->join($this->project, $autoloadValue);
+		$autoloadPath = $this->paths->join($this->lens, $autoloadValue);
 		$autoloadPath = $this->filesystem->getAbsolutePath($autoloadPath);
 		return $this->isFile($autoloadPath, $this->autoload);
 	}
 
 	private function findAutoloadFromLens()
 	{
-		$autoloadPath = $this->paths->join($this->lens, self::AUTOLOAD);
+		$autoloadPath = $this->paths->join($this->lens, self::$autoloadFileName);
 		return $this->isFile($autoloadPath, $this->autoload);
 	}
 
 	private function findAutoloadFromProject()
 	{
-		$autoloadPath = $this->paths->join($this->project, self::VENDOR, self::AUTOLOAD);
+		$autoloadPath = $this->paths->join($this->project, self::$vendorDirectoryName, self::$autoloadFileName);
 		return $this->isFile($autoloadPath, $this->autoload);
 	}
 
@@ -319,16 +323,9 @@ class Finder
 		return true;
 	}
 
-	private function setAutoload(Settings $settings)
-	{
-		$value = $this->paths->getRelativePath($this->project, $this->autoload);
-
-		$settings->setAutoload($value);
-	}
-
 	private function findCoverage()
 	{
-		$this->coverage = $this->paths->join($this->lens, self::COVERAGE);
+		$this->coverage = $this->paths->join($this->lens, self::$coverageDirectoryName);
 	}
 
 	public function getProject()
