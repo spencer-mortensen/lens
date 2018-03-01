@@ -23,37 +23,34 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Commands;
+namespace Lens;
 
-use Lens\Arguments;
-
-class Version implements Command
+class ComposerInstall
 {
-	/** @var Arguments */
-	private $arguments;
+	/** @var integer */
+	const STDOUT = 1;
 
-	/** @var string */
-	const VERSION = '0.0.54';
+	/** @var integer */
+	const STDERR = 2;
 
-	public function __construct(Arguments $arguments)
+	public function run($workingDirectory = null)
 	{
-		$this->arguments = $arguments;
-	}
+		$command = 'composer install';
 
-	public function run(&$stdout, &$stderr, &$exitCode)
-	{
-		$options = $this->arguments->getOptions();
+		$descriptor = array(
+			self::STDOUT => array('pipe', 'w'),
+			self::STDERR => array('pipe', 'w')
+		);
 
-		if (!isset($options['version'])) {
-			return false;
+		$process = proc_open($command, $descriptor, $pipes, $workingDirectory);
+
+		if (!is_resource($process)) {
+			return null;
 		}
 
-		// TODO: if there are any other options, or any other values, then throw a usage exception
+		fclose($pipes[self::STDOUT]);
+		fclose($pipes[self::STDERR]);
 
-		$stdout = 'lens ' . self::VERSION;
-		$stderr = null;
-		$exitCode = 0;
-
-		return true;
+		return proc_close($process);
 	}
 }

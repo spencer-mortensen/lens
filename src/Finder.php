@@ -51,6 +51,9 @@ class Finder
 	/** @var string */
 	const VENDOR = 'vendor';
 
+	/** @var string */
+	const COMPOSER_SETTINGS = 'composer.json';
+
 	/** @var Paths */
 	private $paths;
 
@@ -316,9 +319,7 @@ class Finder
 
 	private function findAutoload(Settings $settings)
 	{
-		$this->findAutoloadFromSettings($settings) ||
-		$this->findAutoloadFromLens() ||
-		$this->findAutoloadFromProject();
+		$this->autoload = $this->getAutoloadPath($settings);
 
 		if ($this->autoload === null) {
 			throw LensException::unknownAutoloadFile();
@@ -327,39 +328,71 @@ class Finder
 		$this->setAutoload($settings);
 	}
 
-	private function findAutoloadFromSettings(Settings $settings)
+	private function getAutoloadPath(Settings $settings)
+	{
+		$settingsAutoload = $this->getAutoloadPathFromSettings($settings);
+		$lensAutoload = $this->paths->join($this->lens, self::AUTOLOAD);
+		$composerAutoload = $this->paths->join($this->project, self::VENDOR, self::AUTOLOAD);
+
+		$paths = self::getPaths($settingsAutoload, $lensAutoload, $composerAutoload);
+
+		foreach ($paths as $path) {
+			if ($this->isAutoload($path, $composerAutoload)) {
+				return $path;
+			}
+		}
+
+		return null;
+	}
+
+	private function getAutoloadPathFromSettings(Settings $settings)
 	{
 		$autoloadValue = $settings->getAutoload();
 
 		if ($autoloadValue === null) {
+			return null;
+		}
+
+		return $this->paths->join($this->project, $autoloadValue);
+	}
+
+	private static function getPaths()
+	{
+		$paths = array();
+
+		foreach (func_get_args() as $path) {
+			if ($path !== null) {
+				$paths[$path] = $path;
+			}
+		}
+
+		return $paths;
+	}
+
+	private function isAutoload($path, $composerAutoload)
+	{
+		if ($this->filesystem->isFile($path)) {
+			return true;
+		}
+
+		if ($path !== $composerAutoload) {
 			return false;
 		}
 
-		$autoloadPath = $this->paths->join($this->project, $autoloadValue);
-		$autoloadPath = $this->filesystem->getAbsolutePath($autoloadPath);
-		return $this->isFile($autoloadPath, $this->autoload);
-	}
+		$composerSettingsPath = $this->paths->join($this->project, self::COMPOSER_SETTINGS);
 
-	private function findAutoloadFromLens()
-	{
-		$autoloadPath = $this->paths->join($this->lens, self::AUTOLOAD);
-		return $this->isFile($autoloadPath, $this->autoload);
-	}
-
-	private function findAutoloadFromProject()
-	{
-		$autoloadPath = $this->paths->join($this->project, self::VENDOR, self::AUTOLOAD);
-		return $this->isFile($autoloadPath, $this->autoload);
-	}
-
-	private function isFile($path, &$variable)
-	{
-		if (!$this->filesystem->isFile($path)) {
+		if (!$this->filesystem->isFile($composerSettingsPath)) {
 			return false;
 		}
 
-		$variable = $path;
-		return true;
+		$composerInstall = new ComposerInstall();
+		$composerInstall->run($this->project);
+
+		if ($this->filesystem->isFile($path)) {
+			return true;
+		}
+
+		throw LensException::missingComposerAutoloader($this->project);
 	}
 
 	private function setAutoload(Settings $settings)

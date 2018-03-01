@@ -38,24 +38,24 @@ class LensException extends Exception
 	private static $lensExecutable = 'lens';
 
 	/** @var string */
-	private static $lensCommandUrl = 'http://lens.guide/command/';
-	private static $lensTestsFileUrl = 'http://lens.guide/tests-file/';
-	private static $lensGuideUrl = 'http://lens.guide/#guide';
-	private static $lensReportsUrl = 'http://lens.guide/command/';
+	private static $lensCommandUrl = 'http://lens.guide/reference/executable/';
+	private static $lensTestsFileSyntaxUrl = 'http://lens.guide/reference/tests-file/';
+	private static $lensGuideUrl = 'http://lens.guide/get-started/write-a-test/';
+	private static $lensReportsUrl = 'http://lens.guide/reference/executable/';
 	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
-	private static $lensInstallationUrl = 'http://lens.guide/installation/';
+	private static $lensInstallationUrl = 'http://lens.guide/get-started/install-lens/';
 	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
-	private static $lensSettingsFileUrl = 'http://lens.guide/organization/testing/settings.ini/';
-	private static $lensAutoloadFileUrl = 'http://lens.guide/organization/testing/autoload.php/';
+	private static $lensSettingsFileUrl = 'http://lens.guide/reference/organization/lens/settings.ini/';
+	private static $lensAutoloadFileUrl = 'http://lens.guide/reference/organization/lens/autoload.php/';
+	private static $composerInstallationUrl = 'https://getcomposer.org/doc/00-intro.md';
 
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
 	const CODE_UNKNOWN_LENS_DIRECTORY = 3;
 	const CODE_UNKNOWN_SRC_DIRECTORY = 4;
 	const CODE_UNKNOWN_AUTOLOAD_FILE = 5;
-	const CODE_INVALID_SETTINGS_FILE = 5;
-	const CODE_INVALID_SRC_DIRECTORY = 6;
-	const CODE_INVALID_AUTOLOADER_PATH = 7;
+	const CODE_MISSING_COMPOSER_AUTOLOADER = 6;
+	const CODE_INVALID_SETTINGS_FILE = 7;
 	const CODE_INVALID_TESTS_PATH = 8;
 	const CODE_INVALID_TESTS_FILE_SYNTAX = 9;
 	const CODE_INVALID_REPORT = 10;
@@ -191,10 +191,40 @@ class LensException extends Exception
 		$message = "Unable to find the autoload file.";
 
 		$help = array(
-			"You will need an autoloader to load your classes. Read more here\n" . self::$lensAutoloadFileUrl
+			"You will need an autoloader to load your classes. Read more here:\n" . self::$lensAutoloadFileUrl
 		);
 
 		return new self($code, $severity, $message, $help);
+	}
+
+	public static function missingComposerAutoloader($absoluteProjectPath)
+	{
+		$code = self::CODE_MISSING_COMPOSER_AUTOLOADER;
+
+		$severity = self::SEVERITY_ERROR;
+
+		$message = "Unable to find your Composer autoload file.";
+
+		$composerCommand = self::getComposerInstallCommand($absoluteProjectPath);
+
+		$help = array(
+			"Do you have Composer installed? You should install Composer if you haven't already:\n" . self::$composerInstallationUrl,
+			"Have you installed the Composer dependencies? Here is the command you need:\n$composerCommand"
+		);
+
+		return new self($code, $severity, $message, $help);
+	}
+
+	private static function getComposerInstallCommand($absoluteProjectPath)
+	{
+		$relativeProjectPath = self::getRelativePath($absoluteProjectPath);
+
+		if ($relativeProjectPath === '.') {
+			return 'composer install';
+		}
+
+		$escapedRelativeProjectPath = escapeshellarg($relativeProjectPath);
+		return "composer --working-dir={$escapedRelativeProjectPath} install";
 	}
 
 	public static function invalidSettingsFile($path, ErrorException $exception)
@@ -219,25 +249,6 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help, $data, $exception);
 	}
 
-	public static function invalidSrcDirectory($path)
-	{
-		$code = self::CODE_INVALID_SRC_DIRECTORY;
-
-		$severity = self::SEVERITY_NOTICE;
-
-		// TODO: this should check for a directory (not a path)
-		// TODO: this should mention the configuration file
-		$message = self::getInvalidPathMessage($path, 'a src directory path');
-
-		$help = null;
-
-		$data = array(
-			'path' => $path
-		);
-
-		return new self($code, $severity, $message, $help, $data);
-	}
-
 	public static function invalidTestsPath($path)
 	{
 		$code = self::CODE_INVALID_TESTS_PATH;
@@ -245,23 +256,6 @@ class LensException extends Exception
 		$severity = self::SEVERITY_ERROR;
 
 		$message = self::getInvalidPathMessage($path, 'a tests file or directory');
-
-		$help = null;
-
-		$data = array(
-			'path' => $path
-		);
-
-		return new self($code, $severity, $message, $help, $data);
-	}
-
-	public static function invalidAutoloaderPath($path)
-	{
-		$code = self::CODE_INVALID_AUTOLOADER_PATH;
-
-		$severity = self::SEVERITY_ERROR;
-
-		$message = self::getInvalidPathMessage($path, 'an autoloader file');
 
 		$help = null;
 
@@ -354,7 +348,7 @@ class LensException extends Exception
 		// TODO: add $data array with "expected" and "actual"
 
 		$help = array(
-			"Here is an article about the syntax of a tests file:\n" . self::$lensTestsFileUrl
+			"Here is an article about the syntax of a tests file:\n" . self::$lensTestsFileSyntaxUrl
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -365,13 +359,8 @@ class LensException extends Exception
 		$position = $exception->getState();
 		$expectation = $exception->getRule();
 
-		$filesystem = new Filesystem();
-		$paths = Paths::getPlatformPaths();
-
-		$currentDirectory = $filesystem->getCurrentDirectory();
-		$relativePath = $paths->getRelativePath($currentDirectory, $absolutePath);
-
 		$displayer = new Displayer();
+		$relativePath = self::getRelativePath($absolutePath);
 		$pathText = $displayer->display($relativePath);
 
 		$message = "Syntax error in {$pathText}: ";
@@ -395,6 +384,15 @@ class LensException extends Exception
 		}
 
 		return $message;
+	}
+
+	private static function getRelativePath($absolutePath)
+	{
+		$filesystem = new Filesystem();
+		$paths = Paths::getPlatformPaths();
+
+		$currentDirectory = $filesystem->getCurrentDirectory();
+		return $paths->getRelativePath($currentDirectory, $absolutePath);
 	}
 
 	private static function getCoordinates($input, $position)
