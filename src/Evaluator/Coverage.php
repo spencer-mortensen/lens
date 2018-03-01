@@ -26,7 +26,6 @@
 namespace Lens\Evaluator;
 
 use Lens\Filesystem;
-use Lens\Logger;
 use SpencerMortensen\RegularExpressions\Re;
 
 class Coverage
@@ -43,13 +42,9 @@ class Coverage
 	/** @var string */
 	private $php;
 
-	/** @var Logger */
-	private $logger;
-
-	public function __construct(Filesystem $filesystem, Logger $logger)
+	public function __construct(Filesystem $filesystem)
 	{
 		$this->filesystem = $filesystem;
-		$this->logger = $logger;
 	}
 
 	public function run($srcDirectory, array $relativePaths, $autoloadPath)

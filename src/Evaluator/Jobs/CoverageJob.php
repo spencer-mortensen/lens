@@ -27,7 +27,6 @@ namespace Lens\Evaluator\Jobs;
 
 use Lens\Evaluator\Coverage;
 use Lens\Filesystem;
-use Lens\Logger;
 use SpencerMortensen\Exceptions\Exceptions;
 use SpencerMortensen\ParallelProcessor\Fork\ForkJob;
 use SpencerMortensen\ParallelProcessor\Shell\ShellJob;
@@ -78,14 +77,12 @@ class CoverageJob implements ForkJob, ShellJob
 		return "{$this->executable} --internal-coverage={$encoded}";
 	}
 
-	public function start() // TODO: start($send)
+	public function start()
 	{
 		$process = $this->process;
 		// TODO: dependency injection:
 		$filesystem = new Filesystem();
-		// TODO: remove this logger (throw exceptions to the logger in the controller)
-		$logger = new Logger('lens');
-		$coverager = new Coverage($filesystem, $logger);
+		$coverager = new Coverage($filesystem);
 
 		$sendResult = function () use ($process, $coverager) {
 			$code = $coverager->getCode();

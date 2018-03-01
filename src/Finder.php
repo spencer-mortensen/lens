@@ -25,6 +25,7 @@
 
 namespace Lens;
 
+use Lens\Updates\Updater;
 use SpencerMortensen\Paths\Paths;
 
 class Finder
@@ -85,6 +86,31 @@ class Finder
 
 	public function find(array &$paths)
 	{
+		$paths = array_map(array($this, 'getAbsoluteTestsPath'), $paths);
+
+		try {
+			$this->findPaths($paths);
+		} catch (LensException $exception) {
+			$updater = new Updater($this->paths, $this->filesystem);
+			$updater->update($paths);
+
+			$this->findPaths($paths);
+		}
+	}
+
+	private function getAbsoluteTestsPath($relativePath)
+	{
+		$absolutePath = $this->filesystem->getAbsolutePath($relativePath);
+
+		if ($absolutePath === null) {
+			throw LensException::invalidTestsPath($relativePath);
+		}
+
+		return $absolutePath;
+	}
+
+	private function findPaths(array &$paths)
+	{
 		$this->findLensTests($paths);
 
 		// Simple tests might not exist within a Lens directory
@@ -119,24 +145,19 @@ class Finder
 			$path = $data->getAtoms();
 		}
 
-		$parent = $this->getParent($paths);
+		$umbrella = $this->getUmbrella($paths);
 
-		if ($this->getTarget($parent, $atoms)) {
-			$data->setAtoms($atoms);
-			$this->lens = $this->paths->serialize($data);
-
-			$atoms[] = self::TESTS;
-			$data->setAtoms($atoms);
-			$this->tests = $this->paths->serialize($data);
-		} else {
-			$atoms = $this->getDirectory($parent);
-			$data->setAtoms($atoms);
-
-			$this->tests = $this->paths->serialize($data);
+		if ($this->getAncestor($data, $umbrella)) {
+			return;
 		}
+
+		// Simple tests might exist outside the usual Lens directory
+		$atoms = $this->getDirectory($umbrella);
+		$data->setAtoms($atoms);
+		$this->tests = $this->paths->serialize($data);
 	}
 
-	private function getParent(array $paths)
+	private function getUmbrella(array $paths)
 	{
 		$n = count($paths);
 
@@ -146,33 +167,21 @@ class Finder
 
 		$m = min(array_map('count', $paths));
 
-		$parent = array();
+		$umbrella = array();
 
 		for ($i = 0; $i < $m; ++$i) {
 			$atom = $paths[0][$i];
 
 			for ($j = 1; $j < $n; ++$j) {
 				if ($paths[$j][$i] !== $atom) {
-					return $parent;
+					return $umbrella;
 				}
 			}
 
-			$parent[$i] = $atom;
+			$umbrella[$i] = $atom;
 		}
 
-		return $parent;
-	}
-
-	private function getTarget(array $atoms, &$output)
-	{
-		for ($i = count($atoms) - 1; 0 < $i; --$i) {
-			if (($atoms[$i - 1] === self::LENS) && ($atoms[$i] === self::TESTS)) {
-				$output = array_slice($atoms, 0, $i);
-				return true;
-			}
-		}
-
-		return false;
+		return $umbrella;
 	}
 
 	private function getDirectory(array $atoms)
@@ -192,24 +201,58 @@ class Finder
 
 		$data = $this->paths->deserialize($basePath);
 		$atoms = $data->getAtoms();
-		$atoms[] = self::LENS;
 
-		$i = count($atoms) - 2;
+		if (!$this->getAncestor($data, $atoms) && !$this->getDescendant($data, $atoms)) {
+			throw LensException::unknownLensDirectory();
+		}
+	}
+
+	private function getAncestor($data, array $atoms)
+	{
+		for ($i = count($atoms) - 1; 0 < $i; --$i) {
+			if (($atoms[$i - 1] !== self::LENS) || ($atoms[$i] !== self::TESTS)) {
+				continue;
+			}
+
+			$atoms = array_slice($atoms, 0, $i);
+			$data->setAtoms($atoms);
+			$this->lens = $this->paths->serialize($data);
+
+			$atoms[] = self::TESTS;
+			$data->setAtoms($atoms);
+			$this->tests = $this->paths->serialize($data);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	private function getDescendant($data, array $atoms)
+	{
+		$atoms[] = self::LENS;
+		$atoms[] = self::TESTS;
+
+		$i = count($atoms) - 3;
 
 		do {
 			$data->setAtoms($atoms);
 			$path = $this->paths->serialize($data);
 
 			if ($this->filesystem->isDirectory($path)) {
-				$this->lens = $path;
-				$this->tests = $this->paths->join($this->lens, self::TESTS);
-				return;
+				$this->tests = $path;
+
+				array_pop($atoms);
+				$data->setAtoms($atoms);
+				$this->lens = $this->paths->serialize($data);
+
+				return true;
 			}
 
 			unset($atoms[$i]);
 		} while (0 <= $i--);
 
-		throw LensException::unknownLensDirectory();
+		return false;
 	}
 
 	private function findProject()
