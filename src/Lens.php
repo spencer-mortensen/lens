@@ -29,10 +29,10 @@ use Error;
 use Exception;
 use Lens\Exceptions\TerminalMessage;
 use Lens\Exceptions\LogMessage;
-use Lens\Commands\Coverage;
-use Lens\Commands\Runner;
-use Lens\Commands\Test;
-use Lens\Commands\Version;
+use Lens\Commands\LensCoverage;
+use Lens\Commands\LensRunner;
+use Lens\Commands\LensTest;
+use Lens\Commands\LensVersion;
 use SpencerMortensen\Exceptions\Exceptions;
 
 class Lens
@@ -49,8 +49,6 @@ class Lens
 	// lens --report=$report --coverage=$coverage $path ...  # run the specified tests
 	public function __construct()
 	{
-		// TODO: in the ShellClientProcess, pass through any STDERR text from the child process
-
 		Exceptions::on(array($this, 'onError'));
 
 		try {
@@ -81,25 +79,25 @@ class Lens
 
 	private function runCoverage(&$stdout, &$stderr, &$exitCode)
 	{
-		$coverage = new Coverage($this->arguments);
+		$coverage = new LensCoverage($this->arguments);
 		return $coverage->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runTest(&$stdout, &$stderr, &$exitCode)
 	{
-		$test = new Test($this->arguments);
+		$test = new LensTest($this->arguments);
 		return $test->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runVersion(&$stdout, &$stderr, &$exitCode)
 	{
-		$version = new Version($this->arguments);
+		$version = new LensVersion($this->arguments);
 		return $version->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runRunner(&$stdout, &$stderr, &$exitCode)
 	{
-		$runner = new Runner($this->arguments);
+		$runner = new LensRunner($this->arguments);
 		return $runner->run($stdout, $stderr, $exitCode);
 	}
 

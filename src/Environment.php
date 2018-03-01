@@ -23,9 +23,29 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens\Commands;
+namespace Lens;
 
-interface Command
+use Lens\Commands\LensVersion;
+use SpencerMortensen\RegularExpressions\Re;
+
+class Environment
 {
-	public function run(&$stdout = null, &$stderr = null, &$exitCode = null);
+	public function getOperatingSystemName()
+	{
+		return php_uname('s');
+	}
+
+	public function getPhpVersion()
+	{
+		$versionString = phpversion();
+
+		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
+
+		return $versionNumber;
+	}
+
+	public function getLensVersion()
+	{
+		return LensVersion::VERSION;
+	}
 }

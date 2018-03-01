@@ -33,9 +33,6 @@ use SpencerMortensen\Paths\Paths;
 class OldFinder
 {
 	/** @var string */
-	private static $lensDirectoryName = 'lens';
-
-	/** @var string */
 	private static $coverageDirectoryName = 'coverage';
 
 	/** @var string */
@@ -236,7 +233,7 @@ class OldFinder
 
 	private function findSrcFromSettings(Settings $settings)
 	{
-		$srcValue = $settings->getSrc();
+		$srcValue = $settings->get('src');
 
 		if ($srcValue === null) {
 			return false;
@@ -290,7 +287,7 @@ class OldFinder
 
 	private function findAutoloadFromSettings(Settings $settings)
 	{
-		$autoloadValue = $settings->getAutoload();
+		$autoloadValue = $settings->get('autoload');
 
 		if ($autoloadValue === null) {
 			return false;

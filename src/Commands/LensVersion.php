@@ -26,41 +26,34 @@
 namespace Lens\Commands;
 
 use Lens\Arguments;
-use Lens\Evaluator\Jobs\CoverageJob;
-use SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
-class Coverage implements Command
+class LensVersion implements Command
 {
 	/** @var Arguments */
 	private $arguments;
+
+	/** @var string */
+	const VERSION = '0.0.54';
 
 	public function __construct(Arguments $arguments)
 	{
 		$this->arguments = $arguments;
 	}
 
-	public function run(&$stdout, &$stderr, &$exitCode)
+	public function run(&$stdout = null, &$stderr = null, &$exitCode = null)
 	{
 		$options = $this->arguments->getOptions();
-		$input = &$options['internal-coverage'];
 
-		if ($input === null) {
+		if (!isset($options['version'])) {
 			return false;
 		}
 
 		// TODO: if there are any other options, or any other values, then throw a usage exception
 
-		$decoded = base64_decode($input);
-		$decompressed = gzinflate($decoded);
-		$arguments = unserialize($decompressed);
+		$stdout = 'lens ' . self::VERSION;
+		$stderr = null;
+		$exitCode = 0;
 
-		$executable = $this->arguments->getExecutable();
-		list($srcDirectory, $relativePaths, $autoloadPath) = $arguments;
-
-		$job = new CoverageJob($executable, $srcDirectory, $relativePaths, $autoloadPath, $process, $code, $coverage);
-		$process = new ShellServerProcess($job);
-
-		$process->run();
 		return true;
 	}
 }

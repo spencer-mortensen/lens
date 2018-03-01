@@ -25,6 +25,7 @@
 
 namespace Lens;
 
+use Lens\Commands\ComposerInstall;
 use Lens\Updates\Updater;
 use SpencerMortensen\Paths\Paths;
 
@@ -53,6 +54,9 @@ class Finder
 
 	/** @var string */
 	const COMPOSER_SETTINGS = 'composer.json';
+
+	/** @var string */
+	const COMPOSER_DIRECTORY = 'vendor';
 
 	/** @var Paths */
 	private $paths;
@@ -116,12 +120,13 @@ class Finder
 	{
 		$this->findLensTests($paths);
 
-		// Simple tests might not exist within a Lens directory
+		// Simple tests might exist outside the usual Lens directory
 		if ($this->lens === null) {
 			return;
 		}
 
 		$this->findProject();
+		$this->checkComposer();
 		$this->findSettings();
 
 		$settings = new Settings($this->paths, $this->filesystem, $this->settings);
@@ -263,6 +268,28 @@ class Finder
 		$this->project = dirname($this->lens);
 	}
 
+	private function checkComposer()
+	{
+		$composerDirectory = $this->paths->join($this->project, self::COMPOSER_DIRECTORY);
+
+		if ($this->filesystem->isDirectory($composerDirectory)) {
+			return;
+		}
+
+		$composerSettings = $this->paths->join($this->project, self::COMPOSER_SETTINGS);
+
+		if (!$this->filesystem->isFile($composerSettings)) {
+			return;
+		}
+
+		$composerInstall = new ComposerInstall($this->project);
+		$composerInstall->run();
+
+		if (!$this->filesystem->isDirectory($composerDirectory)) {
+			throw LensException::missingComposerDirectory($this->project);
+		}
+	}
+
 	private function findSettings()
 	{
 		$this->settings = $this->paths->join($this->lens, self::SETTINGS);
@@ -282,7 +309,7 @@ class Finder
 
 	private function findSrcFromSettings(Settings $settings)
 	{
-		$srcValue = $settings->getSrc();
+		$srcValue = $settings->get('src');
 
 		if ($srcValue === null) {
 			return false;
@@ -314,16 +341,12 @@ class Finder
 	{
 		$srcValue = $this->paths->getRelativePath($this->project, $this->src);
 
-		$settings->setSrc($srcValue);
+		$settings->set('src', $srcValue);
 	}
 
 	private function findAutoload(Settings $settings)
 	{
 		$this->autoload = $this->getAutoloadPath($settings);
-
-		if ($this->autoload === null) {
-			throw LensException::unknownAutoloadFile();
-		}
 
 		$this->setAutoload($settings);
 	}
@@ -337,17 +360,17 @@ class Finder
 		$paths = self::getPaths($settingsAutoload, $lensAutoload, $composerAutoload);
 
 		foreach ($paths as $path) {
-			if ($this->isAutoload($path, $composerAutoload)) {
+			if ($this->filesystem->isFile($path)) {
 				return $path;
 			}
 		}
 
-		return null;
+		throw LensException::unknownAutoloadFile();
 	}
 
 	private function getAutoloadPathFromSettings(Settings $settings)
 	{
-		$autoloadValue = $settings->getAutoload();
+		$autoloadValue = $settings->get('autoload');
 
 		if ($autoloadValue === null) {
 			return null;
@@ -369,37 +392,11 @@ class Finder
 		return $paths;
 	}
 
-	private function isAutoload($path, $composerAutoload)
-	{
-		if ($this->filesystem->isFile($path)) {
-			return true;
-		}
-
-		if ($path !== $composerAutoload) {
-			return false;
-		}
-
-		$composerSettingsPath = $this->paths->join($this->project, self::COMPOSER_SETTINGS);
-
-		if (!$this->filesystem->isFile($composerSettingsPath)) {
-			return false;
-		}
-
-		$composerInstall = new ComposerInstall();
-		$composerInstall->run($this->project);
-
-		if ($this->filesystem->isFile($path)) {
-			return true;
-		}
-
-		throw LensException::missingComposerAutoloader($this->project);
-	}
-
 	private function setAutoload(Settings $settings)
 	{
 		$value = $this->paths->getRelativePath($this->project, $this->autoload);
 
-		$settings->setAutoload($value);
+		$settings->set('autoload', $value);
 	}
 
 	private function findCoverage()

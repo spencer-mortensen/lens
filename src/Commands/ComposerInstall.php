@@ -23,14 +23,42 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens;
+namespace Lens\Commands;
 
-use SpencerMortensen\Paths\Paths;
-
-class Updater
+class ComposerInstall implements Command
 {
-	public function update()
-	{
+	/** @var integer */
+	const STDOUT = 1;
 
+	/** @var integer */
+	const STDERR = 2;
+
+	/** @var string|null */
+	private $workingDirectory;
+
+	public function __construct($workingDirectory)
+	{
+		$this->workingDirectory = $workingDirectory;
+	}
+
+	public function run(&$stdout = null, &$stderr = null, &$exitCode = null)
+	{
+		$command = 'composer install';
+
+		$descriptor = array(
+			self::STDOUT => array('pipe', 'w'),
+			self::STDERR => array('pipe', 'w')
+		);
+
+		$process = proc_open($command, $descriptor, $pipes, $this->workingDirectory);
+
+		if (!is_resource($process)) {
+			return null;
+		}
+
+		fclose($pipes[self::STDOUT]);
+		fclose($pipes[self::STDERR]);
+
+		return proc_close($process);
 	}
 }

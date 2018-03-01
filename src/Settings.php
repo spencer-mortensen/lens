@@ -59,29 +59,46 @@ class Settings
 
 	private static function getValidData(array $input = null)
 	{
+		$src = self::getNonEmptyString($input['src']);
+		$autoload = self::getNonEmptyString($input['autoload']);
+		$checkForUpdates = self::getBoolean($input['checkForUpdates']);
+
+		if ($checkForUpdates === null) {
+			$checkForUpdates = true;
+		}
+
 		return array(
-			'src' => &$input['src'],
-			'autoload' => &$input['autoload']
+			'src' => $src,
+			'autoload' => $autoload,
+			'checkForUpdates' => $checkForUpdates
 		);
 	}
 
-	public function getSrc()
+	private static function getNonEmptyString(&$value)
 	{
-		return $this->data['src'];
+		if (!is_string($value) || (strlen($value) === 0)) {
+			return null;
+		}
+
+		return $value;
 	}
 
-	public function setSrc($value)
+	private static function getBoolean(&$value)
 	{
-		$this->data['src'] = $value;
+		if (!is_bool($value)) {
+			return null;
+		}
+
+		return $value;
 	}
 
-	public function getAutoload()
+	public function get($key)
 	{
-		return $this->data['autoload'];
+		return $this->data[$key];
 	}
 
-	public function setAutoload($value)
+	public function set($key, $value)
 	{
-		$this->data['autoload'] = $value;
+		$this->data[$key] = $value;
 	}
 }

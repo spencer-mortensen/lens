@@ -29,7 +29,7 @@ use Lens\Arguments;
 use Lens\Evaluator\Jobs\TestJob;
 use SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
-class Test implements Command
+class LensTest implements Command
 {
 	/** @var Arguments */
 	private $arguments;
@@ -39,7 +39,7 @@ class Test implements Command
 		$this->arguments = $arguments;
 	}
 
-	public function run(&$stdout, &$stderr, &$exitCode)
+	public function run(&$stdout = null, &$stderr = null, &$exitCode = null)
 	{
 		$options = $this->arguments->getOptions();
 		$input = &$options['internal-test'];

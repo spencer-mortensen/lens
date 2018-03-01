@@ -129,7 +129,21 @@ class PhpCore
 		'tmpfile' => 'tmpfile',
 		'touch' => 'touch',
 		'umask' => 'umask',
-		'unlink' => 'unlink'
+		'unlink' => 'unlink',
+
+		// Network functions
+		'gethostname' => 'gethostname',
+		'gethostbyname' => 'gethostbyname',
+		'gethostbyaddr' => 'gethostbyaddr',
+		'php_uname' => 'php_uname',
+
+		// Options/Info Functions
+		'getmygid' => 'getmygid',
+		'getmypid' => 'getmypid',
+		'getmyuid' => 'getmyuid',
+		'get_current_user' => 'get_current_user',
+		'getmyinode' => 'getmyinode',
+		'getlastmod' => 'getlastmod'
 	);
 
 	public static function getExternalFunctions()

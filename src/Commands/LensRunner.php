@@ -27,6 +27,7 @@ namespace Lens\Commands;
 
 use Lens\Arguments;
 use Lens\Browser;
+use Lens\Environment;
 use Lens\Evaluator\Evaluator;
 use Lens\Filesystem;
 use Lens\Finder;
@@ -34,13 +35,16 @@ use Lens\LensException;
 use Lens\Reports\Tap;
 use Lens\Reports\Text;
 use Lens\Reports\XUnit;
+use Lens\Settings;
 use Lens\SuiteParser;
 use Lens\Summarizer;
+use Lens\Url;
 use Lens\Web;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
+use SpencerMortensen\RegularExpressions\Re;
 
-class Runner implements Command
+class LensRunner implements Command
 {
 	/** @var Arguments */
 	private $arguments;
@@ -62,15 +66,16 @@ class Runner implements Command
 		$this->finder = new Finder($this->paths, $this->filesystem);
 	}
 
-	public function run(&$stdout, &$stderr, &$exitCode)
+	public function run(&$stdout = null, &$stderr = null, &$exitCode = null)
 	{
 		$options = $this->arguments->getOptions();
 		$paths = $this->arguments->getValues();
-		$report = $this->getReport($options);
+		$reportType = $this->getReportType($options);
 
 		// TODO: if there are any options other than "report", then throw a usage exception
 
 		$this->finder->find($paths);
+
 		$executable = $this->arguments->getExecutable();
 		$evaluator = new Evaluator($executable, $this->filesystem);
 
@@ -90,8 +95,13 @@ class Runner implements Command
 		$summarizer = new Summarizer();
 		$summarizer->summarize($project);
 
+		$report = $this->getReport($reportType);
 		$stdout = $report->getReport($project);
 		$stderr = null;
+
+		if ($this->isUpdateAvailable() && ($reportType === 'text')) {
+			$stdout .= "\n\nA newer version of Lens is available:\n" . Url::LENS_INSTALLATION;
+		}
 
 		if (isset($code, $coverage)) {
 			$web = new Web($this->filesystem);
@@ -110,14 +120,62 @@ class Runner implements Command
 		return true;
 	}
 
-	private function getReport(array $options)
+	private function isUpdateAvailable()
+	{
+		$settingsPath = $this->finder->getSettings();
+
+		if ($settingsPath === null) {
+			return false;
+		}
+
+		$settings = new Settings($this->paths, $this->filesystem, $settingsPath);
+		$checkForUpdates = $settings->get('checkForUpdates');
+
+		if (!$checkForUpdates) {
+			return false;
+		}
+
+		$environment = new Environment();
+		$os = $environment->getOperatingSystemName();
+		$php = $environment->getPhpVersion();
+		$lens = $environment->getLensVersion();
+
+		$data = array(
+			'os' => $os,
+			'php' => $php,
+			'lens' => $lens
+		);
+
+		$url = Url::LENS_CHECK_FOR_UPDATES;
+		$query = http_build_query($data);
+		$latestVersion = file_get_contents("{$url}?{$query}");
+
+		return Re::match('^[0-9]+\\.[0-9]+\\.[0-9]+$', $latestVersion) &&
+			(LensVersion::VERSION !== $latestVersion);
+	}
+
+	private function getReportType(array $options)
 	{
 		$type = &$options['report'];
 
 		if ($type === null) {
-			return new Text();
+			return 'text';
 		}
 
+		switch ($type) {
+			case 'xunit':
+				return 'xunit';
+
+			case 'tap':
+				return 'tap';
+
+			default:
+				throw LensException::invalidReport($type);
+		}
+	}
+
+	private function getReport($type)
+	{
 		switch ($type) {
 			case 'xunit':
 				return new XUnit();
@@ -126,7 +184,7 @@ class Runner implements Command
 				return new Tap();
 
 			default:
-				throw LensException::invalidReport($type);
+				return new Text();
 		}
 	}
 

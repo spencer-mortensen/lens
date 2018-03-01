@@ -140,10 +140,10 @@ class Updater
 
 		$src = $this->old->getSrc();
 		$srcValue = $this->paths->getRelativePath($project, $src);
-		$settings->setSrc($srcValue);
+		$settings->set('src', $srcValue);
 
 		$autoloadValue = $this->paths->getRelativePath($project, $autoload);
-		$settings->setAutoload($autoloadValue);
+		$settings->set('autoload', $autoloadValue);
 	}
 
 	private function updatePaths(array &$paths)

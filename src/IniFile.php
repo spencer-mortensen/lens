@@ -56,7 +56,7 @@ class IniFile
 
 		// TODO: use the "Exceptions" class:
 		set_error_handler(array($this, 'errorHandler'));
-		$settings = parse_ini_string($contents, false);
+		$settings = parse_ini_string($contents, false, INI_SCANNER_TYPED);
 		restore_error_handler();
 
 		if (!is_array($settings)) {

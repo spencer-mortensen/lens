@@ -29,7 +29,6 @@ use Lens\Archivist\Archives\ObjectArchive;
 use Lens\Archivist\Comparer;
 use Lens\Formatter;
 use Lens\Paragraph;
-use SpencerMortensen\RegularExpressions\Re;
 
 class Text implements Report
 {

@@ -28,7 +28,7 @@ namespace Lens;
 use Error;
 use ErrorException;
 use Exception;
-use Lens\Commands\Version;
+use Lens\Commands\LensVersion;
 use SpencerMortensen\Parser\ParserException;
 use SpencerMortensen\Paths\Paths;
 
@@ -37,24 +37,12 @@ class LensException extends Exception
 	/** @var string */
 	private static $lensExecutable = 'lens';
 
-	/** @var string */
-	private static $lensCommandUrl = 'http://lens.guide/reference/executable/';
-	private static $lensTestsFileSyntaxUrl = 'http://lens.guide/reference/tests-file/';
-	private static $lensGuideUrl = 'http://lens.guide/get-started/write-a-test/';
-	private static $lensReportsUrl = 'http://lens.guide/reference/executable/';
-	private static $lensIssuesUrl = 'https://github.com/Spencer-Mortensen/lens/issues';
-	private static $lensInstallationUrl = 'http://lens.guide/get-started/install-lens/';
-	private static $iniSyntaxUrl = 'https://en.wikipedia.org/wiki/INI_file';
-	private static $lensSettingsFileUrl = 'http://lens.guide/reference/organization/lens/settings.ini/';
-	private static $lensAutoloadFileUrl = 'http://lens.guide/reference/organization/lens/autoload.php/';
-	private static $composerInstallationUrl = 'https://getcomposer.org/doc/00-intro.md';
-
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
 	const CODE_UNKNOWN_LENS_DIRECTORY = 3;
 	const CODE_UNKNOWN_SRC_DIRECTORY = 4;
 	const CODE_UNKNOWN_AUTOLOAD_FILE = 5;
-	const CODE_MISSING_COMPOSER_AUTOLOADER = 6;
+	const CODE_MISSING_COMPOSER_DIRECTORY = 6;
 	const CODE_INVALID_SETTINGS_FILE = 7;
 	const CODE_INVALID_TESTS_PATH = 8;
 	const CODE_INVALID_TESTS_FILE_SYNTAX = 9;
@@ -122,7 +110,7 @@ class LensException extends Exception
 		$message = "Unknown Lens command.";
 
 		$help = array(
-			"Here is a list of the Lens commands that you can use:\n" . self::$lensCommandUrl
+			"Here is a list of the Lens commands that you can use:\n" . Url::LENS_COMMAND
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -141,7 +129,7 @@ class LensException extends Exception
 		$message = "Lens encountered an error.";
 
 		$help = array(
-			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . self::$lensIssuesUrl
+			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . Url::LENS_ISSUES
 		);
 
 		$data = null;
@@ -158,7 +146,7 @@ class LensException extends Exception
 		$message = "Unable to find the \"lens\" directory.";
 
 		$help = array(
-			"Do you have a \"lens\" directory? If not, you should check out this short guide to get started:\n" . self::$lensGuideUrl,
+			"Do you have a \"lens\" directory? If not, you should check out this short guide to get started:\n" . Url::LENS_GUIDE,
 			"Is your lens directory called \"lens\"? You should use that name exactly, without any spelling or capitalization differences.",
 			"Is your \"lens\" directory located right inside your project directory?",
 			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/lens/tests"
@@ -176,7 +164,7 @@ class LensException extends Exception
 		$message = "Unable to find the source-code directory.";
 
 		$help = array(
-			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.ini\" file and customize the \"src\" path. You can read more about the \"settings.ini\" file here:\n" . self::$lensSettingsFileUrl
+			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.ini\" file and customize the \"src\" path. You can read more about the \"settings.ini\" file here:\n" . Url::LENS_SETTINGS
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -191,25 +179,25 @@ class LensException extends Exception
 		$message = "Unable to find the autoload file.";
 
 		$help = array(
-			"You will need an autoloader to load your classes. Read more here:\n" . self::$lensAutoloadFileUrl
+			"You will need an autoloader to load your classes. Read more here:\n" . Url::LENS_AUTOLOADER
 		);
 
 		return new self($code, $severity, $message, $help);
 	}
 
-	public static function missingComposerAutoloader($absoluteProjectPath)
+	public static function missingComposerDirectory($absoluteProjectPath)
 	{
-		$code = self::CODE_MISSING_COMPOSER_AUTOLOADER;
+		$code = self::CODE_MISSING_COMPOSER_DIRECTORY;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = "Unable to find your Composer autoload file.";
+		$message = "Unable to find your Composer vendor directory.";
 
 		$composerCommand = self::getComposerInstallCommand($absoluteProjectPath);
 
 		$help = array(
-			"Do you have Composer installed? You should install Composer if you haven't already:\n" . self::$composerInstallationUrl,
-			"Have you installed the Composer dependencies? Here is the command you need:\n$composerCommand"
+			"Is Composer installed? You should install Composer now, if you haven't already:\n" . Url::COMPOSER_INSTALLATION,
+			"Once Composer is installed, you should download the project dependencies like this:\n$composerCommand"
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -236,7 +224,7 @@ class LensException extends Exception
 		$message = "The settings file isn't a valid INI file.";
 
 		$help = array(
-			"Here is an article about the INI file format:\n" . self::$iniSyntaxUrl
+			"Here is an article about the INI file format:\n" . Url::INI_SYNTAX
 		);
 
 		// TODO: convert this absolute path into a relative path (based on the current working directory)
@@ -348,7 +336,7 @@ class LensException extends Exception
 		// TODO: add $data array with "expected" and "actual"
 
 		$help = array(
-			"Here is an article about the syntax of a tests file:\n" . self::$lensTestsFileSyntaxUrl
+			"Here is an article about the syntax of a tests file:\n" . Url::LENS_TESTS_FILE_SYNTAX
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -450,11 +438,11 @@ class LensException extends Exception
 		$reportText = $displayer->display($reportType);
 		$message = "There is no report called {$reportText}!";
 
-		$version = Version::VERSION;
+		$version = LensVersion::VERSION;
 
 		$help = array(
-			"Make sure that the report name is spelled correctly. Here is a list of the supported reports:\n" . self::$lensReportsUrl,
-			"Are you using the current version of Lens? (Your version is \"lens {$version}.\") If you need it, you can get the current version here:\n" . self::$lensInstallationUrl
+			"Make sure that the report name is spelled correctly. Here is a list of the supported reports:\n" . Url::LENS_REPORTS,
+			"Are you using the current version of Lens? (Your version is \"lens {$version}.\") If you need it, you can get the current version here:\n" . Url::LENS_INSTALLATION
 		);
 
 		return new self($code, $severity, $message, $help);
