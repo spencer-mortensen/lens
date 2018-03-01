@@ -27,8 +27,7 @@
         "spencer-mortensen/parallel-processor": "~3.0",
         "spencer-mortensen/parser": "~3.0",
         "spencer-mortensen/paths": "~0.0",
-        "spencer-mortensen/regular-expressions": "~1.2",
-        "monolog/monolog": "~1.23"
+        "spencer-mortensen/regular-expressions": "~1.2"
     },
     "bin": [
         "bin/lens"
