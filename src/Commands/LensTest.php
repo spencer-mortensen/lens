@@ -55,9 +55,9 @@ class LensTest implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
+		list($src, $autoload, $cache, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
 
-		$job = new TestJob($executable, $srcDirectory, $autoloadPath, $namespace, $uses, $prePhp, $script, $postPhp, $process, $results, $coverage);
+		$job = new TestJob($executable, $src, $autoload, $cache, $namespace, $uses, $prePhp, $script, $postPhp, $process, $results, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

@@ -51,14 +51,14 @@ class Evaluator
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
 		$this->processor = new Processor();
-		$this->useForks = function_exists('pcntl_fork');
+		$this->useForks = function_exists('pcntl_fork') && false; // TODO
 	}
 
-	public function run($srcDirectory, $autoloadPath, array $suites)
+	public function run($src, $autoload, $cache, array $suites)
 	{
 		// TODO: run this only if coverage is enabled:
-		$this->startCoverage($srcDirectory, $autoloadPath, $code, $executableLines);
-		$this->startTests($srcDirectory, $autoloadPath, $suites, $executedLines);
+		$this->startCoverage($src, $autoload, $code, $executableLines);
+		$this->startTests($src, $autoload, $cache, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -135,7 +135,7 @@ class Evaluator
 		return $coverage;
 	}
 
-	private function startTests($srcDirectory, $autoloadPath, array &$suites, array &$coverage = null)
+	private function startTests($src, $autoload, $cache, array &$suites, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -143,8 +143,9 @@ class Evaluator
 			foreach ($suite['tests'] as $testLine => &$test) {
 				foreach ($test['cases'] as $caseLine => &$case) {
 					$this->startTest(
-						$srcDirectory,
-						$autoloadPath,
+						$src,
+						$autoload,
+						$cache,
 						$suite['namespace'],
 						$suite['uses'],
 						$case['input']['code'],
@@ -160,11 +161,12 @@ class Evaluator
 		}
 	}
 
-	private function startTest($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
+	private function startTest($src, $autoload, $cache, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
 		$this->startTestJob(
-			$srcDirectory,
-			$autoloadPath,
+			$src,
+			$autoload,
+			$cache,
 			$namespace,
 			$uses,
 			$fixturePhp,
@@ -175,8 +177,9 @@ class Evaluator
 		);
 
 		$this->startTestJob(
-			$srcDirectory,
-			$autoloadPath,
+			$src,
+			$autoload,
+			$cache,
 			$namespace,
 			$uses,
 			$fixturePhp,
@@ -186,12 +189,13 @@ class Evaluator
 		);
 	}
 
-	private function startTestJob($srcDirectory, $autoloadPath, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
+	private function startTestJob($src, $autoload, $cache, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
-			$srcDirectory,
-			$autoloadPath,
+			$src,
+			$autoload,
+			$cache,
 			$namespace,
 			$uses,
 			$fixturePhp,

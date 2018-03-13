@@ -35,6 +35,18 @@ class Finder
 	const LENS = 'lens';
 
 	/** @var string */
+	const CACHE = 'cache';
+
+	/** @var string */
+	const MOCKS = 'mocks';
+
+	/** @var string */
+	const CLASSES = 'classes';
+
+	/** @var string */
+	const FUNCTIONS = 'functions.php';
+
+	/** @var string */
 	const COVERAGE = 'coverage';
 
 	/** @var string */
@@ -69,6 +81,9 @@ class Finder
 
 	/** @var string|null */
 	private $lens;
+
+	/** @var string|null */
+	private $cache;
 
 	/** @var string|null */
 	private $coverage;
@@ -133,6 +148,7 @@ class Finder
 
 		$this->findSrc($settings);
 		$this->findAutoload($settings);
+		$this->findCache($settings);
 		$this->findCoverage();
 	}
 
@@ -399,6 +415,41 @@ class Finder
 		$settings->set('autoload', $value);
 	}
 
+	private function findCache(Settings $settings)
+	{
+		$this->findCacheFromSettings($settings) ||
+		$this->findCacheFromLens();
+
+		$this->setCache($settings);
+	}
+
+	private function findCacheFromSettings(Settings $settings)
+	{
+		$cacheValue = $settings->get('cache');
+
+		if ($cacheValue === null) {
+			return false;
+		}
+
+		// TODO: accept absolute paths
+		$this->cache = $this->paths->join($this->project, $cacheValue);
+		return true;
+	}
+
+	private function findCacheFromLens()
+	{
+		$this->cache = $this->paths->join($this->lens, self::CACHE);
+		return true;
+	}
+
+	private function setCache(Settings $settings)
+	{
+		// TODO: accept absolute paths
+		$cacheValue = $this->paths->getRelativePath($this->project, $this->cache);
+
+		$settings->set('cache', $cacheValue);
+	}
+
 	private function findCoverage()
 	{
 		$this->coverage = $this->paths->join($this->lens, self::COVERAGE);
@@ -412,6 +463,11 @@ class Finder
 	public function getLens()
 	{
 		return $this->lens;
+	}
+
+	public function getCache()
+	{
+		return $this->cache;
 	}
 
 	public function getCoverage()

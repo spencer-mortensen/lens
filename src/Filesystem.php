@@ -151,7 +151,7 @@ class Filesystem
 
 	private static function createDirectory($path)
 	{
-		return mkdir($path, 0777, true);
+		return mkdir($path, 0775, true);
 	}
 
 	private static function writeFileContents($path, $contents)

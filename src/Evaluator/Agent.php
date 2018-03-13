@@ -43,12 +43,19 @@ abstract class Agent
 		self::$calls = array();
 	}
 
-	public static function record($object, $method, array $arguments)
+	public static function call($context, $method, array $arguments)
+	{
+		self::record($context, $method, $arguments);
+
+		return self::play();
+	}
+
+	private static function record($object, $method, array $arguments)
 	{
 		self::$calls[] = array($object, $method, $arguments);
 	}
 
-	public static function play()
+	private static function play()
 	{
 		if (self::$script === null) {
 			return null;

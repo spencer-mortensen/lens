@@ -179,7 +179,8 @@ class LensException extends Exception
 		$message = "Unable to find the autoload file.";
 
 		$help = array(
-			"You will need an autoloader to load your classes. Read more here:\n" . Url::LENS_AUTOLOADER
+			"If you do have an autoloader, then add the autoloader path to your \"settings.ini\" file:\n" . Url::LENS_SETTINGS,
+			"If you don't have an autoloader, then create one now:\n" . Url::LENS_AUTOLOADER
 		);
 
 		return new self($code, $severity, $message, $help);

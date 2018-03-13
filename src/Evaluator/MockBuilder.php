@@ -34,30 +34,36 @@ use SpencerMortensen\RegularExpressions\Re;
 
 class MockBuilder
 {
-	public function getMockClassPhp($namespacedClass)
+	public function getMockClassPhp($className)
 	{
+		// TODO: mock interfaces, abstract classes, and missing classes
 		// TODO: check that the $namespacedClass exists
-		$class = new ReflectionClass($namespacedClass);
+		$class = new ReflectionClass($className);
 
 		$namePhp = $class->getShortName();
 		$methodsPhp = $this->getMethodsListPhp($class);
 
-		return "class {$namePhp} extends \\{$namespacedClass}\n{\n{$methodsPhp}\n}";
+		return "class {$namePhp}\n{\n{$methodsPhp}\n}";
 	}
 
 	private function getMethodsListPhp(ReflectionClass $class)
 	{
-		$methodsPhp = array(
-			'__construct' => $this->getMethodPhp('__construct', '')
-		);
+		$methodsPhp = array();
+
+		$this->addMethod($methodsPhp, 'public', '__construct', '');
+		$this->addMethod($methodsPhp, 'public', '__call', '$function, array $arguments', '$this', '$function', '$arguments');
+		$this->addMethod($methodsPhp, 'public static', '__callStatic', '$function, array $arguments', '__CLASS__', '$function', '$arguments');
+		$this->addMethod($methodsPhp, 'public', '__get', '$name');
+		$this->addMethod($methodsPhp, 'public', '__set', '$name, $value');
+		$this->addMethod($methodsPhp, 'public', '__isset', '$name');
+		$this->addMethod($methodsPhp, 'public', '__unset', '$name');
+		$this->addMethod($methodsPhp, 'public', '__toString', '');
+		$this->addMethod($methodsPhp, 'public', '__invoke', '');
+		$this->addMethod($methodsPhp, 'public static', '__setState', 'array $properties', '__CLASS__', '__FUNCTION__', 'func_get_args()');
 
 		$methods = $class->getMethods(ReflectionMethod::IS_PUBLIC);
 
 		foreach ($methods as $method) { /** @var ReflectionMethod $method */
-			if ($method->isStatic() || $method->isFinal()) {
-				continue;
-			}
-
 			$namePhp = $method->getShortName();
 			$methodPhp = &$methodsPhp[$namePhp];
 
@@ -65,34 +71,68 @@ class MockBuilder
 				continue;
 			}
 
-			$parametersPhp = $this->getParametersListPhp($method);
-			$bodyPhp = $this->getBodyPhp('$this', "\t\t");
-
-			$methodPhp = "\tpublic function {$namePhp}({$parametersPhp})\n\t{\n{$bodyPhp}\n\t}";
+			$methodPhp = $this->getMethodPhp($method);
 		}
 
 		return implode("\n\n", $methodsPhp);
 	}
 
-	private function getMethodPhp($namePhp, $parametersPhp)
+	private function addMethod(array &$methods, $typePhp, $namePhp, $parametersPhp, $contextPhp = '$this', $functionPhp = '__FUNCTION__', $argumentsPhp = 'func_get_args()')
 	{
-		$bodyPhp = $this->getBodyPhp('$this', "\t\t");
+		$typePhp .= ' function';
+		$bodyPhp = $this->getAgentPhp("\t\t", $contextPhp, $functionPhp, $argumentsPhp);
+		$methodPhp = $this->getFunctionPhp("\t", $typePhp, $namePhp, $parametersPhp, $bodyPhp);
 
-		return "\tpublic function {$namePhp}({$parametersPhp})\n\t{\n{$bodyPhp}\n\t}";
+		$methods[$namePhp] = $methodPhp;
 	}
 
-	public function getMockFunctionPhp($namespacedFunction)
+	private function getMethodPhp(ReflectionMethod $method)
 	{
-		$function = new ReflectionFunction($namespacedFunction);
+		$typePhp = $this->getMethodTypePhp($method);
+		$namePhp = $method->getShortName();
+		$parametersPhp = $this->getFunctionParametersPhp($method);
+		$bodyPhp = $this->getMethodBodyPhp($method);
 
-		$namePhp = $function->getShortName();
-		$parametersPhp = $this->getParametersListPhp($function);
-		$bodyPhp = $this->getBodyPhp('null', "\t");
-
-		return "function {$namePhp}({$parametersPhp})\n{\n{$bodyPhp}\n}";
+		return $this->getFunctionPhp("\t", $typePhp, $namePhp, $parametersPhp, $bodyPhp);
 	}
 
-	private function getParametersListPhp(ReflectionFunctionAbstract $function)
+	private function getMethodTypePhp(ReflectionMethod $method)
+	{
+		$attributes = array();
+
+		if ($method->isFinal()) {
+			$attributes[] = 'final';
+		}
+
+		if ($method->isAbstract()) {
+			$attributes[] = 'abstract';
+		}
+
+		$attributes[] = $this->getVisibility($method);
+
+		if ($method->isStatic()) {
+			$attributes[] = 'static';
+		}
+
+		$attributes[] = 'function';
+
+		return implode(' ', $attributes);
+	}
+
+	private function getVisibility(ReflectionMethod $method)
+	{
+		if ($method->isPrivate()) {
+			return 'private';
+		}
+
+		if ($method->isProtected()) {
+			return 'protected';
+		}
+
+		return 'public';
+	}
+
+	private function getFunctionParametersPhp(ReflectionFunctionAbstract $function)
 	{
 		$mockParametersPhp = array();
 
@@ -188,9 +228,42 @@ class MockBuilder
 		return false;
 	}
 
-	private function getBodyPhp($contextPhp, $padding)
+	private function getMethodBodyPhp(ReflectionMethod $method)
 	{
-		return "{$padding}\\Lens\\Evaluator\\Agent::record({$contextPhp}, __FUNCTION__, func_get_args());\n" .
-			"{$padding}return eval(\\Lens\\Evaluator\\Agent::play());";
+		$contextPhp = $this->getMethodContextPhp($method);
+
+		return $this->getAgentPhp("\t\t", $contextPhp, '__FUNCTION__', 'func_get_args()');
+	}
+
+	private function getMethodContextPhp(ReflectionMethod $method)
+	{
+		if ($method->isStatic()) {
+			return '__CLASS__';
+		}
+
+		return '$this';
+	}
+
+	public function getMockFunctionPhp($namespacedFunction)
+	{
+		$function = new ReflectionFunction($namespacedFunction);
+
+		$namePhp = $function->getShortName();
+		$parametersPhp = $this->getFunctionParametersPhp($function);
+		$bodyPhp = $this->getAgentPhp("\t", 'null', '__FUNCTION__', 'func_get_args()');
+
+		return $this->getFunctionPhp('', 'function', $namePhp, $parametersPhp, $bodyPhp);
+	}
+
+	private function getAgentPhp($padding, $contextPhp, $functionPhp, $argumentsPhp)
+	{
+		$namespace = __NAMESPACE__;
+
+		return "{$padding}return eval(\\{$namespace}\\Agent::call({$contextPhp}, {$functionPhp}, {$argumentsPhp}));";
+	}
+
+	private function getFunctionPhp($padding, $typePhp, $namePhp, $parametersPhp, $bodyPhp)
+	{
+		return "{$padding}{$typePhp} {$namePhp}({$parametersPhp})\n{$padding}{\n{$bodyPhp}\n{$padding}}";
 	}
 }

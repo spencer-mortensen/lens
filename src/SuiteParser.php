@@ -150,8 +150,6 @@ EOS;
 		$uses = $match[2];
 		$tests = $match[3];
 
-		self::useMocks($namespace, $uses, $tests);
-
 		return array(
 			'namespace' => $namespace,
 			'uses' => $uses,
@@ -294,11 +292,6 @@ EOS;
 		);
 	}
 
-	private static function getText($input, $begin, $end)
-	{
-		return trim(substr($input, $begin, $end - $begin));
-	}
-
 	private static function extractScript(&$php)
 	{
 		$script = array();
@@ -339,93 +332,5 @@ EOS;
 		$code = $matches[3];
 
 		return array($line, $code);
-	}
-
-	private static function useMocks($namespace, array $uses, array &$tests)
-	{
-		foreach ($tests as &$test) {
-			foreach ($test['cases'] as &$case) {
-				self::useFixtureMocks($namespace, $uses, $case['input']['code']);
-			}
-		}
-	}
-
-	private static function useFixtureMocks($namespace, array $uses, &$php)
-	{
-		$lines = Re::split('\\r?\\n', $php);
-
-		foreach ($lines as &$line) {
-			if (self::isInstantiation($line, $name, $class, $arguments)) {
-				$absoluteClass = self::getAbsoluteClass($namespace, $uses, $class);
-				$mockClass = "\\Lens\\Mock{$absoluteClass}";
-				$line = self::getInstantiationPhp($name, $mockClass, $arguments);
-			}
-		}
-
-		$php = self::getValidString(implode("\n", $lines));
-	}
-
-	private static function isInstantiation($php, &$name, &$class, &$arguments)
-	{
-		$expression = '^\$(?<name>[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?<class>[a-zA-Z_0-9\\\\]+)\\h*\\((?<arguments>.*?)\\);$';
-
-		if (!Re::match($expression, $php, $match)) {
-			return false;
-		}
-
-		$name = $match['name'];
-		$class = $match['class'];
-		$arguments = $match['arguments'];
-
-		return true;
-	}
-
-	private static function getAbsoluteClass($namespace, array $uses, $class)
-	{
-		if (substr($class, 0, 1) === '\\') {
-			return $class;
-		}
-
-		if (self::resolveUses($uses, $class)) {
-			return $class;
-		}
-
-		if ($namespace === null) {
-			return "\\{$class}";
-		}
-
-		return "\\{$namespace}\\{$class}";
-	}
-
-	private static function resolveUses(array $uses, &$class)
-	{
-		$names = explode('\\', $class, 2);
-		$baseName = $names[0];
-		$basePath = &$uses[$baseName];
-
-		if ($basePath === null) {
-			return false;
-		}
-
-		$names[0] = $basePath;
-		$class = '\\' . implode('\\', $names);
-
-		return true;
-	}
-
-	private static function getInstantiationPhp($name, $class, $arguments)
-	{
-		return "\${$name} = new {$class}({$arguments});";
-	}
-
-	private static function getValidString($input)
-	{
-		$input = trim($input);
-
-		if (strlen($input) === 0) {
-			return null;
-		}
-
-		return $input;
 	}
 }

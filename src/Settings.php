@@ -61,6 +61,7 @@ class Settings
 	{
 		$src = self::getNonEmptyString($input['src']);
 		$autoload = self::getNonEmptyString($input['autoload']);
+		$cache = self::getNonEmptyString($input['cache']);
 		$checkForUpdates = self::getBoolean($input['checkForUpdates']);
 
 		if ($checkForUpdates === null) {
@@ -70,6 +71,7 @@ class Settings
 		return array(
 			'src' => $src,
 			'autoload' => $autoload,
+			'cache' => $cache,
 			'checkForUpdates' => $checkForUpdates
 		);
 	}

@@ -27,7 +27,10 @@ namespace Lens\Evaluator;
 
 use Lens\Archivist\Archivist;
 use Lens\Archivist\Archives\ObjectArchive;
+use Lens\Filesystem;
 use SpencerMortensen\Exceptions\Exceptions;
+use SpencerMortensen\RegularExpressions\Re;
+use SpencerMortensen\Paths\Paths;
 
 class Test
 {
@@ -35,10 +38,10 @@ class Test
 	private $archivist;
 
 	/** @var string */
-	private $srcDirectory;
+	private $src;
 
 	/** @var string */
-	private $autoloadPath;
+	private $autoload;
 
 	/** @var null|string */
 	private $contextPhp;
@@ -58,14 +61,18 @@ class Test
 	/** @var CoverageExtractor */
 	private $coverageExtractor;
 
+	/** @var string */
+	private $cache;
+
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($srcDirectory, $autoloadPath)
+	public function __construct($src, $autoload, $cache)
 	{
 		$this->archivist = new Archivist();
-		$this->srcDirectory = $srcDirectory;
-		$this->autoloadPath = $autoloadPath;
+		$this->src = $src;
+		$this->autoload = $autoload;
+		$this->cache = $cache;
 	}
 
 	public function getPreState()
@@ -88,11 +95,10 @@ class Test
 		$this->contextPhp = self::getContextPhp($namespace, $uses);
 		$prePhp = self::combine($this->contextPhp, $prePhp);
 		$postPhp = self::combine($this->contextPhp, $postPhp);
-
 		$this->script = $script;
-
 		$this->examiner = new Examiner();
-		$this->prepare($namespace);
+
+		$this->prepare($namespace, $uses, $postPhp);
 
 		Exceptions::on(array($this, 'prePhp'));
 
@@ -193,17 +199,85 @@ class Test
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private function prepare($namespace)
+	private function prepare($namespace, array $uses, $php)
 	{
-		$autoloader = new Autoloader();
+		// TODO: dependency injection
+		$paths = Paths::getPlatformPaths();
+		$filesystem = new Filesystem();
 
-		eval($autoloader->getMockFunctionsPhp($namespace));
+		$mockFunctions = new MockFunctions($paths, $filesystem, $this->cache);
+		$mockFunctions->declareMockFunctions($namespace);
 
-		if (is_string($this->autoloadPath)) {
-			require $this->autoloadPath;
+		$liveClasses = $this->getLiveClasses($namespace, $uses, $php);
+		new Autoloader($paths, $filesystem, $this->autoload, $this->cache, $liveClasses);
+	}
+
+	private function getLiveClasses($namespace, $uses, $php)
+	{
+		$classes = array();
+
+		if ($this->script === null) {
+			return $classes;
 		}
 
-		$autoloader->register();
+		$lines = Re::split('\\r?\\n', $php);
+
+		foreach ($lines as $line) {
+			if (self::isInstantiation($line, $name, $class, $arguments)) {
+				$absoluteClass = self::getAbsoluteClass($namespace, $uses, $class);
+				$classes[$absoluteClass] = $absoluteClass;
+			}
+		}
+
+		return $classes;
+	}
+
+	private static function isInstantiation($php, &$name, &$class, &$arguments)
+	{
+		$expression = '^\$(?<name>[a-zA-Z_0-9]+)\\h*=\\h*new\\h+(?<class>[a-zA-Z_0-9\\\\]+)\\h*\\((?<arguments>.*?)\\);$';
+
+		if (!Re::match($expression, $php, $match)) {
+			return false;
+		}
+
+		$name = $match['name'];
+		$class = $match['class'];
+		$arguments = $match['arguments'];
+
+		return true;
+	}
+
+	private static function getAbsoluteClass($namespace, array $uses, $class)
+	{
+		if (substr($class, 0, 1) === '\\') {
+			return substr($class, 1);
+		}
+
+		if (self::resolveUses($uses, $class)) {
+			return $class;
+		}
+
+		if ($namespace === null) {
+			return $class;
+		}
+
+		return "{$namespace}\\{$class}";
+	}
+
+	private static function resolveUses(array $uses, &$class)
+	{
+		$names = explode('\\', $class, 2);
+		$baseName = $names[0];
+		$basePath = &$uses[$baseName];
+
+		if ($basePath === null) {
+			return false;
+		}
+
+		$names[0] = $basePath;
+		$class = implode('\\', $names);
+
+		return true;
 	}
 
 	private function getState($calls = null)
@@ -260,6 +334,7 @@ class Test
 		$function = self::getTail($function, '\\');
 	}
 
+	// TODO: reconsider this:
 	private static function removeMockObjectNamespace(ObjectArchive $object)
 	{
 		$class = $object->getClass();
@@ -274,11 +349,11 @@ class Test
 
 	private function startCoverage()
 	{
-		if (($this->script === null) || ($this->srcDirectory === null)) {
+		if (($this->script === null) || ($this->src === null)) {
 			return;
 		}
 
-		$this->coverageExtractor = new CoverageExtractor($this->srcDirectory);
+		$this->coverageExtractor = new CoverageExtractor($this->src);
 		$this->coverageExtractor->start();
 
 	}

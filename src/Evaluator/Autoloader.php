@@ -25,100 +25,267 @@
 
 namespace Lens\Evaluator;
 
+use Lens\Filesystem;
+use Lens\Finder;
+use ReflectionClass;
+use SpencerMortensen\Paths\Paths;
+
 class Autoloader
 {
+	/** @var Paths */
+	private $paths;
+
+	/** @var Filesystem */
+	private $filesystem;
+
 	/** @var string */
-	private $mockPrefix;
+	private $autoload;
 
-	/** @var integer */
-	private $mockPrefixLength;
+	/** @var string */
+	private $cache;
 
-	/** @var MockBuilder */
-	private $mockBuilder;
+	/** @var array */
+	private $liveClasses;
 
-	public function __construct()
+	/** @var array */
+	private $userAutoloaders;
+
+	/** @var array */
+	private $map;
+
+	/** @var array */
+	private $externalClasses;
+
+	/** @var boolean */
+	private static $mustReboot;
+
+	public function __construct(Paths $paths, Filesystem $filesystem, $autoload, $cache, array $liveClasses)
 	{
-		$this->mockPrefix = 'Lens\\Mock\\';
-		$this->mockPrefixLength = strlen($this->mockPrefix);
-		$this->mockBuilder = new MockBuilder();
+		$this->paths = $paths;
+		$this->filesystem = $filesystem;
+		$this->autoload = $autoload;
+		$this->cache = $cache;
+		$this->liveClasses = $liveClasses;
+
+		$this->userAutoloaders = null;
+
+		$this->map = $this->getMap();
+
+		$this->externalClasses = PhpExternal::getClasses();
+		self::$mustReboot = false;
+
+		spl_autoload_register(array($this, 'autoload'));
 	}
 
-	public function register()
+	public function __destruct()
 	{
-		$autoloader = array($this, 'autoloader');
+		$mapPath = $this->getMapPath();
+		$json = json_encode($this->map);
 
-		spl_autoload_register($autoloader);
+		$this->filesystem->write($mapPath, $json);
 	}
 
-	public function autoloader($class)
+	public static function mustReboot()
 	{
-		eval($this->getMockPhp($class));
+		return self::$mustReboot;
 	}
 
-	private function getMockPhp($class)
+	private function getMap()
 	{
-		$namespace = $this->getNamespace($class);
+		$mapPath = $this->getMapPath();
 
-		if (strncmp($class, $this->mockPrefix, $this->mockPrefixLength) === 0) {
-			$parentClass = substr($class, $this->mockPrefixLength);
+		$json = $this->filesystem->read($mapPath);
+		$map = json_decode($json, true);
 
-			return $this->getMockClassPhp($namespace, $parentClass);
+		if (!is_array($map)) {
+			$map = array();
 		}
 
-		return $this->getMockFunctionsPhp($namespace);
+		return $map;
 	}
 
-	private function getNamespace($class)
+	private function getMapPath()
 	{
-		$slash = strrpos($class, '\\');
+		return $this->paths->join($this->cache, 'map.json');
+	}
 
-		if (!is_integer($slash)) {
-			return null;
+	public function autoload($class)
+	{
+		if ($this->isLiveClass($class)) {
+			return $this->autoloadLiveClass($class);
 		}
 
-		return substr($class, 0, $slash);
+		// TODO: What if $class is *already* a global class?
+		return $this->autoloadMockClass($class) ||
+			$this->autoloadMockDangerousGlobalClass($class);
 	}
 
-	private function getMockClassPhp($childNamespace, $parentClass)
+	private function isLiveClass($class)
 	{
-		$namespacePhp = self::getNamespacePhp($childNamespace);
-		$childClassPhp = $this->mockBuilder->getMockClassPhp($parentClass);
-
-		return "{$namespacePhp}\n\n{$childClassPhp}";
+		return isset($this->liveClasses[$class]);
 	}
 
-	private static function getNamespacePhp($namespace)
+	private function autoloadLiveClass($class)
 	{
-		return "namespace {$namespace};";
+		return $this->autoloadLiveClassFromMap($class) ||
+			$this->autoloadLiveClassFromUser($class);
 	}
 
-	public function getMockFunctionsPhp($namespace)
+	private function autoloadLiveClassFromMap($class)
 	{
-		if ($namespace === null) {
-			return null;
+		if (!isset($this->map[$class])) {
+			return false;
 		}
 
-		$sections = array(
-			self::getNamespacePhp($namespace)
-		);
+		$files = $this->map[$class];
 
-		$functions = PhpCore::getExternalFunctions();
+		foreach ($files as $file) {
+			include $file;
+		}
 
-		foreach ($functions as $function) {
-			$mock = "{$namespace}\\{$function}";
+		return true;
+	}
 
-			if (function_exists($function) && !function_exists($mock)) {
-				$sections[] = $this->getMockFunctionPhp($function);
+	private function autoloadLiveClassFromUser($class)
+	{
+		$this->getUserAutoloaders();
+
+		$countClasses = count(get_declared_classes());
+		$countFiles = count(get_included_files());
+
+		if (!$this->callUserAutoloaders($class)) {
+			return false;
+		}
+
+		$classes = array_slice(get_declared_classes(), $countClasses);
+		$files = array_slice(get_included_files(), $countFiles);
+
+		foreach ($classes as $class) {
+			foreach ($files as $file) {
+				$this->map[$class][$file] = $file;
 			}
 		}
 
-		return implode("\n\n", $sections);
+		// Add "class => test" to the map
+
+		return true;
 	}
 
-	private function getMockFunctionPhp($function)
+	private function getUserAutoloaders()
 	{
-		$php = $this->mockBuilder->getMockFunctionPhp($function);
+		if ($this->userAutoloaders !== null) {
+			return;
+		}
 
-		return $php;
+		$countAutoloaders = count(spl_autoload_functions());
+
+		// TODO: add exception handling
+		include $this->autoload;
+
+		$autoloaders = array_slice(spl_autoload_functions(), $countAutoloaders);
+
+		foreach ($autoloaders as $autoloader) {
+			spl_autoload_unregister($autoloader);
+		}
+
+		$this->userAutoloaders = $autoloaders;
+	}
+
+	private function callUserAutoloaders($class)
+	{
+		foreach ($this->userAutoloaders as $autoloader) {
+			call_user_func($autoloader, $class);
+
+			if (class_exists($class, false)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function autoloadMockClass($class)
+	{
+		return $this->autoloadMockClassFromCache($class)
+			|| $this->autoloadMockClassFromUser($class);
+	}
+
+	private function autoloadMockClassFromCache($class)
+	{
+		$path = $this->getMockClassCachePath($class);
+
+		if (!$this->filesystem->isFile($path)) {
+			return false;
+		}
+
+		include $path;
+
+		// Add "class => test" to the map
+
+		return true;
+	}
+
+	private function getMockClassCachePath($class)
+	{
+		$names = explode('\\', "{$class}.php");
+		array_unshift($names, Finder::MOCKS, Finder::CLASSES);
+
+		$relativePath = $this->paths->join($names);
+		return $this->paths->join($this->cache, $relativePath);
+	}
+
+	private function autoloadMockClassFromUser($classFullName)
+	{
+		if (!$this->autoloadLiveClass($classFullName)) {
+			return false;
+		}
+
+		$class = new ReflectionClass($classFullName);
+		$namespace = $class->getNamespaceName();
+		$path = $this->getMockClassCachePath($classFullName);
+
+		if ($this->createMock($namespace, $classFullName, $path)) {
+			self::$mustReboot = true;
+		}
+
+		exit;
+	}
+
+	private function autoloadMockDangerousGlobalClass($classFullName)
+	{
+		$class = new ReflectionClass($classFullName);
+		$className = $class->getShortName();
+
+		if (!$this->isDangerousGlobalClass($className)) {
+			return false;
+		}
+
+		$namespace = $class->getNamespaceName();
+		$path = $this->getMockClassCachePath($classFullName);
+
+		if (!$this->filesystem->isFile($path)) {
+			$this->createMock($namespace, $className, $path);
+		}
+
+		include $path;
+
+		return true;
+	}
+
+	private function isDangerousGlobalClass($class)
+	{
+		return isset($this->externalClasses[$class]);
+	}
+
+	private function createMock($namespace, $class, $path)
+	{
+		$mockBuilder = new MockBuilder();
+
+		$tagPhp = "<?php";
+		$namespacePhp = "namespace {$namespace};";
+		$classPhp = $mockBuilder->getMockClassPhp($class);
+		$mockPhp = "{$tagPhp}\n\n{$namespacePhp}\n\n{$classPhp}\n";
+
+		return $this->filesystem->write($path, $mockPhp);
 	}
 }

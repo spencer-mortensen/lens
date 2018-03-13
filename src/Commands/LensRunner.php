@@ -79,17 +79,18 @@ class LensRunner implements Command
 		$executable = $this->arguments->getExecutable();
 		$evaluator = new Evaluator($executable, $this->filesystem);
 
-		$srcPath = $this->finder->getSrc();
-		$autoloadPath = $this->finder->getAutoload();
-		$testsPath = $this->finder->getTests();
+		$src = $this->finder->getSrc();
+		$autoload = $this->finder->getAutoload();
+		$cache = $this->finder->getCache();
+		$tests = $this->finder->getTests();
 
 		$suites = $this->getSuites($paths);
 
-		list($suites, $code, $coverage) = $evaluator->run($srcPath, $autoloadPath, $suites);
+		list($suites, $code, $coverage) = $evaluator->run($src, $autoload, $cache, $suites);
 
 		$project = array(
 			'name' => 'Lens', // TODO: let the user provide the project name in the configuration file
-			'suites' => $this->useRelativePaths($testsPath, $suites)
+			'suites' => $this->useRelativePaths($tests, $suites)
 		);
 
 		$summarizer = new Summarizer();
@@ -106,7 +107,7 @@ class LensRunner implements Command
 		if (isset($code, $coverage)) {
 			$web = new Web($this->filesystem);
 			$coveragePath = $this->finder->getCoverage();
-			$web->coverage($srcPath, $coveragePath, $code, $coverage);
+			$web->coverage($src, $coveragePath, $code, $coverage);
 		}
 
 		$isSuccessful = ($project['summary']['failed'] === 0);

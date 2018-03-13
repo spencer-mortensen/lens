@@ -25,7 +25,7 @@
 
 namespace Lens\Evaluator\Jobs;
 
-use Lens\Lens;
+use Lens\Evaluator\Autoloader;
 use Lens\Evaluator\Test;
 use SpencerMortensen\Exceptions\Exceptions;
 use SpencerMortensen\ParallelProcessor\Fork\ForkJob;
@@ -38,10 +38,13 @@ class TestJob implements ForkJob, ShellJob
 	private $executable;
 
 	/** @var string */
-	private $srcDirectory;
+	private $src;
 
 	/** @var string */
-	private $autoloadPath;
+	private $autoload;
+
+	/** @var string */
+	private $cache;
 
 	/** @var string */
 	private $namespace;
@@ -67,11 +70,12 @@ class TestJob implements ForkJob, ShellJob
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, $autoloadPath, $namespace, array $uses, $prePhp, array $script = null, $postPhp, &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $src, $autoload, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
-		$this->srcDirectory = $srcDirectory;
-		$this->autoloadPath = $autoloadPath;
+		$this->src = $src;
+		$this->autoload = $autoload;
+		$this->cache = $cache;
 		$this->namespace = $namespace;
 		$this->uses = $uses;
 		$this->prePhp = $prePhp;
@@ -84,7 +88,7 @@ class TestJob implements ForkJob, ShellJob
 
 	public function getCommand()
 	{
-		$arguments = array($this->srcDirectory, $this->autoloadPath, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
+		$arguments = array($this->src, $this->autoload, $this->cache, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -95,7 +99,16 @@ class TestJob implements ForkJob, ShellJob
 	public function start()
 	{
 		$worker = $this->process;
-		$test = new Test($this->srcDirectory, $this->autoloadPath);
+		$test = new Test($this->src, $this->autoload, $this->cache);
+
+		$sendRebootSignal = function () use ($worker) {
+			if (Autoloader::mustReboot()) {
+				$worker->sendResult(true);
+				exit;
+			}
+		};
+
+		register_shutdown_function($sendRebootSignal);
 
 		$sendResults = function () use ($worker, $test) {
 			$results = array(
@@ -119,6 +132,11 @@ class TestJob implements ForkJob, ShellJob
 
 	public function stop($message)
 	{
+		if ($message === true) {
+			echo "Reboot!\n";
+			return;
+		}
+
 		list($this->results, $this->coverage) = $message;
 	}
 }
