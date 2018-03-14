@@ -21,24 +21,14 @@
         }
     ],
     "require": {
-        "php": ">=5.6.1",
-        "spencer-mortensen/exceptions": "~2.0",
-        "spencer-mortensen/html5": "~1.0",
-        "spencer-mortensen/parallel-processor": "~3.0",
-        "spencer-mortensen/parser": "~3.0",
-        "spencer-mortensen/paths": "~0.0",
-        "spencer-mortensen/regular-expressions": "~1.2"
+        "php": ">=5.6.1"
     },
     "bin": [
         "bin/lens"
     ],
     "autoload": {
         "psr-4": {
-            "Lens\\": "src"
+            "Lens_0_0_56\\": "src"
         }
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "classmap-authoritative": true
     }
 }
