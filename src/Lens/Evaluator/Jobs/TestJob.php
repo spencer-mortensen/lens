@@ -26,13 +26,12 @@
 namespace Lens_0_0_56\Lens\Evaluator\Jobs;
 
 use Lens_0_0_56\Lens\Evaluator\Autoloader;
+use Lens_0_0_56\Lens\Evaluator\Processor;
 use Lens_0_0_56\Lens\Evaluator\Test;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Fork\ForkJob;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
 
-class TestJob implements ForkJob, ShellJob
+class TestJob implements Job
 {
 	/** @var string */
 	private $executable;
@@ -61,6 +60,9 @@ class TestJob implements ForkJob, ShellJob
 	/** @var string */
 	private $postPhp;
 
+	/** @var Processor */
+	private $processor;
+
 	/** @var null|ServerProcess */
 	private $process;
 
@@ -70,7 +72,7 @@ class TestJob implements ForkJob, ShellJob
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $autoload, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $src, $autoload, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->src = $src;
@@ -81,6 +83,7 @@ class TestJob implements ForkJob, ShellJob
 		$this->prePhp = $prePhp;
 		$this->script = $script;
 		$this->postPhp = $postPhp;
+		$this->processor = $processor;
 		$this->process = &$process;
 		$this->results = &$results;
 		$this->coverage = &$coverage;
@@ -133,10 +136,16 @@ class TestJob implements ForkJob, ShellJob
 	public function stop($message)
 	{
 		if ($message === true) {
-			echo "Reboot!\n";
+			$this->reboot();
 			return;
 		}
 
 		list($this->results, $this->coverage) = $message;
+	}
+
+	private function reboot()
+	{
+		$this->process = $this->processor->getProcess($this);
+		$this->processor->start($this->process);
 	}
 }

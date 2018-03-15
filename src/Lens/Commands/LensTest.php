@@ -26,6 +26,7 @@
 namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
+use Lens_0_0_56\Lens\Evaluator\Processor;
 use Lens_0_0_56\Lens\Evaluator\Jobs\TestJob;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
@@ -57,7 +58,8 @@ class LensTest implements Command
 		$executable = $this->arguments->getExecutable();
 		list($src, $autoload, $cache, $namespace, $uses, $prePhp, $script, $postPhp) = $arguments;
 
-		$job = new TestJob($executable, $src, $autoload, $cache, $namespace, $uses, $prePhp, $script, $postPhp, $process, $results, $coverage);
+		$processor = new Processor();
+		$job = new TestJob($executable, $src, $autoload, $cache, $namespace, $uses, $prePhp, $script, $postPhp, $processor, $process, $results, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

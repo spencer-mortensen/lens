@@ -28,11 +28,9 @@ namespace Lens_0_0_56\Lens\Evaluator\Jobs;
 use Lens_0_0_56\Lens\Evaluator\Coverage;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Fork\ForkJob;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
 
-class CoverageJob implements ForkJob, ShellJob
+class CoverageJob implements Job
 {
 	/** @var string */
 	private $executable;
@@ -55,7 +53,7 @@ class CoverageJob implements ForkJob, ShellJob
 	/** @var Coverage */
 	private $coverage;
 
-	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, &$process = null, &$code, &$coverage)
+	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, ServerProcess &$process = null, &$code, &$coverage)
 	{
 		$this->executable = $executable;
 		$this->srcDirectory = $srcDirectory;

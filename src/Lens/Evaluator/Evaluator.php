@@ -28,9 +28,6 @@ namespace Lens_0_0_56\Lens\Evaluator;
 use Lens_0_0_56\Lens\Evaluator\Jobs\CoverageJob;
 use Lens_0_0_56\Lens\Evaluator\Jobs\TestJob;
 use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Fork\ForkProcess;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Processor;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
 
 class Evaluator
 {
@@ -43,15 +40,11 @@ class Evaluator
 	/** @var Processor */
 	private $processor;
 
-	/** @var boolean */
-	private $useForks;
-
 	public function __construct($executable, $filesystem)
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
 		$this->processor = new Processor();
-		$this->useForks = function_exists('pcntl_fork');
 	}
 
 	public function run($src, $autoload, $cache, array $suites)
@@ -88,7 +81,7 @@ class Evaluator
 			$coverage
 		);
 
-		$process = $this->getProcess($job);
+		$process = $this->processor->getProcess($job);
 
 		$this->processor->start($process);
 	}
@@ -201,22 +194,14 @@ class Evaluator
 			$fixturePhp,
 			$script,
 			$php,
+			$this->processor,
 			$process,
 			$results,
 			$coverage
 		);
 
-		$process = $this->getProcess($job);
+		$process = $this->processor->getProcess($job);
 
 		$this->processor->start($process);
-	}
-
-	private function getProcess($job)
-	{
-		if ($this->useForks) {
-			return new ForkProcess($job);
-		}
-
-		return new ShellClientProcess($job);
 	}
 }
