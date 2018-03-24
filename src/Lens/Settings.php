@@ -25,39 +25,31 @@
 
 namespace Lens_0_0_56\Lens;
 
-use Lens_0_0_56\SpencerMortensen\Paths\Paths;
+use Lens_0_0_56\Lens\Files\IniFile;
 
 class Settings
 {
-	/** @var Paths */
-	private $paths;
-
-	/** @var Filesystem */
-	private $filesystem;
-
 	/** @var IniFile */
 	private $file;
 
-	/** @var array|null */
-	private $input;
+	/** @var array */
+	private $initialValues;
 
-	public function __construct(Paths $paths, Filesystem $filesystem, $path)
+	/** @var array */
+	private $values;
+
+	public function __construct(Filesystem $filesystem, $path)
 	{
-		$this->paths = $paths;
-		$this->filesystem = $filesystem;
-		$this->file = new IniFile($this->filesystem, $path);
-		$this->input = $this->file->read();
-		$this->data = self::getValidData($this->input);
+		$file = new IniFile($filesystem, $path);
+		$file->read($input);
+		$values = $this->getValues($input);
+
+		$this->file = $file;
+		$this->initialValues = $values;
+		$this->values = $values;
 	}
 
-	public function __destruct()
-	{
-		if ($this->data !== $this->input) {
-			$this->file->write($this->data);
-		}
-	}
-
-	private static function getValidData(array $input = null)
+	private function getValues($input)
 	{
 		$src = self::getNonEmptyString($input['src']);
 		$autoload = self::getNonEmptyString($input['autoload']);
@@ -96,11 +88,20 @@ class Settings
 
 	public function get($key)
 	{
-		return $this->data[$key];
+		return $this->values[$key];
 	}
 
 	public function set($key, $value)
 	{
-		$this->data[$key] = $value;
+		$this->values[$key] = $value;
+	}
+
+	public function __destruct()
+	{
+		if ($this->values === $this->initialValues) {
+			return;
+		}
+
+		$this->file->write($this->values);
 	}
 }

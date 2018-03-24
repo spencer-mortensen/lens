@@ -26,6 +26,7 @@
 namespace Lens_0_0_56\Lens;
 
 use Closure;
+use ErrorException;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 
@@ -34,6 +35,12 @@ class Filesystem
 {
 	const TYPE_DIRECTORY = 1;
 	const TYPE_FILE = 2;
+
+	/** @var integer */
+	private $directoryPermissions = 0775;
+
+	/** @var integer */
+	private $filePermissions = 0664;
 
 	/** @var Closure */
 	private $errorHandler;
@@ -132,31 +139,53 @@ class Filesystem
 
 	public function write($path, $contents)
 	{
-		return $this->writeFile($path, $contents);
+		$this->prepareFileDestination($path);
+		$this->atomicWriteFile($path, $contents);
+
+		return true;
 	}
 
-	private function writeFile($path, $contents)
+	private function prepareFileDestination($path)
 	{
-		set_error_handler($this->errorHandler);
+		if (file_exists($path)) {
+			if (!is_file($path)) {
+				// TODO: improve this exception:
+				$pathName = var_export($path, true);
+				throw new ErrorException("{$pathName} must be a file");
+			}
+		} else {
+			$parent = dirname($path);
 
-		$result = self::writeFileContents($path, $contents) ||
-			(
-				self::createDirectory(dirname($path)) &&
-				self::writeFileContents($path, $contents)
-			);
-
-		restore_error_handler();
-		return $result;
+			if (file_exists($parent)) {
+				if (!is_dir($parent)) {
+					// TODO: improve this exception:
+					$parentName = var_export($parent, true);
+					throw new ErrorException("{$parentName} must be a directory");
+				}
+			} else {
+				mkdir($parent, $this->directoryPermissions, true);
+			}
+		}
 	}
 
-	private static function createDirectory($path)
+	// TODO: If the temporary directory and the final destination are in different filesystems, then this won't be atomic at all:
+	//       Should we choose a temporary file that is in the same directory as the original file?
+	private function atomicWriteFile($path, $contents)
 	{
-		return mkdir($path, 0775, true);
-	}
+		$temporaryPath = tempnam(null, null);
 
-	private static function writeFileContents($path, $contents)
-	{
-		return file_put_contents($path, $contents) === strlen($contents);
+		$totalBytes = strlen($contents);
+		$writtenBytes = file_put_contents($temporaryPath, $contents);
+
+		if ($writtenBytes !== $totalBytes) {
+			unlink($temporaryPath);
+
+			// TODO: improve this exception:
+			throw new ErrorException("Unable to write the entire file contents");
+		}
+
+		rename($temporaryPath, $path);
+		chmod($path, $this->filePermissions);
 	}
 
 	public function delete($path)
@@ -179,7 +208,7 @@ class Filesystem
 	public function createEmptyDirectory($path)
 	{
 		set_error_handler($this->errorHandler);
-		$result = mkdir($path, 0777, true);
+		$result = mkdir($path, $this->directoryPermissions, true);
 		restore_error_handler();
 
 		return $result;

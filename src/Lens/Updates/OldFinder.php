@@ -88,7 +88,7 @@ class OldFinder
 		$this->findLensTests($paths);
 		$this->findSettings();
 
-		$settings = new Settings($this->paths, $this->filesystem, $this->settings);
+		$settings = new Settings($this->filesystem, $this->settings);
 
 		$this->findSrc($settings);
 		$this->findProject();

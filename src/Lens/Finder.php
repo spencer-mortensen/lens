@@ -144,7 +144,7 @@ class Finder
 		$this->checkComposer();
 		$this->findSettings();
 
-		$settings = new Settings($this->paths, $this->filesystem, $this->settings);
+		$settings = new Settings($this->filesystem, $this->settings);
 
 		$this->findSrc($settings);
 		$this->findAutoload($settings);

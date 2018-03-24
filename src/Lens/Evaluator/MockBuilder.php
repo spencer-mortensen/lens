@@ -43,6 +43,14 @@ class MockBuilder
 		$namePhp = $class->getShortName();
 		$php = "class {$namePhp}";
 
+		if ($class->isAbstract()) {
+			$php = "abstract {$php}";
+		}
+
+		if ($class->isFinal()) {
+			$php = "final {$php}";
+		}
+
 		$parent = $class->getParentClass();
 
 		if ($parent !== false) {
@@ -90,7 +98,7 @@ class MockBuilder
 	private function addMethod(array &$methods, $typePhp, $namePhp, $parametersPhp, $contextPhp = '$this', $functionPhp = '__FUNCTION__', $argumentsPhp = 'func_get_args()')
 	{
 		$typePhp .= ' function';
-		$bodyPhp = $this->getAgentPhp("\t\t", $contextPhp, $functionPhp, $argumentsPhp);
+		$bodyPhp = $this->getAgentPhp("\t", $contextPhp, $functionPhp, $argumentsPhp);
 		$methodPhp = $this->getFunctionPhp("\t", $typePhp, $namePhp, $parametersPhp, $bodyPhp);
 
 		$methods[$namePhp] = $methodPhp;
@@ -240,9 +248,13 @@ class MockBuilder
 
 	private function getMethodBodyPhp(ReflectionMethod $method)
 	{
+		if ($method->isAbstract()) {
+			return ';';
+		}
+
 		$contextPhp = $this->getMethodContextPhp($method);
 
-		return $this->getAgentPhp("\t\t", $contextPhp, '__FUNCTION__', 'func_get_args()');
+		return $this->getAgentPhp("\t", $contextPhp, '__FUNCTION__', 'func_get_args()');
 	}
 
 	private function getMethodContextPhp(ReflectionMethod $method)
@@ -260,20 +272,18 @@ class MockBuilder
 
 		$namePhp = $function->getShortName();
 		$parametersPhp = $this->getFunctionParametersPhp($function);
-		$bodyPhp = $this->getAgentPhp("\t", 'null', '__FUNCTION__', 'func_get_args()');
+		$bodyPhp = $this->getAgentPhp('', 'null', '__FUNCTION__', 'func_get_args()');
 
 		return $this->getFunctionPhp('', 'function', $namePhp, $parametersPhp, $bodyPhp);
 	}
 
 	private function getAgentPhp($padding, $contextPhp, $functionPhp, $argumentsPhp)
 	{
-		$namespace = __NAMESPACE__;
-
-		return "{$padding}return eval(\\{$namespace}\\Agent::call({$contextPhp}, {$functionPhp}, {$argumentsPhp}));";
+		return "\n{$padding}{\n{$padding}\treturn eval(Agent::call({$contextPhp}, {$functionPhp}, {$argumentsPhp}));\n{$padding}}";
 	}
 
 	private function getFunctionPhp($padding, $typePhp, $namePhp, $parametersPhp, $bodyPhp)
 	{
-		return "{$padding}{$typePhp} {$namePhp}({$parametersPhp})\n{$padding}{\n{$bodyPhp}\n{$padding}}";
+		return "{$padding}{$typePhp} {$namePhp}({$parametersPhp}){$bodyPhp}";
 	}
 }

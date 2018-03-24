@@ -129,7 +129,7 @@ class LensRunner implements Command
 			return false;
 		}
 
-		$settings = new Settings($this->paths, $this->filesystem, $settingsPath);
+		$settings = new Settings($this->filesystem, $settingsPath);
 		$checkForUpdates = $settings->get('checkForUpdates');
 
 		if (!$checkForUpdates) {

@@ -26,7 +26,6 @@
 namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 
 class Coverage
 {

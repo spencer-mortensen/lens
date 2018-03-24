@@ -27,6 +27,7 @@ namespace Lens_0_0_56\Lens\Reports;
 
 use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
 use Lens_0_0_56\Lens\Archivist\Comparer;
+use Lens_0_0_56\Lens\Evaluator\PhpCode;
 use Lens_0_0_56\Lens\Formatter;
 use Lens_0_0_56\Lens\Paragraph;
 
@@ -55,11 +56,14 @@ class Text implements Report
 	public function getReport(array $project)
 	{
 		foreach ($project['suites'] as $testsFile => $suite) {
+			$namespace = $suite['namespace'];
+			$uses = $suite['uses'];
+
 			foreach ($suite['tests'] as $testLine => $test) {
 				$testText = $test['code'];
 
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->summarizeCase($testsFile, $testLine, $testText, $caseLine, $case);
+					$this->summarizeCase($namespace, $uses, $testsFile, $testLine, $testText, $caseLine, $case);
 				}
 			}
 		}
@@ -75,8 +79,9 @@ class Text implements Report
 		return implode("\n\n\n", $output);
 	}
 
-	private function summarizeCase($testsFile, $testLine, $testText, $caseLine, array $case)
+	private function summarizeCase($namespace, array $uses, $testsFile, $testLine, $testText, $caseLine, array $case)
 	{
+		$script = $case['script'];
 		$results = $case['results'];
 
 		if ($case['summary']['pass']) {
@@ -85,29 +90,31 @@ class Text implements Report
 			return;
 		}
 
-		$caseText = $this->getCaseText($testText, $case['input']['text'], $case['output']['text']);
+		$caseText = $this->getCaseText($namespace, $uses, $testText, $case['input']);
 
 		$actual = $results['actual'];
 		$expected = $results['expected'];
 
 		if (!is_array($expected['diff'])) {
-			$issues = $this->getFixtureIssues($expected['pre']);
+			$issues = $this->getFixtureIssues($namespace, $uses, $expected['pre']);
 		} elseif (!is_array($actual['diff'])) {
-			$issues = $this->getFixtureIssues($actual['pre']);
+			$issues = $this->getFixtureIssues($namespace, $uses, $actual['pre']);
 		} else {
-			$issues = $this->getDifferenceIssues($actual, $expected);
+			$issues = $this->getDifferenceIssues($namespace, $uses, $actual, $expected, $script);
 		}
 
 		++$this->failedTestsCount;
 		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
 	}
 
-	private function getCaseText($testText, $inputText, $outputText)
+	private function getCaseText($namespace, array $uses, $testText, $inputText)
 	{
+		$contextPhp = PhpCode::getContextPhp($namespace, $uses);
+
 		$sections = array(
-			$this->getSectionText('// Test', $testText),
+			$contextPhp,
 			$this->getSectionText('// Input', $inputText),
-			$this->getSectionText('// Output', $outputText)
+			$this->getSectionText('// Test', $testText)
 		);
 
 		$sections = array_filter($sections, 'is_string');
@@ -124,9 +131,9 @@ class Text implements Report
 		return "{$label}\n{$code}";
 	}
 
-	private function getFixtureIssues(array $state)
+	private function getFixtureIssues($namespace, array $uses, array $state)
 	{
-		$formatter = self::getFormatter($state);
+		$formatter = self::getFormatter($namespace, $uses, $state);
 
 		$sections = array(
 			self::getUnexpectedMessages($this->getExceptionMessages($formatter, $state['exception'])),
@@ -137,23 +144,24 @@ class Text implements Report
 		return implode("\n", call_user_func_array('array_merge', $sections));
 	}
 
-	private function getDifferenceIssues(array $actual, array $expected)
+	private function getDifferenceIssues($namespace, array $uses, array $actual, array $expected, array $script)
 	{
 		$actualDiff = $actual['diff'];
 		$expectedDiff = $expected['diff'];
 
-		$actualFormatter = self::getFormatter($actual['pre']);
-		$expectedFormatter = self::getFormatter($expected['pre']);
+		// TODO: use ALL of the variables (including the variables from the "\\ Output" section
+		$actualFormatter = self::getFormatter($namespace, $uses, $actual['pre']);
+		$expectedFormatter = self::getFormatter($namespace, $uses, $expected['pre']);
 
+		// TODO: display ALL side-effects (NOT just the differences)
 		$sections = array(
+			self::getCallsMessages($actualFormatter, $expectedFormatter, $actual['post']['calls'], $expected['post']['calls'], $script),
+
 			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actualDiff['exception'])),
 			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expectedDiff['exception'])),
 
 			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
 			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
-
-			self::getUnexpectedMessages($this->getCallMessages($actualFormatter, $actualDiff['calls'])),
-			self::getMissingMessages($this->getCallMessages($expectedFormatter, $expectedDiff['calls'])),
 
 			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
 			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
@@ -168,28 +176,63 @@ class Text implements Report
 			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expectedDiff['output']))
 		);
 
-		// TODO: show a troubleshooting message when the $issuesText is empty
 		return implode("\n", call_user_func_array('array_merge', $sections));
+	}
+
+	private static function getCallsMessages(Formatter $actualFormatter, Formatter $expectedFormatter, array $actualCalls, array $expectedCalls, array $script)
+	{
+		$output = array();
+
+		$comparer = new Comparer();
+
+		$n = max(count($actualCalls), count($expectedCalls));
+
+		for ($i = 0; $i < $n; ++$i) {
+			$expected = &$expectedCalls[$i];
+			$actual = &$actualCalls[$i];
+			$action = &$script[$i];
+
+			$isSame = $comparer->isSame($expected, $actual);
+
+			if ($isSame) {
+				$output[] = self::equal($expectedFormatter->getCall($expected, $action));
+			} else {
+				if ($expected !== null) {
+					$output[] = self::minus($expectedFormatter->getCall($expected, $action));
+				}
+
+				if ($actual !== null) {
+					$output[] = self::plus($actualFormatter->getCall($actual, $action));
+				}
+			}
+		}
+
+		return $output;
 	}
 
 	private function getUnexpectedMessages(array $messages)
 	{
-		return array_map(array($this, 'plus'), $messages);
-	}
-
-	private function plus($message)
-	{
-		return ' + ' . $message;
+		return array_map(array(__CLASS__, 'plus'), $messages);
 	}
 
 	private function getMissingMessages(array $messages)
 	{
-		return array_map(array($this, 'minus'), $messages);
+		return array_map(array(__CLASS__, 'minus'), $messages);
 	}
 
-	private function minus($message)
+	private static function minus($message)
 	{
 		return ' - ' . $message;
+	}
+
+	private static function equal($message)
+	{
+		return '   ' . $message;
+	}
+
+	private static function plus($message)
+	{
+		return ' + ' . $message;
 	}
 
 	private function getOutputMessages(Formatter $formatter, $output)
@@ -248,11 +291,6 @@ class Text implements Report
 		return array_map(array($formatter, 'getError'), $errors);
 	}
 
-	private function getCallMessages(Formatter $formatter, array $calls)
-	{
-		return array_map(array($formatter, 'getCall'), $calls);
-	}
-
 	private function getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine)
 	{
 		$caseText = Paragraph::wrap($caseText);
@@ -261,7 +299,7 @@ class Text implements Report
 		$sections = array(
 			"{$testsFile} (Line {$caseLine}):",
 			$caseText,
-			"   // Issues\n" . $issues
+			"   // Output\n" . $issues
 		);
 
 		return implode("\n\n", $sections);
@@ -287,10 +325,10 @@ class Text implements Report
 		return implode("\n", $output);
 	}
 
-	private static function getFormatter(array $state)
+	private static function getFormatter($namespace, array $uses, array $state)
 	{
 		$objectNames = self::getObjectNames($state);
-		return new Formatter($objectNames);
+		return new Formatter($namespace, $uses, $objectNames);
 	}
 
 	private static function getObjectNames(array $state)

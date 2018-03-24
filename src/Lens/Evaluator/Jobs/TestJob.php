@@ -102,16 +102,7 @@ class TestJob implements Job
 	public function start()
 	{
 		$worker = $this->process;
-		$test = new Test($this->src, $this->autoload, $this->cache);
-
-		$sendRebootSignal = function () use ($worker) {
-			if (Autoloader::mustReboot()) {
-				$worker->sendResult(true);
-				exit;
-			}
-		};
-
-		register_shutdown_function($sendRebootSignal);
+		$test = new Test($this->executable, $this->src, $this->autoload, $this->cache);
 
 		$sendResults = function () use ($worker, $test) {
 			$results = array(

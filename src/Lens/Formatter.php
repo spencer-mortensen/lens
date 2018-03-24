@@ -29,6 +29,12 @@ use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
 
 class Formatter
 {
+	/** @var string */
+	private $namespace;
+
+	/** @var array */
+	private $uses;
+
 	/** @var array */
 	private $objectNames;
 
@@ -38,8 +44,10 @@ class Formatter
 	/** @var string */
 	private $currentDirectory;
 
-	public function __construct(array $objectNames)
+	public function __construct($namespace, array $uses, array $objectNames)
 	{
+		$this->namespace = $namespace;
+		$this->uses = $uses;
 		$this->objectNames = $objectNames;
 		$this->displayer = new Displayer();
 		$this->currentDirectory = getcwd(); // TODO
@@ -167,26 +175,83 @@ class Formatter
 		return "{$fileText} (line {$lineText})";
 	}
 
-	public function getCall(array $call)
+	public function getCall(array $call, $action)
 	{
 		list($context, $method, $arguments) = $call;
 
-		$functionText = $this->getFunctionText($method, $arguments);
-
 		if ($context === null) {
-			return $functionText;
+			return $this->getFunctionCall($method, $arguments) . $this->getActionText($action);
 		}
 
-		// TODO: use a relative namespace (based on the namespace and uses)
 		if (is_string($context)) {
-			return "\\{$context}::{$functionText}";
+			return $this->getStaticMethodCall($context, $method, $arguments, $action);
 		}
 
-		$objectText = $this->getObjectText($context);
-		return "{$objectText}->{$functionText}";
+		return $this->getMethodCall($context, $method, $arguments, $action);
 	}
 
-	private function getFunctionText($function, array $arguments)
+	private function getStaticMethodCall($class, $method, array $arguments, $action)
+	{
+		$relativeContext = $this->getRelativeNamespace($class);
+		$functionText = $this->getFunctionCall($method, $arguments);
+		$actionText = $this->getActionText($action);
+
+		return "{$relativeContext}::{$functionText}{$actionText}";
+	}
+
+	private function getMethodCall(ObjectArchive $object, $method, array $arguments, $action)
+	{
+		if ($method === '__construct') {
+			$absoluteClass = $object->getClass();
+			$relativeClass = $this->getRelativeNamespace($absoluteClass);
+			$argumentsPhp = $this->getArgumentsText($arguments);
+
+			if ($action === null) {
+				$actionText = '';
+			} else {
+				$actionText = $this->getActionText($action);
+			}
+
+			return "new {$relativeClass}({$argumentsPhp});{$actionText}";
+		}
+
+		$objectText = $this->getObjectText($object);
+		$functionText = $this->getFunctionCall($method, $arguments);
+		$actionText = $this->getActionText($action);
+
+		return "{$objectText}->{$functionText}{$actionText}";
+	}
+
+	private function getActionText($action)
+	{
+		if ($action === null) {
+			$action = 'return null;';
+		}
+
+		return " // {$action}";
+	}
+
+	private function getRelativeNamespace($absoluteName)
+	{
+		foreach ($this->uses as $alias => $path) {
+			$length = strlen($path);
+
+			if (strncmp($absoluteName, $path, $length) === 0) {
+				return substr_replace($absoluteName, $alias, 0, $length);
+			}
+		}
+
+		$path = "{$this->namespace}\\";
+		$length = strlen($path);
+
+		if (strncmp($absoluteName, $path, $length) === 0) {
+			return substr($absoluteName, $length);
+		}
+
+		return "\\{$absoluteName}";
+	}
+
+	private function getFunctionCall($function, array $arguments)
 	{
 		$argumentsText = $this->getArgumentsText($arguments);
 

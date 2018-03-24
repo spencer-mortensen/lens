@@ -274,19 +274,12 @@ EOS;
 		$line = $match[1][0];
 		$output = $match[1][1];
 
-		$expected = $output;
-		$script = self::extractScript($expected);
+		$script = self::extractScript($output);
 
 		return array(
 			$line => array(
-				'input' => array(
-					'text' => $input,
-					'code' => $input
-				),
-				'output' => array(
-					'text' => $output,
-					'code' => $expected
-				),
+				'input' => $input,
+				'output' => $output,
 				'script' => $script
 			)
 		);
@@ -297,23 +290,45 @@ EOS;
 		$script = array();
 
 		$lines = Re::split('\\r?\\n', $php);
-		$expression = '^(?<call>(?:\\$[a-zA-Z_0-9]+->|[a-zA-Z_0-9\\\\]+::)?[a-zA-Z_0-9]+\(.*?\);)(?:\\s*//\\s+(?<body>.*?))?$';
 
 		foreach ($lines as &$line) {
-			if (!Re::match($expression, $line, $match)) {
-				continue;
+			if (self::extractFromCall($line, $action) || self::extractFromInstantiation($line, $action)) {
+				$script[] = $action;
 			}
-
-			$function = &$match['call'];
-			$body = &$match['body'];
-
-			$line = $function;
-			$script[] = $body;
 		}
 
 		$php = implode("\n", $lines);
 
 		return $script;
+	}
+
+	private static function extractFromCall(&$php, &$action)
+	{
+		$expression = '^(?<call>(?:\\$[a-zA-Z_0-9]+->|[a-zA-Z_0-9\\\\]+::)?[a-zA-Z_0-9]+\(.*?\);)(?:\\s*//\\s+(?<body>.*?))?$';
+
+		if (!Re::match($expression, $php, $match)) {
+			return false;
+		}
+
+		$function = &$match['call'];
+		$body = &$match['body'];
+
+		$php = $function;
+		$action = $body;
+
+		return true;
+	}
+
+	private static function extractFromInstantiation($php, &$action)
+	{
+		$expression = 'new\\s+[a-zA-Z_0-9\\\\]+\(.*?\);$';
+
+		if (!Re::match($expression, $php)) {
+			return false;
+		}
+
+		$action = null;
+		return true;
 	}
 
 	public function getOptionalInput(array $matches)

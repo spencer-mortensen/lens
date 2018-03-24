@@ -58,16 +58,11 @@ class MockFunctions
 			return;
 		}
 
-		$namespacePhp = $this->getNamespacePhp($namespace);
+		$namespacePhp = PhpCode::getNamespacePhp($namespace);
 		$mocksPhp = $this->getFunctionMocksPhp();
 		$php = "{$namespacePhp}\n\n{$mocksPhp}";
 
 		eval($php);
-	}
-
-	private function getNamespacePhp($namespace)
-	{
-		return "namespace {$namespace};";
 	}
 
 	private function getFunctionMocksPhp()

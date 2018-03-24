@@ -29,6 +29,7 @@ use Error;
 use Exception;
 use Lens_0_0_56\Lens\Exceptions\TerminalMessage;
 use Lens_0_0_56\Lens\Exceptions\LogMessage;
+use Lens_0_0_56\Lens\Commands\LensCache;
 use Lens_0_0_56\Lens\Commands\LensCoverage;
 use Lens_0_0_56\Lens\Commands\LensRunner;
 use Lens_0_0_56\Lens\Commands\LensTest;
@@ -45,6 +46,7 @@ class Lens
 
 	// lens --internal-coverage=... # get code coverage (private)
 	// lens --internal-test=... # get test results (private)
+	// lens --internal-cache=... # generate a portion of the cache
 	// lens --version  # get the installed version of Lens
 	// lens --report=$report --coverage=$coverage $path ...  # run the specified tests
 	public function __construct()
@@ -73,6 +75,7 @@ class Lens
 	{
 		return $this->runCoverage($stdout, $stderr, $exitCode) ||
 			$this->runTest($stdout, $stderr, $exitCode) ||
+			$this->runCache($stdout, $stderr, $exitCode) ||
 			$this->runVersion($stdout, $stderr, $exitCode) ||
 			$this->runRunner($stdout, $stderr, $exitCode);
 	}
@@ -87,6 +90,12 @@ class Lens
 	{
 		$test = new LensTest($this->arguments);
 		return $test->run($stdout, $stderr, $exitCode);
+	}
+
+	private function runCache(&$stdout, &$stderr, &$exitCode)
+	{
+		$cache = new LensCache($this->arguments);
+		return $cache->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runVersion(&$stdout, &$stderr, &$exitCode)

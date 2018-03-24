@@ -117,12 +117,28 @@ class Summarizer
 	private function removeMutualValues(array &$expected, array &$actual)
 	{
 		$this->removeMutualValue($expected['output'], $actual['output']);
+		$this->removeIndependentArrayValues($expected['variables'], $actual['variables']);
 		$this->removeMutualArrayValues($expected['variables'], $actual['variables']);
 		$this->removeMutualArrayValues($expected['globals'], $actual['globals']);
 		$this->removeMutualArrayValues($expected['constants'], $actual['constants']);
 		$this->removeMutualValue($expected['exception'], $actual['exception']);
 		$this->removeMutualArrayValues($expected['errors'], $actual['errors']);
 		$this->removeMutualArrayValues($expected['calls'], $actual['calls']);
+	}
+
+	private function removeIndependentArrayValues(array &$a, array &$b)
+	{
+		self::removeUniqueArrayKeys($a, $b);
+		self::removeUniqueArrayKeys($b, $a);
+	}
+
+	private static function removeUniqueArrayKeys(array &$a, array &$b)
+	{
+		foreach ($a as $key => $value) {
+			if (!array_key_exists($key, $b)) {
+				unset($a[$key]);
+			}
+		}
 	}
 
 	private function removeMutualValue(&$a, &$b)

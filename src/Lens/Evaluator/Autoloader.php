@@ -25,9 +25,11 @@
 
 namespace Lens_0_0_56\Lens\Evaluator;
 
+use Lens_0_0_56\Lens\Evaluator\Jobs\CacheJob;
 use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\Lens\Finder;
-use ReflectionClass;
+use Lens_0_0_56\Lens\Lock;
+use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Processor;
+use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Autoloader
@@ -39,6 +41,9 @@ class Autoloader
 	private $filesystem;
 
 	/** @var string */
+	private $executable;
+
+	/** @var string */
 	private $autoload;
 
 	/** @var string */
@@ -48,31 +53,24 @@ class Autoloader
 	private $liveClasses;
 
 	/** @var array */
-	private $userAutoloaders;
-
-	/** @var array */
 	private $map;
 
-	/** @var array */
-	private $externalClasses;
+	/** @var Processor */
+	private $processor;
 
-	/** @var boolean */
-	private static $mustReboot;
-
-	public function __construct(Paths $paths, Filesystem $filesystem, $autoload, $cache, array $liveClasses)
+	public function __construct(Paths $paths, Filesystem $filesystem, $executable, $autoload, $cache, array $liveClasses)
 	{
 		$this->paths = $paths;
 		$this->filesystem = $filesystem;
+		$this->executable = $executable;
 		$this->autoload = $autoload;
 		$this->cache = $cache;
 		$this->liveClasses = $liveClasses;
 
-		$this->userAutoloaders = null;
+		///
 
 		$this->map = $this->getMap();
-
-		$this->externalClasses = PhpExternal::getClasses();
-		self::$mustReboot = false;
+		$this->processor = new Processor();
 
 		spl_autoload_register(array($this, 'autoload'));
 	}
@@ -83,11 +81,6 @@ class Autoloader
 		$json = json_encode($this->map);
 
 		$this->filesystem->write($mapPath, $json);
-	}
-
-	public static function mustReboot()
-	{
-		return self::$mustReboot;
 	}
 
 	private function getMap()
@@ -111,181 +104,39 @@ class Autoloader
 
 	public function autoload($class)
 	{
-		if ($this->isLiveClass($class)) {
-			return $this->autoloadLiveClass($class);
+		$cache = new CachedClass($this->cache, $class);
+
+		$isLive = $this->isLiveClass($class);
+
+		if ($cache->get($isLive)) {
+			return;
 		}
 
-		// TODO: What if $class is *already* a global class?
-		return $this->autoloadMockClass($class) ||
-			$this->autoloadMockDangerousGlobalClass($class);
+		$relativePath = strtr($class, '\\', '.') . '.lock';
+		$lockPath = $this->paths->join($this->cache, 'locks', 'process', $relativePath);
+		$lock = new Lock($lockPath);
+
+		if (!$lock->getExclusive()) {
+			// TODO: throw exception
+		}
+
+		if ($cache->get($isLive)) {
+			$lock->unlock();
+			return;
+		}
+
+		$job = new CacheJob($this->executable, $this->autoload, $this->cache, $class, $result);
+		$process = new ShellClientProcess($job);
+		$this->processor->start($process);
+		$this->processor->finish();
+
+		$lock->unlock();
+
+		$cache->get($isLive);
 	}
 
 	private function isLiveClass($class)
 	{
 		return isset($this->liveClasses[$class]);
-	}
-
-	private function autoloadLiveClass($class)
-	{
-		return $this->autoloadLiveClassFromMap($class) ||
-			$this->autoloadLiveClassFromUser($class);
-	}
-
-	private function autoloadLiveClassFromMap($class)
-	{
-		if (!isset($this->map[$class])) {
-			return false;
-		}
-
-		$files = $this->map[$class];
-
-		foreach ($files as $file) {
-			include $file;
-		}
-
-		return true;
-	}
-
-	private function autoloadLiveClassFromUser($class)
-	{
-		$this->getUserAutoloaders();
-
-		$countClasses = count(get_declared_classes());
-		$countFiles = count(get_included_files());
-
-		if (!$this->callUserAutoloaders($class)) {
-			return false;
-		}
-
-		$classes = array_slice(get_declared_classes(), $countClasses);
-		$files = array_slice(get_included_files(), $countFiles);
-
-		foreach ($classes as $class) {
-			foreach ($files as $file) {
-				$this->map[$class][$file] = $file;
-			}
-		}
-
-		// Add "class => test" to the map
-
-		return true;
-	}
-
-	private function getUserAutoloaders()
-	{
-		if ($this->userAutoloaders !== null) {
-			return;
-		}
-
-		$countAutoloaders = count(spl_autoload_functions());
-
-		// TODO: add exception handling
-		include $this->autoload;
-
-		$autoloaders = array_slice(spl_autoload_functions(), $countAutoloaders);
-
-		foreach ($autoloaders as $autoloader) {
-			spl_autoload_unregister($autoloader);
-		}
-
-		$this->userAutoloaders = $autoloaders;
-	}
-
-	private function callUserAutoloaders($class)
-	{
-		foreach ($this->userAutoloaders as $autoloader) {
-			call_user_func($autoloader, $class);
-
-			if (class_exists($class, false)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private function autoloadMockClass($class)
-	{
-		return $this->autoloadMockClassFromCache($class)
-			|| $this->autoloadMockClassFromUser($class);
-	}
-
-	private function autoloadMockClassFromCache($class)
-	{
-		$path = $this->getMockClassCachePath($class);
-
-		if (!$this->filesystem->isFile($path)) {
-			return false;
-		}
-
-		include $path;
-
-		// Add "class => test" to the map
-
-		return true;
-	}
-
-	private function getMockClassCachePath($class)
-	{
-		$names = explode('\\', "{$class}.php");
-		array_unshift($names, Finder::MOCKS, Finder::CLASSES);
-
-		$relativePath = $this->paths->join($names);
-		return $this->paths->join($this->cache, $relativePath);
-	}
-
-	private function autoloadMockClassFromUser($classFullName)
-	{
-		if (!$this->autoloadLiveClass($classFullName)) {
-			return false;
-		}
-
-		$class = new ReflectionClass($classFullName);
-		$namespace = $class->getNamespaceName();
-		$path = $this->getMockClassCachePath($classFullName);
-
-		if ($this->createMock($namespace, $classFullName, $path)) {
-			self::$mustReboot = true;
-		}
-
-		exit;
-	}
-
-	private function autoloadMockDangerousGlobalClass($classFullName)
-	{
-		$class = new ReflectionClass($classFullName);
-		$className = $class->getShortName();
-
-		if (!$this->isDangerousGlobalClass($className)) {
-			return false;
-		}
-
-		$namespace = $class->getNamespaceName();
-		$path = $this->getMockClassCachePath($classFullName);
-
-		if (!$this->filesystem->isFile($path)) {
-			$this->createMock($namespace, $className, $path);
-		}
-
-		include $path;
-
-		return true;
-	}
-
-	private function isDangerousGlobalClass($class)
-	{
-		return isset($this->externalClasses[$class]);
-	}
-
-	private function createMock($namespace, $class, $path)
-	{
-		$mockBuilder = new MockBuilder();
-
-		$tagPhp = "<?php";
-		$namespacePhp = "namespace {$namespace};";
-		$classPhp = $mockBuilder->getMockClassPhp($class);
-		$mockPhp = "{$tagPhp}\n\n{$namespacePhp}\n\n{$classPhp}\n";
-
-		return $this->filesystem->write($path, $mockPhp);
 	}
 }

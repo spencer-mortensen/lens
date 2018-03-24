@@ -23,44 +23,32 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens;
+namespace Lens_0_0_56\Lens\Files;
 
-use ErrorException;
+use Lens_0_0_56\Lens\Filesystem;
 
-class IniFile
+class IniFile implements File
 {
-	/** @var Filesystem */
-	private $filesystem;
-
-	/** @var string */
-	private $path;
+	/** @var TextFile */
+	private $file;
 
 	public function __construct(Filesystem $filesystem, $path)
 	{
-		$this->filesystem = $filesystem;
-		$this->path = $path;
+		$this->file = new TextFile($filesystem, $path);
 	}
 
-	public function getPath()
+	public function read(&$value)
 	{
-		return $this->path;
-	}
-
-	public function read()
-	{
-		$contents = $this->filesystem->read($this->path);
-
-		if ($contents === null) {
-			return null;
+		if (!$this->file->read($contents)) {
+			return false;
 		}
 
-		// TODO: use the "Exceptions" class:
-		set_error_handler(array($this, 'errorHandler'));
+		set_error_handler(function () {});
 		$settings = parse_ini_string($contents, false, INI_SCANNER_TYPED);
 		restore_error_handler();
 
 		if (!is_array($settings)) {
-			return null;
+			return false;
 		}
 
 		foreach ($settings as &$setting) {
@@ -69,22 +57,19 @@ class IniFile
 			}
 		}
 
-		return $settings;
+		$value = $settings;
+		return true;
 	}
 
-
-	public function errorHandler($level, $message, $file, $line)
+	public function write($value)
 	{
-		$code = 0;
+		if (!is_array($value)) {
+			return false;
+		}
 
-		throw new ErrorException($message, $code, $level, $file, $line);
-	}
+		$contents = self::getIniText($value);
 
-	public function write(array $settings)
-	{
-		$contents = self::getIniText($settings);
-
-		$this->filesystem->write($this->path, $contents);
+		return $this->file->write($contents);
 	}
 
 	private static function getIniText(array $values)
@@ -106,5 +91,10 @@ class IniFile
 		}
 
 		return var_export($value, true);
+	}
+
+	public function getPath()
+	{
+		return $this->file->getPath();
 	}
 }

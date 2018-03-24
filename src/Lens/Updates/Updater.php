@@ -134,7 +134,7 @@ class Updater
 	private function updateSettings($autoload)
 	{
 		$settingsPath = $this->new->getSettings();
-		$settings = new Settings($this->paths, $this->filesystem, $settingsPath);
+		$settings = new Settings($this->filesystem, $settingsPath);
 
 		$project = $this->new->getProject();
 

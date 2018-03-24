@@ -26,8 +26,8 @@
 namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Archivist\Archivist;
-use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
 use Lens_0_0_56\Lens\Filesystem;
+use Lens_0_0_56\Lens\Map;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
 use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
@@ -36,6 +36,9 @@ class Test
 {
 	/** @var Archivist */
 	private $archivist;
+
+	/** @var string */
+	private $executable;
 
 	/** @var string */
 	private $src;
@@ -67,9 +70,10 @@ class Test
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($src, $autoload, $cache)
+	public function __construct($executable, $src, $autoload, $cache)
 	{
 		$this->archivist = new Archivist();
+		$this->executable = $executable;
 		$this->src = $src;
 		$this->autoload = $autoload;
 		$this->cache = $cache;
@@ -92,7 +96,7 @@ class Test
 
 	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp)
 	{
-		$this->contextPhp = self::getContextPhp($namespace, $uses);
+		$this->contextPhp = PhpCode::getContextPhp($namespace, $uses);
 		$prePhp = self::combine($this->contextPhp, $prePhp);
 		$postPhp = self::combine($this->contextPhp, $postPhp);
 		$this->script = $script;
@@ -137,52 +141,6 @@ class Test
 		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
 	}
 
-	private static function getContextPhp($namespace, array $uses)
-	{
-		$namespacePhp = self::getNamespacePhp($namespace);
-		// TODO: mock DateTime et. al.
-		$usesPhp = self::getUsesPhp($uses);
-
-		return self::combine($namespacePhp, $usesPhp);
-	}
-
-	private static function getNamespacePhp($namespace)
-	{
-		if ($namespace === null) {
-			return null;
-		}
-
-		return "namespace {$namespace};";
-	}
-
-	private static function getUsesPhp(array $uses)
-	{
-		if (count($uses) === 0) {
-			return null;
-		}
-
-		$usesPhp = array();
-
-		foreach ($uses as $name => $path) {
-			$usesPhp[] = self::getUsePhp($name, $path);
-		}
-
-		return implode("\n", $usesPhp);
-	}
-
-	private static function getUsePhp($name, $path)
-	{
-		$usePhp = "use {$path}";
-
-		if ($name !== self::getTail($path, '\\')) {
-			$usePhp .= " as {$name}";
-		}
-
-		$usePhp .= ';';
-
-		return $usePhp;
-	}
-
 	private static function getTail($haystack, $needle)
 	{
 		$position = strrpos($haystack, $needle);
@@ -205,11 +163,14 @@ class Test
 		$paths = Paths::getPlatformPaths();
 		$filesystem = new Filesystem();
 
+		/*
+		// TODO:
 		$mockFunctions = new MockFunctions($paths, $filesystem, $this->cache);
 		$mockFunctions->declareMockFunctions($namespace);
+		*/
 
 		$liveClasses = $this->getLiveClasses($namespace, $uses, $php);
-		new Autoloader($paths, $filesystem, $this->autoload, $this->cache, $liveClasses);
+		new Autoloader($paths, $filesystem, $this->executable, $this->autoload, $this->cache, $liveClasses);
 	}
 
 	private function getLiveClasses($namespace, array $uses, $php)
@@ -222,6 +183,7 @@ class Test
 
 		self::fromInstantiations($namespace, $uses, $php, $classes);
 		self::fromStaticCalls($namespace, $uses, $php, $classes);
+		$this->fromParentClasses($classes);
 
 		return $classes;
 	}
@@ -279,6 +241,24 @@ class Test
 		$class = implode('\\', $names);
 
 		return true;
+	}
+
+	private function fromParentClasses(array &$classes)
+	{
+		// TODO: dependency injection
+		$paths = Paths::getPlatformPaths();
+		$filesystem = new Filesystem();
+
+		// TODO: this path is repeated elsewhere:
+		$parentsPath = $paths->join($this->cache, 'classes', 'parents.json');
+		$map = new Map($paths, $filesystem, $parentsPath);
+
+		// TODO: do this all at once, rather than as a sequence of slow lock-and-read steps
+		foreach ($classes as $class) {
+			if ($map->get($class, $parent)) {
+				$classes[$parent] = $parent;
+			}
+		}
 	}
 
 	private function getState($calls = null)
