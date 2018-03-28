@@ -27,6 +27,17 @@ namespace Lens_0_0_56\Lens\Evaluator;
 
 class PhpCode
 {
+	public static function getRequirePhp($file)
+	{
+		if ($file === null) {
+			return null;
+		}
+
+		$stringPhp = var_export($file, true);
+
+		return "require {$stringPhp};";
+	}
+
 	public static function getContextPhp($namespace, array $uses)
 	{
 		$namespacePhp = self::getNamespacePhp($namespace);

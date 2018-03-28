@@ -96,7 +96,7 @@ class LensRunner implements Command
 		$summarizer = new Summarizer();
 		$summarizer->summarize($project);
 
-		$report = $this->getReport($reportType);
+		$report = $this->getReport($reportType, $autoload);
 		$stdout = $report->getReport($project);
 		$stderr = null;
 
@@ -175,7 +175,7 @@ class LensRunner implements Command
 		}
 	}
 
-	private function getReport($type)
+	private function getReport($type, $autoload)
 	{
 		switch ($type) {
 			case 'xunit':
@@ -185,7 +185,7 @@ class LensRunner implements Command
 				return new Tap();
 
 			default:
-				return new Text();
+				return new Text($autoload);
 		}
 	}
 

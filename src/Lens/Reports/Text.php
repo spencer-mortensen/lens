@@ -33,6 +33,9 @@ use Lens_0_0_56\Lens\Paragraph;
 
 class Text implements Report
 {
+	/** @var string */
+	private $autoload;
+
 	/** @var Comparer */
 	private $comparer;
 
@@ -45,8 +48,9 @@ class Text implements Report
 	/** @var array */
 	private $failedTests;
 
-	public function __construct()
+	public function __construct($autoload)
 	{
+		$this->autoload = $autoload;
 		$this->comparer = new Comparer();
 		$this->passedTestsCount = 0;
 		$this->failedTestsCount = 0;
@@ -110,9 +114,11 @@ class Text implements Report
 	private function getCaseText($namespace, array $uses, $testText, $inputText)
 	{
 		$contextPhp = PhpCode::getContextPhp($namespace, $uses);
+		$requirePhp = PhpCode::getRequirePhp($this->autoload);
 
 		$sections = array(
 			$contextPhp,
+			$requirePhp,
 			$this->getSectionText('// Input', $inputText),
 			$this->getSectionText('// Test', $testText)
 		);
@@ -133,7 +139,7 @@ class Text implements Report
 
 	private function getFixtureIssues($namespace, array $uses, array $state)
 	{
-		$formatter = self::getFormatter($namespace, $uses, $state);
+		$formatter = self::getFormatter($namespace, $uses, $state['variables']);
 
 		$sections = array(
 			self::getUnexpectedMessages($this->getExceptionMessages($formatter, $state['exception'])),
@@ -150,30 +156,33 @@ class Text implements Report
 		$expectedDiff = $expected['diff'];
 
 		// TODO: use ALL of the variables (including the variables from the "\\ Output" section
-		$actualFormatter = self::getFormatter($namespace, $uses, $actual['pre']);
-		$expectedFormatter = self::getFormatter($namespace, $uses, $expected['pre']);
+		$actualVariables = array_merge($actual['pre']['variables'], $actual['post']['variables']);
+		$expectedVariables = array_merge($expected['pre']['variables'], $expected['post']['variables']);
+
+		$actualFormatter = self::getFormatter($namespace, $uses, $actualVariables);
+		$expectedFormatter = self::getFormatter($namespace, $uses, $expectedVariables);
 
 		// TODO: display ALL side-effects (NOT just the differences)
 		$sections = array(
 			self::getCallsMessages($actualFormatter, $expectedFormatter, $actual['post']['calls'], $expected['post']['calls'], $script),
 
-			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actualDiff['exception'])),
-			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expectedDiff['exception'])),
-
-			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
-			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
-
-			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
 			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
+			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
 
-			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actualDiff['globals'])),
 			self::getMissingMessages($this->getGlobalMessages($expectedFormatter, $expectedDiff['globals'])),
+			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actualDiff['globals'])),
 
-			self::getUnexpectedMessages($this->getConstantMessages($actualFormatter, $actualDiff['constants'])),
 			self::getMissingMessages($this->getConstantMessages($expectedFormatter, $expectedDiff['constants'])),
+			self::getUnexpectedMessages($this->getConstantMessages($actualFormatter, $actualDiff['constants'])),
 
+			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expectedDiff['output'])),
 			self::getUnexpectedMessages($this->getOutputMessages($actualFormatter, $actualDiff['output'])),
-			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expectedDiff['output']))
+
+			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
+			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
+
+			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expectedDiff['exception'])),
+			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actualDiff['exception'])),
 		);
 
 		return implode("\n", call_user_func_array('array_merge', $sections));
@@ -325,17 +334,17 @@ class Text implements Report
 		return implode("\n", $output);
 	}
 
-	private static function getFormatter($namespace, array $uses, array $state)
+	private static function getFormatter($namespace, array $uses, array $variables)
 	{
-		$objectNames = self::getObjectNames($state);
+		$objectNames = self::getObjectNames($variables);
 		return new Formatter($namespace, $uses, $objectNames);
 	}
 
-	private static function getObjectNames(array $state)
+	private static function getObjectNames(array $variables)
 	{
 		$names = array();
 
-		foreach ($state['variables'] as $name => $value) {
+		foreach ($variables as $name => $value) {
 			/** @var ObjectArchive $value */
 			if (!is_object($value) || $value->isResourceArchive()) {
 				continue;

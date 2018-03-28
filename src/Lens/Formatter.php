@@ -212,6 +212,8 @@ class Formatter
 				$actionText = $this->getActionText($action);
 			}
 
+			// TODO: use variable name (if available)
+
 			return "new {$relativeClass}({$argumentsPhp});{$actionText}";
 		}
 
