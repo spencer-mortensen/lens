@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Evaluator\Jobs;
+namespace Lens_0_0_56\Lens\Jobs;
 
 use Lens_0_0_56\Lens\Evaluator\CacheBuilder;
 
@@ -33,29 +33,29 @@ class CacheJob implements Job
 	private $executable;
 
 	/** @var string */
-	private $autoloadPath;
+	private $project;
 
 	/** @var string */
-	private $cachePath;
+	private $src;
 
 	/** @var string */
-	private $className;
+	private $autoload;
 
-	/** @var boolean */
-	private $result;
+	/** @var string */
+	private $cache;
 
-	public function __construct($executable, $autoloadPath, $cachePath, $className, &$result)
+	public function __construct($executable, $project, $src, $autoload, $cache)
 	{
 		$this->executable = $executable;
-		$this->autoloadPath = $autoloadPath;
-		$this->cachePath = $cachePath;
-		$this->className = $className;
-		$this->result = &$result;
+		$this->project = $project;
+		$this->src = $src;
+		$this->autoload = $autoload;
+		$this->cache = $cache;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->autoloadPath, $this->cachePath, $this->className);
+		$arguments = array($this->project, $this->src, $this->autoload, $this->cache);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -65,12 +65,11 @@ class CacheJob implements Job
 
 	public function start()
 	{
-		$cache = new CacheBuilder($this->autoloadPath, $this->cachePath);
-		return $cache->run($this->className);
+		$builder = new CacheBuilder($this->project, $this->src, $this->autoload, $this->cache);
+		$builder->build();
 	}
 
 	public function stop($message)
 	{
-		$this->result = $message;
 	}
 }

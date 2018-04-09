@@ -28,7 +28,7 @@ namespace Lens_0_0_56\Lens\Evaluator;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Fork\ForkProcess;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Processor as ParallelProcessor;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
-use Lens_0_0_56\Lens\Evaluator\Jobs\Job;
+use Lens_0_0_56\Lens\Jobs\Job;
 
 class Processor extends ParallelProcessor
 {

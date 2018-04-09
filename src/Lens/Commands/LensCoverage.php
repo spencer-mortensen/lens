@@ -26,7 +26,7 @@
 namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
-use Lens_0_0_56\Lens\Evaluator\Jobs\CoverageJob;
+use Lens_0_0_56\Lens\Jobs\CoverageJob;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensCoverage implements Command

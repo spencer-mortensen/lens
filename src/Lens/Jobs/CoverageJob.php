@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Evaluator\Jobs;
+namespace Lens_0_0_56\Lens\Jobs;
 
 use Lens_0_0_56\Lens\Evaluator\Coverage;
 use Lens_0_0_56\Lens\Filesystem;

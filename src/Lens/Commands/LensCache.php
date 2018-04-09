@@ -26,7 +26,7 @@
 namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
-use Lens_0_0_56\Lens\Evaluator\Jobs\CacheJob;
+use Lens_0_0_56\Lens\Jobs\CacheJob;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensCache implements Command
@@ -55,9 +55,9 @@ class LensCache implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($autoloadPath, $cachePath, $className) = $arguments;
+		list($project, $src, $autoload, $cache) = $arguments;
 
-		$job = new CacheJob($executable, $autoloadPath, $cachePath, $className, $result);
+		$job = new CacheJob($executable, $project, $src, $autoload, $cache);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

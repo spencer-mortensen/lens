@@ -23,9 +23,8 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Evaluator\Jobs;
+namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\Autoloader;
 use Lens_0_0_56\Lens\Evaluator\Processor;
 use Lens_0_0_56\Lens\Evaluator\Test;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
@@ -38,9 +37,6 @@ class TestJob implements Job
 
 	/** @var string */
 	private $src;
-
-	/** @var string */
-	private $autoload;
 
 	/** @var string */
 	private $cache;
@@ -72,11 +68,10 @@ class TestJob implements Job
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $autoload, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $src, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->src = $src;
-		$this->autoload = $autoload;
 		$this->cache = $cache;
 		$this->namespace = $namespace;
 		$this->uses = $uses;
@@ -91,7 +86,7 @@ class TestJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = array($this->src, $this->autoload, $this->cache, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
+		$arguments = array($this->src, $this->cache, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -102,7 +97,7 @@ class TestJob implements Job
 	public function start()
 	{
 		$worker = $this->process;
-		$test = new Test($this->executable, $this->src, $this->autoload, $this->cache);
+		$test = new Test($this->executable, $this->src, $this->cache);
 
 		$sendResults = function () use ($worker, $test) {
 			$results = array(

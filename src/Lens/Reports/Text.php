@@ -27,7 +27,7 @@ namespace Lens_0_0_56\Lens\Reports;
 
 use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
 use Lens_0_0_56\Lens\Archivist\Comparer;
-use Lens_0_0_56\Lens\Evaluator\PhpCode;
+use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\Lens\Formatter;
 use Lens_0_0_56\Lens\Paragraph;
 
@@ -113,8 +113,8 @@ class Text implements Report
 
 	private function getCaseText($namespace, array $uses, $testText, $inputText)
 	{
-		$contextPhp = PhpCode::getContextPhp($namespace, $uses);
-		$requirePhp = PhpCode::getRequirePhp($this->autoload);
+		$contextPhp = Code::getContextPhp($namespace, $uses);
+		$requirePhp = $this->getRequireAutoloadPhp();
 
 		$sections = array(
 			$contextPhp,
@@ -126,6 +126,16 @@ class Text implements Report
 		$sections = array_filter($sections, 'is_string');
 
 		return implode("\n\n", $sections);
+	}
+
+	private function getRequireAutoloadPhp()
+	{
+		if ($this->autoload === null) {
+			return null;
+		}
+
+		$valuePhp = Code::getValuePhp($this->autoload);
+		return Code::getRequirePhp($valuePhp);
 	}
 
 	private function getSectionText($label, $code)
@@ -155,7 +165,7 @@ class Text implements Report
 		$actualDiff = $actual['diff'];
 		$expectedDiff = $expected['diff'];
 
-		// TODO: use ALL of the variables (including the variables from the "\\ Output" section
+		// TODO: use ALL of the variables (including the variables from the "\\ Output" section)
 		$actualVariables = array_merge($actual['pre']['variables'], $actual['post']['variables']);
 		$expectedVariables = array_merge($expected['pre']['variables'], $expected['post']['variables']);
 

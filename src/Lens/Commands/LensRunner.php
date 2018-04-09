@@ -27,6 +27,7 @@ namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
 use Lens_0_0_56\Lens\Browser;
+use Lens_0_0_56\Lens\Index;
 use Lens_0_0_56\Lens\Environment;
 use Lens_0_0_56\Lens\Evaluator\Evaluator;
 use Lens_0_0_56\Lens\Filesystem;
@@ -77,8 +78,7 @@ class LensRunner implements Command
 		$this->finder->find($paths);
 
 		$executable = $this->arguments->getExecutable();
-		$evaluator = new Evaluator($executable, $this->filesystem);
-
+		$project = $this->finder->getProject();
 		$src = $this->finder->getSrc();
 		$autoload = $this->finder->getAutoload();
 		$cache = $this->finder->getCache();
@@ -86,18 +86,19 @@ class LensRunner implements Command
 
 		$suites = $this->getSuites($paths);
 
-		list($suites, $code, $coverage) = $evaluator->run($src, $autoload, $cache, $suites);
+		$evaluator = new Evaluator($executable, $this->filesystem);
+		list($suites, $code, $coverage) = $evaluator->run($project, $src, $autoload, $cache, $suites);
 
-		$project = array(
+		$results = array(
 			'name' => 'Lens', // TODO: let the user provide the project name in the configuration file
 			'suites' => $this->useRelativePaths($tests, $suites)
 		);
 
 		$summarizer = new Summarizer();
-		$summarizer->summarize($project);
+		$summarizer->summarize($results);
 
 		$report = $this->getReport($reportType, $autoload);
-		$stdout = $report->getReport($project);
+		$stdout = $report->getReport($results);
 		$stderr = null;
 
 		if ($this->isUpdateAvailable() && ($reportType === 'text')) {
@@ -110,7 +111,7 @@ class LensRunner implements Command
 			$web->coverage($src, $coveragePath, $code, $coverage);
 		}
 
-		$isSuccessful = ($project['summary']['failed'] === 0);
+		$isSuccessful = ($results['summary']['failed'] === 0);
 
 		if ($isSuccessful) {
 			$exitCode = 0;

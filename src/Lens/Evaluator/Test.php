@@ -27,16 +27,12 @@ namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Archivist\Archivist;
 use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\Lens\Map;
+use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Test
 {
-	/** @var Archivist */
-	private $archivist;
-
 	/** @var string */
 	private $executable;
 
@@ -44,7 +40,16 @@ class Test
 	private $src;
 
 	/** @var string */
-	private $autoload;
+	private $cache;
+
+	/** @var Archivist */
+	private $archivist;
+
+	/** @var Paths  */
+	private $paths;
+
+	/** @var Filesystem */
+	private $filesystem;
 
 	/** @var null|string */
 	private $contextPhp;
@@ -64,19 +69,16 @@ class Test
 	/** @var CoverageExtractor */
 	private $coverageExtractor;
 
-	/** @var string */
-	private $cache;
-
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $autoload, $cache)
+	public function __construct($executable, $src, $cache)
 	{
-		$this->archivist = new Archivist();
 		$this->executable = $executable;
 		$this->src = $src;
-		$this->autoload = $autoload;
 		$this->cache = $cache;
+		$this->archivist = new Archivist();
+		$this->paths = Paths::getPlatformPaths();
 	}
 
 	public function getPreState()
@@ -96,13 +98,13 @@ class Test
 
 	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp)
 	{
-		$this->contextPhp = PhpCode::getContextPhp($namespace, $uses);
+		$this->contextPhp = Code::getContextPhp($namespace, $uses);
 		$prePhp = self::combine($this->contextPhp, $prePhp);
 		$postPhp = self::combine($this->contextPhp, $postPhp);
 		$this->script = $script;
 		$this->examiner = new Examiner();
 
-		$this->prepare($namespace, $uses, $postPhp);
+		$this->prepare();
 
 		Exceptions::on(array($this, 'prePhp'));
 
@@ -126,6 +128,12 @@ class Test
 		Exceptions::off();
 
 		$this->postPhp();
+	}
+
+	private function prepare()
+	{
+		define('LENS_CACHE_DIRECTORY', $this->cache);
+		spl_autoload_register(array($this, 'autoload'));
 	}
 
 	public function prePhp()
@@ -157,107 +165,15 @@ class Test
 		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
 	}
 
-	private function prepare($namespace, array $uses, $php)
+	public function autoload($class)
 	{
-		// TODO: dependency injection
-		$paths = Paths::getPlatformPaths();
-		$filesystem = new Filesystem();
+		$parts = explode('\\', $class);
+		$relativeFilePath = $this->paths->join($parts) . '.php';
+		// TODO: autoload mock classes when necessary:
+		$absoluteFilePath = $this->paths->join(LENS_CACHE_DIRECTORY, 'classes', 'live', $relativeFilePath);
 
-		/*
-		// TODO:
-		$mockFunctions = new MockFunctions($paths, $filesystem, $this->cache);
-		$mockFunctions->declareMockFunctions($namespace);
-		*/
-
-		$liveClasses = $this->getLiveClasses($namespace, $uses, $php);
-		new Autoloader($paths, $filesystem, $this->executable, $this->autoload, $this->cache, $liveClasses);
-	}
-
-	private function getLiveClasses($namespace, array $uses, $php)
-	{
-		$classes = array();
-
-		if ($this->script === null) {
-			return $classes;
-		}
-
-		self::fromInstantiations($namespace, $uses, $php, $classes);
-		self::fromStaticCalls($namespace, $uses, $php, $classes);
-		$this->fromParentClasses($classes);
-
-		return $classes;
-	}
-
-	private static function fromInstantiations($namespace, array $uses, $php, array &$classes)
-	{
-		self::addClasses('\\bnew\\h+(?<class>[a-zA-Z_0-9\\\\]+)', $namespace, $uses, $php, $classes);
-	}
-
-	private static function fromStaticCalls($namespace, array $uses, $php, array &$classes)
-	{
-		self::addClasses('(?<class>[a-zA-Z_0-9\\\\]+)::', $namespace, $uses, $php, $classes);
-	}
-
-	private static function addClasses($expression, $namespace, array $uses, $php, array &$classes)
-	{
-		if (!Re::matches($expression, $php, $matches)) {
-			return;
-		}
-
-		foreach ($matches as $match) {
-			$class = self::getAbsoluteClass($namespace, $uses, $match['class']);
-			$classes[$class] = $class;
-		}
-	}
-
-	private static function getAbsoluteClass($namespace, array $uses, $class)
-	{
-		if (substr($class, 0, 1) === '\\') {
-			return substr($class, 1);
-		}
-
-		if (self::resolveUses($uses, $class)) {
-			return $class;
-		}
-
-		if ($namespace === null) {
-			return $class;
-		}
-
-		return "{$namespace}\\{$class}";
-	}
-
-	private static function resolveUses(array $uses, &$class)
-	{
-		$names = explode('\\', $class, 2);
-		$baseName = $names[0];
-		$basePath = &$uses[$baseName];
-
-		if ($basePath === null) {
-			return false;
-		}
-
-		$names[0] = $basePath;
-		$class = implode('\\', $names);
-
-		return true;
-	}
-
-	private function fromParentClasses(array &$classes)
-	{
-		// TODO: dependency injection
-		$paths = Paths::getPlatformPaths();
-		$filesystem = new Filesystem();
-
-		// TODO: this path is repeated elsewhere:
-		$parentsPath = $paths->join($this->cache, 'classes', 'parents.json');
-		$map = new Map($paths, $filesystem, $parentsPath);
-
-		// TODO: do this all at once, rather than as a sequence of slow lock-and-read steps
-		foreach ($classes as $class) {
-			if ($map->get($class, $parent)) {
-				$classes[$parent] = $parent;
-			}
+		if ($this->filesystem->isFile($absoluteFilePath)) {
+			include $absoluteFilePath;
 		}
 	}
 

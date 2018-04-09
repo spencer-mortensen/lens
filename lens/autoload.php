@@ -8,7 +8,7 @@ call_user_func(function() {
 		'Lens_0_0_56' => 'src'
 	);
 
-	require "{$project}/src/Lens/Autoloader.php";
+	require_once "{$project}/src/Lens/Autoloader.php";
 
 	new Autoloader($project, $namespaces);
 });

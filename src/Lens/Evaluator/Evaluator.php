@@ -25,8 +25,9 @@
 
 namespace Lens_0_0_56\Lens\Evaluator;
 
-use Lens_0_0_56\Lens\Evaluator\Jobs\CoverageJob;
-use Lens_0_0_56\Lens\Evaluator\Jobs\TestJob;
+use Lens_0_0_56\Lens\Jobs\CacheJob;
+use Lens_0_0_56\Lens\Jobs\CoverageJob;
+use Lens_0_0_56\Lens\Jobs\TestJob;
 use Lens_0_0_56\Lens\Filesystem;
 
 class Evaluator
@@ -47,11 +48,13 @@ class Evaluator
 		$this->processor = new Processor();
 	}
 
-	public function run($src, $autoload, $cache, array $suites)
+	public function run($project, $src, $autoload, $cache, array $suites)
 	{
+		$this->updateCache($project, $src, $autoload, $cache);
+
 		// TODO: run this only if coverage is enabled:
 		$this->startCoverage($src, $autoload, $code, $executableLines);
-		$this->startTests($src, $autoload, $cache, $suites, $executedLines);
+		$this->startTests($src, $cache, $suites, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -63,6 +66,15 @@ class Evaluator
 		return array($suites, $code, $coverage);
 	}
 
+	private function updateCache($project, $src, $autoload, $cache)
+	{
+		$job = new CacheJob($this->executable, $project, $src, $autoload, $cache);
+		$process = $this->processor->getProcess($job);
+
+		$this->processor->start($process);
+		$this->processor->finish();
+	}
+
 	private function startCoverage($srcDirectory, $autoloadPath, array &$code = null, array &$coverage = null)
 	{
 		if ($srcDirectory === null) {
@@ -71,15 +83,7 @@ class Evaluator
 
 		$relativePaths = $this->getRelativePaths($srcDirectory);
 
-		$job = new CoverageJob(
-			$this->executable,
-			$srcDirectory,
-			$relativePaths,
-			$autoloadPath,
-			$process,
-			$code,
-			$coverage
-		);
+		$job = new CoverageJob($this->executable, $srcDirectory, $relativePaths, $autoloadPath, $process, $code, $coverage);
 
 		$process = $this->processor->getProcess($job);
 
@@ -128,7 +132,7 @@ class Evaluator
 		return $coverage;
 	}
 
-	private function startTests($src, $autoload, $cache, array &$suites, array &$coverage = null)
+	private function startTests($src, $cache, array &$suites, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -137,7 +141,6 @@ class Evaluator
 				foreach ($test['cases'] as $caseLine => &$case) {
 					$this->startTest(
 						$src,
-						$autoload,
 						$cache,
 						$suite['namespace'],
 						$suite['uses'],
@@ -154,11 +157,10 @@ class Evaluator
 		}
 	}
 
-	private function startTest($src, $autoload, $cache, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
+	private function startTest($src, $cache, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
 		$this->startTestJob(
 			$src,
-			$autoload,
 			$cache,
 			$namespace,
 			$uses,
@@ -171,7 +173,6 @@ class Evaluator
 
 		$this->startTestJob(
 			$src,
-			$autoload,
 			$cache,
 			$namespace,
 			$uses,
@@ -182,12 +183,11 @@ class Evaluator
 		);
 	}
 
-	private function startTestJob($src, $autoload, $cache, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
+	private function startTestJob($src, $cache, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
 			$src,
-			$autoload,
 			$cache,
 			$namespace,
 			$uses,

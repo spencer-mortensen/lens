@@ -23,19 +23,37 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Evaluator;
+namespace Lens_0_0_56\Lens\Php;
 
-class PhpCode
+class Code
 {
-	public static function getRequirePhp($file)
+	public static function getValuePhp($value)
 	{
-		if ($file === null) {
-			return null;
-		}
+		return var_export($value, true);
+	}
 
-		$stringPhp = var_export($file, true);
+	public static function getPhp()
+	{
+		$sections = func_get_args();
+		$sections = array_filter($sections, 'is_string');
+		array_unshift($sections, '<?php');
 
-		return "require {$stringPhp};";
+		return implode("\n\n", $sections) . "\n";
+	}
+
+	public static function getRequirePhp($filePhp)
+	{
+		return self::getIncludeStatement('require', $filePhp);
+	}
+
+	public static function getRequireOncePhp($filePhp)
+	{
+		return self::getIncludeStatement('require_once', $filePhp);
+	}
+
+	private static function getIncludeStatement($keyword, $filePhp)
+	{
+		return "{$keyword} {$filePhp};";
 	}
 
 	public static function getContextPhp($namespace, array $uses)

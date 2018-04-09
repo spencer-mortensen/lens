@@ -42,7 +42,7 @@ class Autoloader
 	{
 		$namespacePrefix = "{$namespace}\\";
 		$namespacePrefixLength = strlen($namespacePrefix);
-		$absolutePath = "{$this->projectDirectory}/{$relativePath}";
+		$absolutePath = $this->projectDirectory . DIRECTORY_SEPARATOR . $relativePath;
 
 		$autoloader = function ($class) use ($namespacePrefix, $namespacePrefixLength, $absolutePath) {
 			if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
@@ -50,8 +50,8 @@ class Autoloader
 			}
 
 			$relativeClassName = substr($class, $namespacePrefixLength);
-			$relativeFilePath = strtr($relativeClassName, '\\', '/') . '.php';
-			$absoluteFilePath = "{$absolutePath}/{$relativeFilePath}";
+			$relativeFilePath = strtr($relativeClassName, '\\', DIRECTORY_SEPARATOR) . '.php';
+			$absoluteFilePath = $absolutePath . DIRECTORY_SEPARATOR . $relativeFilePath;
 
 			if (is_file($absoluteFilePath)) {
 				include $absoluteFilePath;
