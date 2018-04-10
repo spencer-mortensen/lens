@@ -36,18 +36,31 @@ class ClassParser extends Parser
 	public function __construct()
 	{
 		$grammar = <<<'EOS'
-class: AND classLine openingBrace classBody
-classLine: RE [^{]+
-classBody: RE .*
+class: AND classDeclaration openingBrace classBody closingBrace
+classDeclaration: RE [^{]+
 openingBrace: STRING {
-closingBrace: STRING }
+classBody: MANY classBodyUnit 0
+classBodyUnit: OR fluff functionDefinition comment string
+fluff: RE (?:(?![#'"{}]|/\*|//|<<<).)+
+functionDefinition: AND openingBrace functionBody closingBrace
+functionBody: MANY functionBodyUnit 0
+functionBodyUnit: OR safeSymbols call comment string group character
+safeSymbols: RE [^\w\\/#'"<{}$-]+
+call: OR functionCall excludedCall constructorCall staticMethodCall
+functionCall: RE ([\w\\]+)\s*\(
+excludedCall: RE (?:->\s*|\$)[\w\\]+\s*\(
+constructorCall: RE \bnew\s+([\w\\]+)\s*\(
+staticMethodCall: RE ([\w\\]+)::(\w+)\s*\(
+comment: OR multiLineComment singleLineComment
+multiLineComment: RE /\*.*?\*/
+singleLineComment: RE (?://|#).*?(?:\n|$)
 string: OR singleQuotedString doubleQuotedString docString
 singleQuotedString: RE '(?:\\\\|\\\'|[^'])*'
 doubleQuotedString: RE "(?:\\\\|\\\"|[^"])*"
 docString: RE <<<(['"]?)(\w+)\1\r?\n.*?\n\2;?(?:\r?\n|$)
-comment: OR multiLineComment singleLineComment
-multiLineComment: RE /\*.*?\*/
-singleLineComment: RE (?://|#).*?(?:\n|$)
+group: AND openingBrace functionBody closingBrace
+character: RE [^}]
+closingBrace: STRING }
 EOS;
 
 		$rules = new Rules($this, $grammar);
@@ -58,71 +71,107 @@ EOS;
 
 	public function parse($input)
 	{
-		$input = <<<'EOS'
-class C extends P implements I, J
-{
-	/**
-         * This is a multiline comment
-	 */
-	private static $x;
-
-	// private $y = 'hey';
-
-	/*
-	public function __construct()
-	{
-		$x = new Parser();
-	}
-	*/
-
-	public function f(integer $x, ...$strings)
-	{
-		$d = new D();
-		$d->f();
-
-		D::g();
-
-		$string = <<<'EOF'
-	public function g()
-	{
-		echo "g\n";
-	}
-EOF;
-
-		$transform = 'strtoupper';
-
-		foreach ($strings as &$string) {
-			$string = $transform($string);
-		}
-
-		$date = new \DateTime();
-		$time = \time();
-	}
-
-	abstract public function g();
-}
-EOS;
-
 		$this->input = $input;
 
-		try {
-			$output = parent::parse($input);
-			echo "output: {$output}\n";
-		} catch (\Exception $exception) {
-			$output = null;
-			echo "Exception\n";
-		}
-
-		return $output;
+		return parent::parse($input);
 	}
 
 	public function getClass(array $matches)
 	{
-		return implode('', $matches);
+		return $matches[2];
 	}
 
-	public function getDocString(array $match)
+	public function getClassBody(array $matches)
 	{
-		return $match[0];
+		return self::merge($matches);
+	}
+
+	public function getFluff()
+	{
+		return null;
+	}
+
+	public function getFunctionDefinition(array $matches)
+	{
+		return $matches[1];
+	}
+
+	public function getFunctionBody(array $matches)
+	{
+		return self::merge($matches);
+	}
+
+	private static function merge(array $array)
+	{
+		$array = array_filter($array, array('self', 'isNonNull'));
+
+		if (0 < count($array)) {
+			$array = call_user_func_array('array_merge', $array);
+		}
+
+		return $array;
+	}
+
+	private static function isNonNull($value)
+	{
+		return $value !== null;
+	}
+
+	public function getSafeSymbols()
+	{
+		return null;
+	}
+
+	public function getFunctionCall(array $match)
+	{
+		$namespace = null;
+		$function = $match[1];
+
+		if (Semantics::isKeyword($function)) {
+			return null;
+		}
+
+		return array(array($namespace, $function));
+	}
+
+	public function getExcludedCall()
+	{
+		return null;
+	}
+
+	public function getConstructorCall(array $match)
+	{
+		$namespace = $match[1];
+		$function = '__construct';
+
+		return array(array($namespace, $function));
+	}
+
+	public function getStaticMethodCall(array $match)
+	{
+		$namespace = $match[1];
+		$function = $match[2];
+
+		return array(array($namespace, $function));
+	}
+
+	public function getComment()
+	{
+		return null;
+	}
+
+	public function getString()
+	{
+		return null;
+	}
+
+	public function getGroup(array $matches)
+	{
+		return $matches[1];
+	}
+
+	public function getCharacter()
+	{
+		return null;
 	}
 }

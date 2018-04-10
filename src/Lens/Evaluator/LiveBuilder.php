@@ -27,7 +27,9 @@ namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Php\Code;
+use Lens_0_0_56\Lens\Php\ClassParser;
 use Lens_0_0_56\Lens\Php\FileParser;
+use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 use ReflectionClass;
 use ReflectionFunction;
@@ -54,12 +56,23 @@ class LiveBuilder
 	public function getClassPhp($class)
 	{
 		$reflection = new ReflectionClass($class);
-		$code = $this->getCode($reflection);
+		$filePhp = $this->getCode($reflection);
+		$classPhp = $this->getDefinitionPhp($reflection, $filePhp);
 
-		$headerPhp = $this->getHeaderPhp($reflection, $code);
-		$classPhp = $this->getDefinitionPhp($reflection, $code);
+		$namespace = $reflection->getNamespaceName();
+		$uses = $this->getUses($filePhp);
 
-		return Code::getPhp($headerPhp, $classPhp);
+		$calls = $this->getCalls($classPhp);
+
+		// TODO: interpret "self" and "parent"
+		// TODO: translate these calls into file dependencies
+		// TODO: modify the source code in some cases (e.g. "\time()")
+		echo "calls: ", json_encode($calls), "\n";
+
+		$contextPhp = Code::getContextPhp($namespace, $uses);
+		$requirePhp = $this->getGlobalFunctionsPhp($namespace);
+
+		return Code::getPhp($contextPhp, $requirePhp, $classPhp);
 	}
 
 	/**
@@ -72,27 +85,33 @@ class LiveBuilder
 		return $this->filesystem->read($file);
 	}
 
+	private function getUses($filePhp)
+	{
+		$parser = new FileParser();
+		return $parser->parse($filePhp);
+	}
+
+	private function getCalls($classPhp)
+	{
+		try {
+			$parser = new ClassParser();
+			return $parser->parse($classPhp);
+		} catch (ParserException $exception) {
+			// TODO:
+			echo "Exception\n";
+			return array();
+		}
+	}
+
 	/**
 	 * @param ReflectionClass|ReflectionFunction $reflection
-	 * @param string $code
+	 * @param string $filePhp
 	 * @return string
 	 */
-	private function getHeaderPhp($reflection, $code)
+	private function getHeaderPhp($reflection, $filePhp)
 	{
-		$namespace = $reflection->getNamespaceName();
-
-		$parser = new FileParser();
-		$uses = $parser->parse($code);
-
-		$contextPhp = Code::getContextPhp($namespace, $uses);
 		// TODO
-		return $contextPhp;
-
-		$requirePhp = $this->getGlobalFunctionsPhp($namespace);
-
-		$sections = array($contextPhp, $requirePhp);
-		$sections = array_filter($sections, 'is_string');
-		return implode("\n\n", $sections);
+		return null;
 	}
 
 	private function getGlobalFunctionsPhp($namespace)
