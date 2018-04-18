@@ -25,11 +25,15 @@
 
 namespace Lens_0_0_56\Lens\Php;
 
+use Lens_0_0_56\SpencerMortensen\Parser\Rule;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
 
 class FileParser extends Parser
 {
+	/** @var Rule */
+	private $rule;
+
 	/** @var string */
 	private $input;
 
@@ -51,16 +55,14 @@ code: RE .*
 EOS;
 
 		$rules = new Rules($this, $grammar);
-		$rule = $rules->getRule('php');
-
-		parent::__construct($rule);
+		$this->rule = $rules->getRule('php');
 	}
 
 	public function parse($input)
 	{
 		$this->input = $input;
 
-		return parent::parse($input);
+		return $this->run($this->rule, $input);
 	}
 
 	public function getPhp(array $matches)

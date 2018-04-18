@@ -91,6 +91,11 @@ class CacheBuilder
 			}
 		}
 
+		// For each file:
+		//   For each use statement:
+		//     Autoload the class (using "class_exists($class, true)")
+		//   Load all sibling files (if not already loaded)
+
 		while ($declarations->get($path, $classes, $functions)) {
 			if (isset($changes[$path]) || $watcher->isModifiedFile($path)) {
 				$this->removeCachedFile($path);

@@ -32,6 +32,37 @@ class Semantics
 		return isset(self::$keywords[$name]);
 	}
 
+	public static function isClassIdentifier($name)
+	{
+		return isset(self::$classIdentifiers[$name]);
+	}
+
+	public static function isInternalFunction($name)
+	{
+		if (self::$internalFunctions === null) {
+			$names = get_defined_functions()['internal'];
+			self::$internalFunctions = array_combine($names, $names);
+		}
+
+		return isset(self::$internalFunctions[$name]);
+	}
+
+	public static function isUnsafeFunction($name)
+	{
+		return isset(self::$unsafeFunctions[$name]);
+	}
+
+	public static function isUnsafeClass($name)
+	{
+		return isset(self::$unsafeClasses[$name]);
+	}
+
+	private static $classIdentifiers = array(
+		'parent' => 'parent',
+		'self' => 'self',
+		'static' => 'static'
+	);
+
 	private static $keywords = array(
 		'__halt_compiler' => '__halt_compiler',
 		'abstract' => 'abstract',
@@ -102,7 +133,7 @@ class Semantics
 		'yield' => 'yield'
 	);
 
-	private static $externalFunctions = array(
+	private static $unsafeFunctions = array(
 		// TODO: Finish the date/time functions <http://php.net/manual/en/ref.datetime.php>
 		// Time functions
 		'microtime' => 'microtime',
@@ -222,8 +253,11 @@ class Semantics
 	);
 
 	// TODO: Finish this list:
-	private static $externalClasses = array(
+	private static $unsafeClasses = array(
+		'DateTime' => 'DateTime',
 		'PDO' => 'PDO',
 		'PDOStatement' => 'PDOStatement'
 	);
+
+	private static $internalFunctions;
 }

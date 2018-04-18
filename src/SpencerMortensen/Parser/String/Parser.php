@@ -31,28 +31,20 @@ use Lens_0_0_56\SpencerMortensen\Parser\Rule;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules\ReRule;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules\StringRule;
 
-class Parser extends CoreParser
+abstract class Parser extends CoreParser
 {
-	/** @var Rule */
-	private $rule;
-
 	/** @var Lexer */
 	private $lexer;
 
 	/** @var array */
 	private $expectation;
 
-	public function __construct(Rule $rule)
-	{
-		$this->rule = $rule;
-	}
-
-	public function parse($input)
+	protected function run(Rule $rule, $input)
 	{
 		$this->lexer = new Lexer($input);
 		$this->setExpectation(null);
 
-		if (!$this->runRule($this->rule, $output) || !$this->lexer->isHalted()) {
+		if (!$this->runRule($rule, $output) || !$this->lexer->isHalted()) {
 			throw $this->parserException();
 		}
 
@@ -148,5 +140,10 @@ class Parser extends CoreParser
 		$position = $this->lexer->getPosition();
 
 		$this->expectation = array($ruleName, $position);
+	}
+
+	protected function getPosition()
+	{
+		return $this->lexer->getPosition();
 	}
 }

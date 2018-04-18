@@ -28,10 +28,13 @@ namespace Lens_0_0_56\Lens\Php;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
 
-class ClassParser extends Parser
+class CallParser extends Parser
 {
-	/** @var string */
-	private $input;
+	/** @var Rules */
+	private $rules;
+
+	const TYPE_CLASS = 1;
+	const TYPE_FUNCTION = 2;
 
 	public function __construct()
 	{
@@ -49,8 +52,8 @@ safeSymbols: RE [^\w\\/#'"<{}$-]+
 call: OR functionCall excludedCall constructorCall staticMethodCall
 functionCall: RE ([\w\\]+)\s*\(
 excludedCall: RE (?:->\s*|\$)[\w\\]+\s*\(
-constructorCall: RE \bnew\s+([\w\\]+)\s*\(
-staticMethodCall: RE ([\w\\]+)::(\w+)\s*\(
+constructorCall: RE (\bnew\s+)([\w\\]+)\s*\(
+staticMethodCall: RE ([\w\\]+)\s*::\s*\w+\s*\(
 comment: OR multiLineComment singleLineComment
 multiLineComment: RE /\*.*?\*/
 singleLineComment: RE (?://|#).*?(?:\n|$)
@@ -61,19 +64,16 @@ docString: RE <<<(['"]?)(\w+)\1\r?\n.*?\n\2;?(?:\r?\n|$)
 group: AND openingBrace functionBody closingBrace
 character: RE [^}]
 closingBrace: STRING }
+function: AND fluff functionDefinition
 EOS;
 
-		$rules = new Rules($this, $grammar);
-		$rule = $rules->getRule('class');
-
-		parent::__construct($rule);
+		$this->rules = new Rules($this, $grammar);
 	}
 
-	public function parse($input)
+	public function parse($ruleName, $input)
 	{
-		$this->input = $input;
-
-		return parent::parse($input);
+		$rule = $this->rules->getRule($ruleName);
+		return $this->run($rule, $input);
 	}
 
 	public function getClass(array $matches)
@@ -122,37 +122,41 @@ EOS;
 		return null;
 	}
 
+	public function getExcludedCall()
+	{
+		return null;
+	}
+
 	public function getFunctionCall(array $match)
 	{
-		$namespace = null;
 		$function = $match[1];
 
 		if (Semantics::isKeyword($function)) {
 			return null;
 		}
 
-		return array(array($namespace, $function));
-	}
+		$position = $this->getPosition() - strlen($match[0]);
 
-	public function getExcludedCall()
-	{
-		return null;
+		$token = array(self::TYPE_FUNCTION, $position, $function);
+		return array($token);
 	}
 
 	public function getConstructorCall(array $match)
 	{
-		$namespace = $match[1];
-		$function = '__construct';
+		$class = $match[2];
+		$position = $this->getPosition() - strlen($match[0]) + strlen($match[1]);
 
-		return array(array($namespace, $function));
+		$token = array(self::TYPE_CLASS, $position, $class);
+		return array($token);
 	}
 
 	public function getStaticMethodCall(array $match)
 	{
-		$namespace = $match[1];
-		$function = $match[2];
+		$class = $match[1];
+		$position = $this->getPosition() - strlen($match[0]);
 
-		return array(array($namespace, $function));
+		$token = array(self::TYPE_CLASS, $position, $class);
+		return array($token);
 	}
 
 	public function getComment()
@@ -173,5 +177,10 @@ EOS;
 	public function getCharacter()
 	{
 		return null;
+	}
+
+	public function getFunction(array $matches)
+	{
+		return $matches[1];
 	}
 }
