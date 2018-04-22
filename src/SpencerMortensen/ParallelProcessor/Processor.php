@@ -30,12 +30,6 @@ use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Stream;
 class Processor
 {
 	/** @var integer */
-	private static $TIMEOUT_SECONDS = 3;
-
-	/** @var integer */
-	private static $TIMEOUT_MICROSECONDS = 0;
-
-	/** @var integer */
 	private $id;
 
 	/** @var ClientProcess[] */
@@ -44,11 +38,36 @@ class Processor
 	/** @var resource[] */
 	private $streams;
 
-	public function __construct()
+	/** @var integer */
+	private $timeoutSeconds;
+
+	/** @var integer */
+	private $timeoutMicroseconds;
+
+	public function __construct($timeoutSeconds = null)
 	{
 		$this->id = 0;
 		$this->processes = array();
 		$this->streams = array();
+
+		$this->setTimeout($timeoutSeconds);
+	}
+
+	private function setTimeout($input)
+	{
+		if ((!is_integer($input) && !is_float($input)) || ($input <= 0)) {
+			$this->timeoutSeconds = null;
+			$this->timeoutMicroseconds = null;
+			return;
+		}
+
+		$MICROSECONDS_PER_SECOND = 1000000;
+
+		$timeoutSeconds = (integer)floor($input);
+		$timeoutMicroseconds = (integer)round(($input - $timeoutSeconds) * $MICROSECONDS_PER_SECOND);
+
+		$this->timeoutSeconds = $timeoutSeconds;
+		$this->timeoutMicroseconds = $timeoutMicroseconds;
 	}
 
 	public function start(ClientProcess $process)
@@ -75,7 +94,7 @@ class Processor
 		$ready = $this->streams;
 		$x = null;
 
-		if (stream_select($ready, $x, $x, self::$TIMEOUT_SECONDS, self::$TIMEOUT_MICROSECONDS) === 0) {
+		if (stream_select($ready, $x, $x, $this->timeoutSeconds, $this->timeoutMicroseconds) === 0) {
 			throw ProcessorException::timeout();
 		}
 
