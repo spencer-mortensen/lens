@@ -26,7 +26,7 @@
 namespace Lens_0_0_56\Lens;
 
 use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Lexer;
+use Lens_0_0_56\SpencerMortensen\Parser\Rule;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
 
@@ -97,6 +97,9 @@ results: {
 
 class SuiteParser extends Parser
 {
+	/** @var Rule */
+	private $rule;
+
 	/** @var string */
 	private $input;
 
@@ -116,7 +119,7 @@ use: AND useLine optionalComments
 useLine: RE use\h+(?<namespace>[a-zA-Z_0-9\\]+)(?:\h+as\h+(?<alias>[a-zA-Z_0-9]+))?;\s*
 tests: MANY test 1
 test: AND subject cases
-subject: AND subjectLabel optionalComments lineNumber code
+subject: AND lineNumber subjectLabel optionalComments code
 subjectLabel: RE // Test\s+
 lineNumber: STRING
 code: MANY codeBlock 1
@@ -127,21 +130,19 @@ case: AND optionalInput output
 optionalInput: MANY input 0 1
 input: AND inputLabel optionalComments code
 inputLabel: RE // Input\s+
-output: AND outputLabel optionalComments lineNumber code
+output: AND lineNumber outputLabel optionalComments code
 outputLabel: RE // Output\s+
 EOS;
 
 		$rules = new Rules($this, $grammar);
-		$rule = $rules->getRule('suite');
-
-		parent::__construct($rule);
+		$this->rule = $rules->getRule('suite');
 	}
 
 	public function parse($input)
 	{
 		$this->input = $input;
 
-		return parent::parse($input);
+		return $this->run($this->rule, $input);
 	}
 
 	public function getSuite(array $match)
@@ -233,16 +234,14 @@ EOS;
 
 	public function getLineNumber()
 	{
-		/** @var Lexer $lexer */
-		$lexer = $this->getState();
-		$position = $lexer->getPosition();
+		$position = $this->getPosition();
 		$text = substr($this->input, 0, $position);
 		return substr_count($text, "\n") + 1;
 	}
 
 	public function getSubject(array $matches)
 	{
-		$line = $matches[2];
+		$line = $matches[0];
 		$code = $matches[3];
 
 		return array($line, $code);
@@ -343,7 +342,7 @@ EOS;
 
 	public function getOutput(array $matches)
 	{
-		$line = $matches[2];
+		$line = $matches[0];
 		$code = $matches[3];
 
 		return array($line, $code);

@@ -42,10 +42,7 @@ class TestJob implements Job
 	private $cache;
 
 	/** @var string */
-	private $namespace;
-
-	/** @var array */
-	private $uses;
+	private $contextPhp;
 
 	/** @var string */
 	private $prePhp;
@@ -68,13 +65,12 @@ class TestJob implements Job
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $cache, $namespace, array $uses, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $src, $cache, $contextPhp, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->src = $src;
 		$this->cache = $cache;
-		$this->namespace = $namespace;
-		$this->uses = $uses;
+		$this->contextPhp = $contextPhp;
 		$this->prePhp = $prePhp;
 		$this->script = $script;
 		$this->postPhp = $postPhp;
@@ -86,7 +82,7 @@ class TestJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = array($this->src, $this->cache, $this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
+		$arguments = array($this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->script, $this->postPhp);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -112,7 +108,7 @@ class TestJob implements Job
 
 		Exceptions::on($sendResults);
 
-		$test->run($this->namespace, $this->uses, $this->prePhp, $this->script, $this->postPhp);
+		$test->run($this->contextPhp, $this->prePhp, $this->script, $this->postPhp);
 
 		Exceptions::off();
 

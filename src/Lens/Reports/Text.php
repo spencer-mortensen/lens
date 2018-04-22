@@ -45,8 +45,8 @@ class Text implements Report
 	/** @var integer */
 	private $failedTestsCount;
 
-	/** @var array */
-	private $failedTests;
+	/** @var null|array */
+	private $failedTest;
 
 	public function __construct($autoload)
 	{
@@ -54,7 +54,7 @@ class Text implements Report
 		$this->comparer = new Comparer();
 		$this->passedTestsCount = 0;
 		$this->failedTestsCount = 0;
-		$this->failedTests = array();
+		$this->failedTest = null;
 	}
 
 	public function getReport(array $project)
@@ -72,15 +72,15 @@ class Text implements Report
 			}
 		}
 
-		$output = array();
+		$output = array(
+			$this->showSummary()
+		);
 
-		if (0 < $this->failedTestsCount) {
-			$output[] = $this->showFailedTests();
+		if ($this->failedTest !== null) {
+			$output[] = $this->failedTest;
 		}
 
-		$output[] = $this->showSummary();
-
-		return implode("\n\n\n", $output);
+		return implode("\n\n", $output);
 	}
 
 	private function summarizeCase($namespace, array $uses, $testsFile, $testLine, $testText, $caseLine, array $case)
@@ -107,8 +107,11 @@ class Text implements Report
 			$issues = $this->getDifferenceIssues($namespace, $uses, $actual, $expected, $script);
 		}
 
+		if ($this->failedTest === null) {
+			$this->failedTest = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
+		}
+
 		++$this->failedTestsCount;
-		$this->failedTests[] = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
 	}
 
 	private function getCaseText($namespace, array $uses, $testText, $inputText)
@@ -322,11 +325,6 @@ class Text implements Report
 		);
 
 		return implode("\n\n", $sections);
-	}
-
-	private function showFailedTests()
-	{
-		return implode("\n\n\n", $this->failedTests);
 	}
 
 	private function showSummary()

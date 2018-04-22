@@ -30,7 +30,7 @@ use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Watcher
 {
-	/** @var Paths  */
+	/** @var Paths */
 	private $paths;
 
 	/** @var Filesystem */
@@ -62,13 +62,114 @@ class Watcher
 
 	public function __destruct()
 	{
+		// TODO: write only if changes were made
 		$this->cacheFile->write($this->cache);
+	}
+
+	public function getDirectoryChanges($directoryPath)
+	{
+		$timesCached = $this->getCachedDirectoryModifiedTimes($directoryPath);
+		$timesLive = $this->getLiveDirectoryModifiedTimes($directoryPath);
+
+		$this->setCachedDirectoryModifiedTimes($directoryPath, $timesLive);
+		return $this->getChangedFileList($directoryPath, $timesCached, $timesLive);
+	}
+
+	private function getCachedDirectoryModifiedTimes($directoryPath)
+	{
+		$path = $this->paths->getRelativePath($this->projectDirectory, $directoryPath);
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+
+		$cache = &$this->cache;
+
+		foreach ($atoms as $atom) {
+			$cache = &$cache[$atom];
+		}
+
+		if (!is_array($cache)) {
+			$cache = array();
+		}
+
+		return $cache;
+	}
+
+	private function setCachedDirectoryModifiedTimes($directoryPath, array $times)
+	{
+		$path = $this->paths->getRelativePath($this->projectDirectory, $directoryPath);
+		$data = $this->paths->deserialize($path);
+		$atoms = $data->getAtoms();
+
+		$cache = &$this->cache;
+
+		foreach ($atoms as $atom) {
+			$cache = &$cache[$atom];
+		}
+
+		$cache = $times;
+	}
+
+	private function getLiveDirectoryModifiedTimes($directoryPath)
+	{
+		$times = array();
+
+		$childNames = $this->filesystem->scan($directoryPath);
+
+		foreach ($childNames as $childName) {
+			$childPath = $this->paths->join($directoryPath, $childName);
+
+			if ($this->filesystem->isDirectory($childPath)) {
+				$value = $this->getLiveDirectoryModifiedTimes($childPath);
+			} else {
+				$value = $this->filesystem->getModifiedTime($childPath);
+			}
+
+			$times[$childName] = $value;
+		}
+
+		return $times;
+	}
+
+	private function getChangedFileList($path, array $timesCached, array $timesLive)
+	{
+		$differences = array();
+
+		$this->compare($path, $timesCached, $timesLive, $differences);
+
+		return $differences;
+	}
+
+	private function compare($path, &$a, &$b, array &$differences)
+	{
+		if (is_array($a) && is_array($b)) {
+			$keys = array_keys(array_merge($a, $b));
+
+			foreach ($keys as $key) {
+				$childPath = $this->paths->join($path, $key);
+				$this->compare($childPath, $a[$key], $b[$key], $differences);
+			}
+		} elseif ($a !== $b) {
+			$this->recordDifferences($path, $a, false, $differences);
+			$this->recordDifferences($path, $b, true, $differences);
+		}
+	}
+
+	private function recordDifferences($path, $value, $flag, array &$differences)
+	{
+		if (is_array($value)) {
+			foreach ($value as $key => $childValue) {
+				$childPath = $this->paths->join($path, $key);
+				$this->recordDifferences($childPath, $childValue, $flag, $differences);
+			}
+		} elseif ($value !== null) {
+			$differences[$path] = $flag;
+		}
 	}
 
 	public function isModifiedFile($filePath)
 	{
 		$timeCached = $this->getCachedFileModifiedTime($filePath);
-		$timeLive = $this->getLiveFileModifiedTime($filePath);
+		$timeLive = $this->filesystem->getModifiedTime($filePath);
 
 		$this->setCachedFileModifiedTime($filePath, $timeLive);
 		return $timeCached !== $timeLive;
@@ -102,118 +203,5 @@ class Watcher
 		}
 
 		$cache = $time;
-	}
-
-	private function getLiveFileModifiedTime($filePath)
-	{
-		// TODO: this can generate a warning, and return a false value, if the file doesn't exist
-		return filemtime($filePath);
-	}
-
-	public function getDirectoryStatus($directoryPath)
-	{
-		$timesCached = $this->getCachedDirectoryModifiedTimes($directoryPath);
-		$timesLive = $this->getLiveDirectoryModifiedTimes($directoryPath);
-
-		$this->setCachedDirectoryModifiedTimes($directoryPath, $timesLive);
-		return $this->getChangedFileList($directoryPath, $timesCached, $timesLive);
-	}
-
-	private function getChangedFileList($path, array $timesCached, array $timesLive)
-	{
-		$differences = array();
-
-		$this->compare($path, $timesCached, $timesLive, $differences);
-
-		return $differences;
-	}
-
-	private function compare($path, &$a, &$b, array &$differences)
-	{
-		if (is_array($a) && is_array($b)) {
-			$keys = array_keys(array_merge($a, $b));
-
-			foreach ($keys as $key) {
-				$childPath = $path . DIRECTORY_SEPARATOR . $key;
-				$this->compare($childPath, $a[$key], $b[$key], $differences);
-			}
-		} elseif ($a !== $b) {
-			$this->recordDifferences($path, $a, false, $differences);
-			$this->recordDifferences($path, $b, true, $differences);
-		}
-	}
-
-	private function recordDifferences($path, $value, $flag, array &$differences)
-	{
-		if (is_array($value)) {
-			foreach ($value as $key => $childValue) {
-				$childPath = $path . DIRECTORY_SEPARATOR . $key;
-				$this->recordDifferences($childPath, $childValue, $flag, $differences);
-			}
-		} elseif ($value !== null) {
-			$differences[$path] = $flag;
-		}
-	}
-
-	private function getCachedDirectoryModifiedTimes($directoryPath)
-	{
-		$path = $this->paths->getRelativePath($this->projectDirectory, $directoryPath);
-		$data = $this->paths->deserialize($path);
-		$atoms = $data->getAtoms();
-
-		$cache = &$this->cache;
-
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
-		}
-
-		if (!is_array($cache)) {
-			$cache = array();
-		}
-
-		return $cache;
-	}
-
-	private function setCachedDirectoryModifiedTimes($directoryPath, $times)
-	{
-		$path = $this->paths->getRelativePath($this->projectDirectory, $directoryPath);
-		$data = $this->paths->deserialize($path);
-		$atoms = $data->getAtoms();
-
-		$cache = &$this->cache;
-
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
-		}
-
-		$cache = $times;
-	}
-
-	private function getLiveDirectoryModifiedTimes($directoryPath)
-	{
-		$times = array();
-
-		// TODO: error handling
-		$directory = opendir($directoryPath);
-
-		for ($childName = readdir($directory); $childName !== false; $childName = readdir($directory)) {
-			if (($childName === '.') || ($childName === '..')) {
-				continue;
-			}
-
-			$childPath = $directoryPath . DIRECTORY_SEPARATOR . $childName;
-
-			if (is_dir($childPath)) {
-				$time = $this->getLiveDirectoryModifiedTimes($childPath);
-			} else {
-				$time = filemtime($childPath);
-			}
-
-			$times[$childName] = $time;
-		}
-
-		closedir($directory);
-
-		return $times;
 	}
 }

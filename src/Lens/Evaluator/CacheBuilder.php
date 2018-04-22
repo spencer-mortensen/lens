@@ -29,6 +29,7 @@ use Lens_0_0_56\Lens\Files\JsonFile;
 use Lens_0_0_56\Lens\Files\TextFile;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Php\Code;
+use Lens_0_0_56\Lens\Php\FileParser;
 use Lens_0_0_56\Lens\Watcher;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 use ReflectionClass;
@@ -39,6 +40,7 @@ use ReflectionFunction;
 Assumptions:
 
  * The user autoloader uses "require_once" or "include_once" (rather than "require" or "include")
+ * The autoload file defines the user autoloader, and may include files that define classes or functions, but the autoload file itself is a pure controller and doesn't contain any such definitions
  * The "src" directory contains only source code (no controller scripts, or constant definitions, or global variables)
  * The "src" directory contains scripts that have no fatal syntax errors (i.e. all files must all be parseable)
  * The source files use the common namespace format (not the brace format) with parseable method calls
@@ -65,6 +67,15 @@ class CacheBuilder
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Watcher */
+	private $watcher;
+
+	/** @var FileParser */
+	private $parser;
+
+	/** @var Sanitizer */
+	private $sanitizer;
+
 	public function __construct($projectDirectory, $srcDirectory, $autoloadFile, $cacheDirectory)
 	{
 		$this->projectDirectory = $projectDirectory;
@@ -73,35 +84,104 @@ class CacheBuilder
 		$this->cacheDirectory = $cacheDirectory;
 		$this->paths = Paths::getPlatformPaths();
 		$this->filesystem = new Filesystem();
+		$this->watcher = $this->getWatcher();
+		$this->parser = new FileParser();
+		$this->sanitizer = new Sanitizer();
 	}
 
 	public function build()
 	{
-		$watcher = $this->getWatcher();
+		$directories = array();
+
+		$this->getChildDirectories($this->srcDirectory, $directories);
+
 		$declarations = new Declarations();
-
-		$changes = $watcher->getDirectoryStatus($this->srcDirectory);
-
 		$declarations->start();
-		$this->enableUserAutoloader($this->autoloadFile);
 
-		foreach ($changes as $path => $exists) {
-			if ($this->isPhpFile($path)) {
-				require_once $path;
-			}
+		$this->requireOnce($this->autoloadFile);
+
+		foreach ($directories as $directory) {
+			$this->scanDirectory($directory);
 		}
 
-		// For each file:
-		//   For each use statement:
-		//     Autoload the class (using "class_exists($class, true)")
-		//   Load all sibling files (if not already loaded)
+		while ($declarations->get($file, $classes, $functions)) {
+			if ($this->autoloadFile === $file) {
+				continue;
+			}
 
-		while ($declarations->get($path, $classes, $functions)) {
-			if (isset($changes[$path]) || $watcher->isModifiedFile($path)) {
-				$this->removeCachedFile($path);
-				$this->addCachedFile($path, $classes, $functions);
+			// TODO: continue here:
+			// Scan the parent directory (if it hasn't already been scanned)
+			/*
+			$parentDirectory = $this->getParentDirectory($file);
+
+			$isModified = $this->watcher->isModifiedFile($file);
+
+			if (!isset($directories[$parentDirectory])) {
+				$this->scanDirectory($parentDirectory);
+				$directories[$parentDirectory] = $parentDirectory;
+			}
+			*/
+
+			$filePhp = $this->filesystem->read($file);
+
+			list($namespace, $uses) = $this->parser->parse($filePhp);
+
+			// TODO: What if  the $path is not a fully-qualified class name? (Maybe it's a partial namespace path?)
+			// TODO: Support the function and constant use-statements: http://php.net/manual/en/language.namespaces.importing.php
+			foreach ($uses as $alias => $path) {
+				class_exists($path, true);
+			}
+
+			foreach ($classes as $class) {
+				$this->addLiveClass($class, $namespace, $uses, $filePhp);
+				$this->addMockClass($class);
+			}
+
+			foreach ($functions as $function) {
+				$this->addLiveFunction($function, $namespace, $uses, $filePhp);
+				$this->addMockFunction($function);
 			}
 		}
+	}
+
+	private function getChildDirectories($directoryPath, array &$directories)
+	{
+		$directories[$directoryPath] = $directoryPath;
+
+		$contents = $this->filesystem->scan($directoryPath);
+
+		foreach ($contents as $childName) {
+			$childPath = $this->paths->join($directoryPath, $childName);
+
+			if (is_dir($childPath)) {
+				$this->getChildDirectories($childPath, $directories);
+			}
+		}
+	}
+
+	private function scanDirectory($directoryPath)
+	{
+		$changes = $this->watcher->getDirectoryChanges($directoryPath);
+
+		foreach ($changes as $filePath => $exists) {
+			if (!$this->isPhpFile($filePath)) {
+				continue;
+			}
+
+			// TODO: if the file is modified or deleted:
+			$this->removeCachedFile($filePath);
+
+			// TODO: if the file is new or modified:
+			if ($exists) {
+				$this->requireOnce($filePath);
+			}
+		}
+	}
+
+	private function requireOnce($filePath)
+	{
+		// TODO: exception handling
+		require_once $filePath;
 	}
 
 	private function getWatcher()
@@ -109,12 +189,6 @@ class CacheBuilder
 		$filePath = $this->paths->join($this->cacheDirectory, 'modified.json');
 		$cacheFile = new JsonFile($this->filesystem, $filePath);
 		return new Watcher($cacheFile, $this->projectDirectory);
-	}
-
-	private function enableUserAutoloader($autoloadFile)
-	{
-		// TODO: exception handling
-		require $autoloadFile;
 	}
 
 	// TODO: this is repeated elsewhere
@@ -125,29 +199,59 @@ class CacheBuilder
 
 	private function removeCachedFile($path)
 	{
-		echo "remove from cache: $path\n";
+		// echo "remove from cache: $path\n";
 	}
 
-	private function addCachedFile($path, array $classes, array $functions)
+	private function getParentDirectory($file)
 	{
-		foreach ($classes as $class) {
-			$this->addLiveClass($class);
-			$this->addMockClass($class);
-		}
-
-		foreach ($functions as $function) {
-			$this->addLiveFunction($function);
-			$this->addMockFunction($function);
-		}
+		// TODO: use the "Paths" class:
+		return dirname($file);
 	}
 
-	private function addLiveClass($class)
+	// TODO: use the regular expressions class:
+	private static function getPattern($expression, $flags = '')
+	{
+		$delimiter = "\x03";
+
+		return $delimiter . $expression . $delimiter . $flags . 'XDs';
+	}
+
+	private function addLiveClass($class, $namespace, array $uses, $filePhp)
 	{
 		$path = $this->getLiveClassPath($class);
-		$code = $this->getLiveClassCode($class);
+
+		$reflection = new ReflectionClass($class);
+		$classPhp = $this->getDefinitionPhp($reflection, $filePhp);
+		$classPhp = $this->sanitizer->sanitize('class', $namespace, $uses, $classPhp);
+
+		$this->write($namespace, $uses, $classPhp, $path);
+	}
+
+	/**
+	 * @param ReflectionClass|ReflectionFunction $reflection
+	 * @param string $filePhp
+	 * @return string
+	 */
+	private function getDefinitionPhp($reflection, $filePhp)
+	{
+		$pattern = self::getPattern('\\r?\\n');
+		$lines = preg_split($pattern, $filePhp);
+
+		$begin = $reflection->getStartLine() - 1;
+		$length = $reflection->getEndLine() - $begin;
+
+		$lines = array_slice($lines, $begin, $length);
+		return implode("\n", $lines);
+	}
+
+	private function write($namespace, array $uses, $definitionPhp, $path)
+	{
+		$tagPhp = Code::getTagPhp();
+		$contextPhp = Code::getContextPhp($namespace, $uses);
+		$filePhp = Code::combine($tagPhp, $contextPhp, $definitionPhp) . "\n";
 
 		$file = new TextFile($this->filesystem, $path);
-		$file->write($code);
+		$file->write($filePhp);
 	}
 
 	private function addMockClass($class)
@@ -159,13 +263,15 @@ class CacheBuilder
 		$file->write($code);
 	}
 
-	private function addLiveFunction($function)
+	private function addLiveFunction($function, $namespace, array $uses, $filePhp)
 	{
 		$path = $this->getLiveFunctionPath($function);
-		$code = $this->getLiveFunctionCode($function);
 
-		$file = new TextFile($this->filesystem, $path);
-		$file->write($code);
+		$reflection = new ReflectionFunction($function);
+		$functionPhp = $this->getDefinitionPhp($reflection, $filePhp);
+		$functionPhp = $this->sanitizer->sanitize('function', $namespace, $uses, $functionPhp);
+
+		$this->write($namespace, $uses, $functionPhp, $path);
 	}
 
 	private function addMockFunction($function)
@@ -207,18 +313,6 @@ class CacheBuilder
 		return $this->paths->join($parts);
 	}
 
-	private function getLiveClassCode($class)
-	{
-		$builder = new LiveBuilder($this->cacheDirectory);
-		return $builder->getClassPhp($class);
-	}
-
-	private function getLiveFunctionCode($function)
-	{
-		$builder = new LiveBuilder($this->cacheDirectory);
-		return $builder->getFunctionPhp($function);
-	}
-
 	private function getMockClassCode($class)
 	{
 		// TODO: absorb this into the "MockBuilder"
@@ -229,12 +323,13 @@ class CacheBuilder
 			'Agent' => __NAMESPACE__ . '\\Agent'
 		);
 
+		$tagPhp = Code::getTagPhp();
 		$contextPhp = Code::getContextPhp($namespace, $uses);
 
 		$builder = new MockBuilder();
 		$classPhp = $builder->getMockClassPhp($class);
 
-		return Code::getPhp($contextPhp, $classPhp);
+		return Code::combine($tagPhp, $contextPhp, $classPhp) . "\n";
 	}
 
 	private function getMockFunctionCode($function)
@@ -247,11 +342,12 @@ class CacheBuilder
 			'Agent' => __NAMESPACE__ . '\\Agent'
 		);
 
+		$tagPhp = Code::getTagPhp();
 		$contextPhp = Code::getContextPhp($namespace, $uses);
 
 		$builder = new MockBuilder();
 		$functionPhp = $builder->getMockFunctionPhp($function);
 
-		return Code::getPhp($contextPhp, $functionPhp);
+		return Code::combine($tagPhp, $contextPhp, $functionPhp) . "\n";
 	}
 }

@@ -47,9 +47,19 @@ class Semantics
 		return isset(self::$internalFunctions[$name]);
 	}
 
+	public static function getUnsafeFunctions()
+	{
+		return self::$unsafeFunctions;
+	}
+
 	public static function isUnsafeFunction($name)
 	{
 		return isset(self::$unsafeFunctions[$name]);
+	}
+
+	public static function getUnsafeClasses()
+	{
+		return self::$unsafeClasses;
 	}
 
 	public static function isUnsafeClass($name)

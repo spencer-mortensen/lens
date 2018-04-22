@@ -25,129 +25,31 @@
 
 namespace Lens_0_0_56\Lens\Evaluator;
 
-use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\Lens\Php\CallParser;
-use Lens_0_0_56\Lens\Php\FileParser;
+use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\Lens\Php\Semantics;
 use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
-use ReflectionClass;
-use ReflectionFunction;
 
-class LiveBuilder
+class Sanitizer
 {
-	/** @var string */
-	private $cache;
-
 	/** @var Paths */
 	private $paths;
-
-	/** @var Filesystem */
-	private $filesystem;
 
 	/** @var CallParser */
 	private $parser;
 
-	public function __construct($cache)
+	public function __construct()
 	{
 		// TODO: dependency injection
-		$this->cache = $cache;
 		$this->paths = Paths::getPlatformPaths();
-		$this->filesystem = new Filesystem();
 		$this->parser = new CallParser();
 	}
 
-	public function getClassPhp($class)
+	public function sanitize($type, $namespace, array $uses, $definitionPhp)
 	{
-		$reflection = new ReflectionClass($class);
+		$tokens = $this->getTokens($type, $definitionPhp);
 
-		$inputFilePhp = $this->getInputFilePhp($reflection);
-		$this->scanInputFile($reflection, $inputFilePhp, $namespace, $uses, $definitionPhp);
-		$functions = $this->getClassFunctions($namespace, $uses, $definitionPhp);
-
-		return $this->getOutputFilePhp($namespace, $uses, $functions, $definitionPhp);
-	}
-
-	/**
-	 * @param ReflectionClass|ReflectionFunction $reflection
-	 * @return string
-	 */
-	private function getInputFilePhp($reflection)
-	{
-		$file = $reflection->getFileName();
-		return $this->filesystem->read($file);
-	}
-
-	/**
-	 * @param ReflectionClass|ReflectionFunction $reflection
-	 * @param string|null $filePhp
-	 * @param string|null $namespace
-	 * @param array $uses
-	 * @param string|null $definitionPhp
-	 */
-	private function scanInputFile($reflection, $filePhp, &$namespace = null, array &$uses = null, &$definitionPhp = null)
-	{
-		$namespace = $this->getNamespace($reflection);
-		$uses = $this->getUses($filePhp);
-		$definitionPhp = $this->getDefinitionPhp($reflection, $filePhp);
-	}
-
-	/**
-	 * @param ReflectionClass|ReflectionFunction $reflection
-	 * @return string|null
-	 */
-	private function getNamespace($reflection)
-	{
-		$namespace = $reflection->getNamespaceName();
-
-		if (strlen($namespace) === 0) {
-			return null;
-		}
-
-		return $namespace;
-	}
-
-	private function getUses($filePhp)
-	{
-		$parser = new FileParser();
-		return $parser->parse($filePhp);
-	}
-
-	/**
-	 * @param ReflectionClass|ReflectionFunction $reflection
-	 * @param string $code
-	 * @return string
-	 */
-	private function getDefinitionPhp($reflection, $code)
-	{
-		$pattern = self::getPattern('\\r?\\n');
-		$lines = preg_split($pattern, $code);
-
-		$begin = $reflection->getStartLine() - 1;
-		$length = $reflection->getEndLine() - $begin;
-
-		$lines = array_slice($lines, $begin, $length);
-		return implode("\n", $lines);
-	}
-
-	// TODO: use the regular expressions class:
-	private static function getPattern($expression, $flags = '')
-	{
-		$delimiter = "\x03";
-
-		return $delimiter . $expression . $delimiter . $flags . 'XDs';
-	}
-
-	private function getClassFunctions($namespace, array $uses, &$classPhp)
-	{
-		$tokens = $this->getTokens('class', $classPhp);
-
-		return $this->getFunctions($namespace, $uses, $tokens, $classPhp);
-	}
-
-	private function getFunctions($namespace, array $uses, array $tokens, &$classPhp)
-	{
 		$functions = array();
 		$edits = array();
 
@@ -155,13 +57,28 @@ class LiveBuilder
 			$this->analyzeToken($namespace, $uses, $token, $functions, $edits);
 		}
 
-		$classPhp = $this->applyEdits($classPhp, $edits);
+		$requirePhp = $this->getRequirePhp($functions);
+		$definitionPhp = $this->applyEdits($definitionPhp, $edits);
 
-		return $functions;
+		return Code::combine($requirePhp, $definitionPhp);
 	}
 
-	private function getTokens($rule, $php)
+	private function getTokens($type, $php)
 	{
+		switch ($type) {
+			case 'class':
+				$rule = 'class';
+				break;
+
+			case 'function':
+				$rule = 'function';
+				break;
+
+			default:
+				$rule = 'functionBody';
+				break;
+		}
+
 		try {
 			return $this->parser->parse($rule, $php);
 		} catch (ParserException $exception) {
@@ -194,7 +111,8 @@ class LiveBuilder
 		$class = $this->getAbsolutePath($namespace, $uses, $value);
 
 		if (Semantics::isUnsafeClass($class)) {
-			$edits[$position] = array(strlen($value), "\\Lens\\{$class}");
+			$class = "Lens\\{$class}";
+			$edits[$position] = array(strlen($value), "\\{$class}");
 		}
 	}
 
@@ -203,13 +121,15 @@ class LiveBuilder
 		$function = $this->getFunction($namespace, $uses, $value);
 
 		if (Semantics::isUnsafeFunction($function)) {
-			$edits[$position] = array(strlen($value), "\\Lens\\{$function}");
+			$function = "Lens\\{$function}";
+			$edits[$position] = array(strlen($value), "\\{$function}");
+			$functions[$function] = $function;
 		} elseif (!Semantics::isInternalFunction($function)) {
 			$functions[$function] = $function;
 		}
 	}
 
-	// $namespace: null, 'A', 'A\\B', ...
+	// Namespaces: null, 'A', 'A\\B', ...
 	private function getFunction($namespace, array $uses, $call)
 	{
 		$delimiter = strrpos($call, '\\');
@@ -232,9 +152,7 @@ class LiveBuilder
 		return $function;
 	}
 
-	/*
-	 * Absolute paths: null, 'A', A\\B', ...
-	 */
+	// Absolute paths: null, 'A', A\\B', ...
 	private function getAbsolutePath($namespace, array $uses, $prefix)
 	{
 		if ($prefix === null) {
@@ -289,13 +207,6 @@ class LiveBuilder
 		return $subject;
 	}
 
-	private function getOutputFilePhp($namespace, array $uses, $functions, $definitionPhp)
-	{
-		$contextPhp = Code::getContextPhp($namespace, $uses);
-		$requirePhp = $this->getRequirePhp($functions);
-		return Code::getPhp($contextPhp, $requirePhp, $definitionPhp);
-	}
-
 	private function getRequirePhp(array $functions)
 	{
 		if (count($functions) === 0) {
@@ -305,11 +216,8 @@ class LiveBuilder
 		$lines = array();
 
 		foreach ($functions as $function) {
-			// TODO: this is undoubtedly duplicated elsewhere:
-			$names = explode('\\', $function);
-			$relativePath = $this->paths->join($names) . '.php';
-			$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('functions', 'live', $relativePath);
-			$pathPhp = 'LENS_CACHE_DIRECTORY . ' . Code::getValuePhp($relativePath);
+			$this->getCoreMockPath($function, $pathPhp) ||
+			$this->getUserLivePath($function, $pathPhp);
 
 			$lines[] = Code::getRequireOncePhp($pathPhp);
 		}
@@ -317,22 +225,33 @@ class LiveBuilder
 		return implode("\n", $lines);
 	}
 
-	// TODO: get this to work:
-	public function getFunctionPhp($function)
+	private function getCoreMockPath($function, &$pathPhp)
 	{
-		$reflection = new ReflectionFunction($function);
+		if (strncmp($function, 'Lens\\', 5) !== 0) {
+			return false;
+		}
 
-		$inputFilePhp = $this->getInputFilePhp($reflection);
-		$this->scanInputFile($reflection, $inputFilePhp, $namespace, $uses, $definitionPhp);
-		$functions = $this->getFunctionFunctions($namespace, $uses, $definitionPhp);
+		$function = substr($function, 5);
+		$relativePath = $this->getRelativeFilePath($function);
+		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('files', 'mocks', 'functions', $relativePath);
+		$pathPhp = 'LENS_CORE_DIRECTORY . ' . Code::getValuePhp($relativePath);
 
-		return $this->getOutputFilePhp($namespace, $uses, $functions, $definitionPhp);
+		return true;
 	}
 
-	private function getFunctionFunctions($namespace, array $uses, &$functionPhp)
+	private function getUserLivePath($function, &$pathPhp)
 	{
-		$tokens = $this->getTokens('function', $functionPhp);
+		// TODO: this is undoubtedly duplicated elsewhere:
+		$relativePath = $this->getRelativeFilePath($function);
+		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('functions', 'live', $relativePath);
+		$pathPhp = 'LENS_CACHE_DIRECTORY . ' . Code::getValuePhp($relativePath);
 
-		return $this->getFunctions($namespace, $uses, $tokens, $functionPhp);
+		return true;
+	}
+
+	private function getRelativeFilePath($namespacePath)
+	{
+		$names = explode('\\', $namespacePath);
+		return $this->paths->join($names) . '.php';
 	}
 }

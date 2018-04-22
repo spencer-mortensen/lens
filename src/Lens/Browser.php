@@ -48,7 +48,7 @@ class Browser
 	public function browse(array $paths)
 	{
 		foreach ($paths as $path) {
-			$contents = $this->filesystem->read($path);
+			$contents = $this->read($path);
 
 			if ($contents === null) {
 				throw LensException::invalidTestsPath($path);
@@ -58,6 +58,29 @@ class Browser
 		}
 
 		return $this->files;
+	}
+
+	private function read($path)
+	{
+		if (is_dir($path)) {
+			return $this->readDirectory($path);
+		}
+
+		return $this->filesystem->read($path);
+	}
+
+	private function readDirectory($path)
+	{
+		$contents = array();
+
+		$files = $this->filesystem->scan($path);
+
+		foreach ($files as $file) {
+			$childPath = "{$path}/{$file}";
+			$contents[$file] = $this->read($childPath);
+		}
+
+		return $contents;
 	}
 
 	private function get($path, $contents)

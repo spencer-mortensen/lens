@@ -29,6 +29,7 @@ use Lens_0_0_56\Lens\Jobs\CacheJob;
 use Lens_0_0_56\Lens\Jobs\CoverageJob;
 use Lens_0_0_56\Lens\Jobs\TestJob;
 use Lens_0_0_56\Lens\Filesystem;
+use Lens_0_0_56\Lens\Php\Code;
 
 class Evaluator
 {
@@ -38,6 +39,9 @@ class Evaluator
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var Sanitizer */
+	private $sanitizer;
+
 	/** @var Processor */
 	private $processor;
 
@@ -45,6 +49,7 @@ class Evaluator
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
+		$this->sanitizer = new Sanitizer();
 		$this->processor = new Processor();
 	}
 
@@ -92,8 +97,10 @@ class Evaluator
 
 	private function getRelativePaths($srcDirectory)
 	{
+		$paths = array();
+
 		// TODO: sample only those files that have changed since the last sampling
-		$paths = $this->filesystem->listFiles($srcDirectory);
+		$this->listFiles($srcDirectory, '', $paths);
 
 		foreach ($paths as $key => $path) {
 			if (substr($path, -4) !== '.php') {
@@ -102,6 +109,26 @@ class Evaluator
 		}
 
 		return array_values($paths);
+	}
+
+	private function listFiles($baseDirectory, $relativePath, array &$contents)
+	{
+		// TODO: use the "Paths" class:
+		$absolutePath = rtrim("{$baseDirectory}/{$relativePath}", '/');
+
+		$files = $this->filesystem->scan($absolutePath);
+
+		foreach ($files as $file) {
+			// TODO: use the "Paths" class:
+			$childRelativePath = ltrim("{$relativePath}/{$file}", '/');
+			$childAbsolutePath = "{$baseDirectory}/{$childRelativePath}";
+
+			if (is_dir($childAbsolutePath)) {
+				$this->listFiles($baseDirectory, $childRelativePath, $contents);
+			} else {
+				$contents[] = $childRelativePath;
+			}
+		}
 	}
 
 	private static function getCoverage(array $lines, array $results)
@@ -138,15 +165,22 @@ class Evaluator
 
 		foreach ($suites as $file => &$suite) {
 			foreach ($suite['tests'] as $testLine => &$test) {
+				$namespace = $suite['namespace'];
+				$uses = $suite['uses'];
+				$actualPhp = $test['code'];
+				$contextPhp = Code::getContextPhp($namespace, $uses);
+
 				foreach ($test['cases'] as $caseLine => &$case) {
+					$fixturePhp = $this->sanitizer->sanitize('code', $namespace, $uses, $case['input']);
+					$expectedPhp = $this->sanitizer->sanitize('code', $namespace, $uses, $case['output']);
+
 					$this->startTest(
 						$src,
 						$cache,
-						$suite['namespace'],
-						$suite['uses'],
-						$case['input'],
-						$test['code'],
-						$case['output'],
+						$contextPhp,
+						$fixturePhp,
+						$actualPhp,
+						$expectedPhp,
 						$case['script'],
 						$case['results']['actual'],
 						$case['results']['expected'],
@@ -157,13 +191,12 @@ class Evaluator
 		}
 	}
 
-	private function startTest($src, $cache, $namespace, array $uses, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
+	private function startTest($src, $cache, $contextPhp, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
 		$this->startTestJob(
 			$src,
 			$cache,
-			$namespace,
-			$uses,
+			$contextPhp,
 			$fixturePhp,
 			$script,
 			$actualPhp,
@@ -174,8 +207,7 @@ class Evaluator
 		$this->startTestJob(
 			$src,
 			$cache,
-			$namespace,
-			$uses,
+			$contextPhp,
 			$fixturePhp,
 			null,
 			$expectedPhp,
@@ -183,14 +215,13 @@ class Evaluator
 		);
 	}
 
-	private function startTestJob($src, $cache, $namespace, array $uses, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
+	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
 			$src,
 			$cache,
-			$namespace,
-			$uses,
+			$contextPhp,
 			$fixturePhp,
 			$script,
 			$php,

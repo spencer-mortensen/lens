@@ -51,9 +51,6 @@ class Test
 	/** @var Filesystem */
 	private $filesystem;
 
-	/** @var null|string */
-	private $contextPhp;
-
 	/** @var Examiner */
 	private $examiner;
 
@@ -74,11 +71,13 @@ class Test
 
 	public function __construct($executable, $src, $cache)
 	{
+		// TODO: dependency injection
 		$this->executable = $executable;
 		$this->src = $src;
 		$this->cache = $cache;
 		$this->archivist = new Archivist();
 		$this->paths = Paths::getPlatformPaths();
+		$this->filesystem = new Filesystem();
 	}
 
 	public function getPreState()
@@ -96,11 +95,10 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($namespace, array $uses, $prePhp, array $script = null, $postPhp)
+	public function run($contextPhp, $prePhp, array $script = null, $postPhp)
 	{
-		$this->contextPhp = Code::getContextPhp($namespace, $uses);
-		$prePhp = self::combine($this->contextPhp, $prePhp);
-		$postPhp = self::combine($this->contextPhp, $postPhp);
+		$prePhp = Code::combine($contextPhp, $prePhp);
+		$postPhp = Code::combine($contextPhp, $postPhp);
 		$this->script = $script;
 		$this->examiner = new Examiner();
 
@@ -118,7 +116,7 @@ class Test
 			return;
 		}
 
-		Agent::start($this->contextPhp, $this->script);
+		Agent::start($contextPhp, $this->script);
 		$this->startCoverage();
 
 		Exceptions::on(array($this, 'postPhp'));
@@ -132,8 +130,15 @@ class Test
 
 	private function prepare()
 	{
+		// TODO: this is duplicated elsewhere:
+		// TODO: move this to the finder?
+		$lensCoreDirectory = dirname(dirname(dirname(__DIR__)));
+
+		define('LENS_CORE_DIRECTORY', $lensCoreDirectory);
 		define('LENS_CACHE_DIRECTORY', $this->cache);
-		spl_autoload_register(array($this, 'autoload'));
+
+		$autoloader = new Autoloader();
+		$autoloader->enable();
 	}
 
 	public function prePhp()
@@ -147,34 +152,6 @@ class Test
 		$calls = Agent::stop();
 
 		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
-	}
-
-	private static function getTail($haystack, $needle)
-	{
-		$position = strrpos($haystack, $needle);
-
-		if (is_integer($position)) {
-			return substr($haystack, $position + 1);
-		}
-
-		return $haystack;
-	}
-
-	private static function combine()
-	{
-		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
-	}
-
-	public function autoload($class)
-	{
-		$parts = explode('\\', $class);
-		$relativeFilePath = $this->paths->join($parts) . '.php';
-		// TODO: autoload mock classes when necessary:
-		$absoluteFilePath = $this->paths->join(LENS_CACHE_DIRECTORY, 'classes', 'live', $relativeFilePath);
-
-		if ($this->filesystem->isFile($absoluteFilePath)) {
-			include $absoluteFilePath;
-		}
 	}
 
 	private function getState($calls = null)
@@ -217,16 +194,18 @@ class Test
 			$object = &$call[0];
 			$function = &$call[1];
 
-			if ($object === null) {
-				self::removeMockFunctionNamespace($function);
-			}
+			$object = self::removeLensMockNamespace($object);
+			$function = self::removeLensMockNamespace($function);
 		}
 	}
 
-	private static function removeMockFunctionNamespace(&$function)
+	private static function removeLensMockNamespace($namespace)
 	{
-		// TODO: this will remove the namespace prefix from all functions... including non-mocked functions
-		$function = self::getTail($function, '\\');
+		if (is_string($namespace) && (strncmp($namespace, 'Lens\\', 5) === 0)) {
+			return substr($namespace, 5);
+		}
+
+		return $namespace;
 	}
 
 	private function startCoverage()

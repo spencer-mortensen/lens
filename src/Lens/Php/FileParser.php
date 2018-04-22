@@ -67,7 +67,7 @@ EOS;
 
 	public function getPhp(array $matches)
 	{
-		return $matches[2];
+		return array($matches[1], $matches[2]);
 	}
 
 	public function getOptionalNamespace(array $matches)

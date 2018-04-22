@@ -27,7 +27,6 @@ namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
 use Lens_0_0_56\Lens\Browser;
-use Lens_0_0_56\Lens\Index;
 use Lens_0_0_56\Lens\Environment;
 use Lens_0_0_56\Lens\Evaluator\Evaluator;
 use Lens_0_0_56\Lens\Filesystem;

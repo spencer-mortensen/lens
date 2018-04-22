@@ -54,81 +54,6 @@ class Filesystem
 
 	public function read($path)
 	{
-		if (is_dir($path)) {
-			return $this->readDirectory($path);
-		}
-
-		return $this->readFile($path);
-	}
-
-	public function listFiles($path)
-	{
-		$contents = array();
-
-		set_error_handler($this->errorHandler);
-		$this->listFilesInternal($path, '', $contents);
-		restore_error_handler();
-
-		return $contents;
-	}
-
-	private function listFilesInternal($baseDirectory, $relativePath, array &$contents)
-	{
-		$absolutePath = rtrim("{$baseDirectory}/{$relativePath}", '/');
-
-		$files = scandir($absolutePath, SCANDIR_SORT_NONE);
-
-		if ($files === false) {
-			// TODO: throw exception
-			return null;
-		}
-
-		foreach ($files as $file) {
-			if (($file === '.') || ($file === '..')) {
-				continue;
-			}
-
-			$childRelativePath = ltrim("{$relativePath}/{$file}", '/');
-			$childAbsolutePath = "{$baseDirectory}/{$childRelativePath}";
-
-			if (is_dir($childAbsolutePath)) {
-				$this->listFilesInternal($baseDirectory, $childRelativePath, $contents);
-			} else {
-				$contents[] = $childRelativePath;
-			}
-		}
-	}
-
-	private function readDirectory($path)
-	{
-		// TODO: use the "Exceptions" class
-		set_error_handler($this->errorHandler);
-
-		$files = scandir($path, SCANDIR_SORT_NONE);
-
-		if ($files === false) {
-			// TODO: throw exception
-			restore_error_handler();
-			return null;
-		}
-
-		$contents = array();
-
-		foreach ($files as $file) {
-			if (($file === '.') || ($file === '..')) {
-				continue;
-			}
-
-			$childPath = "{$path}/{$file}";
-			$contents[$file] = $this->read($childPath);
-		}
-
-		restore_error_handler();
-		return $contents;
-	}
-
-	private function readFile($path)
-	{
 		set_error_handler($this->errorHandler);
 
 		$contents = self::getString(file_get_contents($path));
@@ -143,6 +68,26 @@ class Filesystem
 		$this->atomicWriteFile($path, $contents);
 
 		return true;
+	}
+
+	public function scan($directoryPath)
+	{
+		$contents = array();
+
+		// TODO: error handling
+		$directory = opendir($directoryPath);
+
+		for ($childName = readdir($directory); $childName !== false; $childName = readdir($directory)) {
+			if (($childName === '.') || ($childName === '..')) {
+				continue;
+			}
+
+			$contents[] = $childName;
+		}
+
+		closedir($directory);
+
+		return $contents;
 	}
 
 	private function prepareFileDestination($path)
@@ -280,6 +225,11 @@ class Filesystem
 	public function getCurrentDirectory()
 	{
 		return self::getString(getcwd());
+	}
+
+	public function getModifiedTime($path)
+	{
+		return filemtime($path);
 	}
 
 	public function getAbsolutePath($path)

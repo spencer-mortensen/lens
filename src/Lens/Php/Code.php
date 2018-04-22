@@ -27,18 +27,14 @@ namespace Lens_0_0_56\Lens\Php;
 
 class Code
 {
+	public static function getTagPhp()
+	{
+		return '<?php';
+	}
+
 	public static function getValuePhp($value)
 	{
 		return var_export($value, true);
-	}
-
-	public static function getPhp()
-	{
-		$sections = func_get_args();
-		$sections = array_filter($sections, 'is_string');
-		array_unshift($sections, '<?php');
-
-		return implode("\n\n", $sections) . "\n";
 	}
 
 	public static function getRequirePhp($filePhp)
@@ -112,8 +108,10 @@ class Code
 		return $haystack;
 	}
 
-	private static function combine()
+	public static function combine()
 	{
-		return implode("\n\n", array_filter(func_get_args(), 'is_string'));
+		$sections = func_get_args();
+		$sections = array_filter($sections, 'is_string');
+		return implode("\n\n", $sections);
 	}
 }
