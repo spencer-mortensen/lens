@@ -56,10 +56,10 @@ class LensTest implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($src, $cache, $contextPhp, $prePhp, $script, $postPhp) = $arguments;
+		list($src, $cache, $contextPhp, $prePhp, $script, $postPhp, $isCoverageEnabled) = $arguments;
 
 		$processor = new Processor();
-		$job = new TestJob($executable, $src, $cache, $contextPhp, $prePhp, $script, $postPhp, $processor, $process, $results, $coverage);
+		$job = new TestJob($executable, $src, $cache, $contextPhp, $prePhp, $script, $postPhp, $isCoverageEnabled, $processor, $process, $results, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

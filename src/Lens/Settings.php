@@ -25,27 +25,35 @@
 
 namespace Lens_0_0_56\Lens;
 
-use Lens_0_0_56\Lens\Files\IniFile;
+use Lens_0_0_56\Lens\Files\TextFile;
+use Lens_0_0_56\Mustangostang\Spyc\Spyc as Yaml;
 
 class Settings
 {
-	/** @var IniFile */
+	/** @var TextFile */
 	private $file;
 
+	/** @var Yaml */
+	private $yaml;
+
 	/** @var array */
-	private $initialValues;
+	private $input;
 
 	/** @var array */
 	private $values;
 
 	public function __construct(Filesystem $filesystem, $path)
 	{
-		$file = new IniFile($filesystem, $path);
-		$file->read($input);
+		$file = new TextFile($filesystem, $path);
+		$yaml = new Yaml();
+
+		$file->read($content);
+		$input = $yaml->load($content);
 		$values = $this->getValues($input);
 
 		$this->file = $file;
-		$this->initialValues = $values;
+		$this->yaml = $yaml;
+		$this->input = $input;
 		$this->values = $values;
 	}
 
@@ -55,6 +63,8 @@ class Settings
 		$autoload = self::getNonEmptyString($input['autoload']);
 		$cache = self::getNonEmptyString($input['cache']);
 		$checkForUpdates = self::getBoolean($input['checkForUpdates']);
+		$mockClasses = self::getStringList($input['mockClasses']);
+		$mockFunctions = self::getStringList($input['mockFunctions']);
 
 		if ($checkForUpdates === null) {
 			$checkForUpdates = true;
@@ -64,7 +74,9 @@ class Settings
 			'src' => $src,
 			'autoload' => $autoload,
 			'cache' => $cache,
-			'checkForUpdates' => $checkForUpdates
+			'checkForUpdates' => $checkForUpdates,
+			'mockClasses' => $mockClasses,
+			'mockFunctions' => $mockFunctions
 		);
 	}
 
@@ -86,6 +98,16 @@ class Settings
 		return $value;
 	}
 
+	private static function getStringList(&$value)
+	{
+		if (!is_array($value)) {
+			return null;
+		}
+
+		$value = array_filter($value, 'is_string');
+		return array_values($value);
+	}
+
 	public function get($key)
 	{
 		return $this->values[$key];
@@ -98,10 +120,11 @@ class Settings
 
 	public function __destruct()
 	{
-		if ($this->values === $this->initialValues) {
+		if ($this->values === $this->input) {
 			return;
 		}
 
-		$this->file->write($this->values);
+		$content = $this->yaml->dump($this->values, 1, false, true);
+		$this->file->write($content);
 	}
 }

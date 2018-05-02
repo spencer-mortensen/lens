@@ -36,7 +36,7 @@ abstract class Agent
 	/** @var null|array */
 	private static $calls;
 
-	public static function start($contextPhp, array $script = null)
+	public static function start($contextPhp, array $script)
 	{
 		self::$contextPhp = $contextPhp;
 		self::$script = $script;
@@ -57,10 +57,6 @@ abstract class Agent
 
 	private static function play()
 	{
-		if (self::$script === null) {
-			return null;
-		}
-
 		$code = array_shift(self::$script);
 
 		if ($code === null) {

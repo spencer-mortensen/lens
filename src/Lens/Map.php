@@ -30,100 +30,101 @@ use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Map
 {
+	/** @var Paths */
+	private $paths;
+
+	/** @var Filesystem */
+	private $filesystem;
+
+	/** @var string */
+	private $baseDirectory;
+
 	/** @var JsonFile */
 	private $file;
 
-	/** @var Lock */
-	private $lock;
+	/** @var array */
+	private $map;
 
-	public function __construct(Paths $paths, Filesystem $filesystem, $filePath)
+	/** @var array|null */
+	private $files;
+
+	/** @var array|null */
+	private $modified;
+
+	/** @var array|null */
+	private $classes;
+
+	/** @var array|null */
+	private $functions;
+
+	public function __construct(Paths $paths, Filesystem $filesystem, $baseDirectory, $filePath)
 	{
 		$file = new JsonFile($filesystem, $filePath);
+		$file->read($map);
 
-		$lockPath = $this->getLockPath($paths, $filePath);
-		$lock = new Lock($lockPath);
+		if (!is_array($map)) {
+			$map = array();
+		}
 
+		$this->paths = $paths;
+		$this->filesystem = $filesystem;
+		$this->baseDirectory = $baseDirectory;
 		$this->file = $file;
-		$this->lock = $lock;
+
+		$this->map = $map;
+		$this->files = &$this->map['files'];
+		$this->modified = &$this->map['modified'];
+		$this->classes = &$this->map['classes'];
+		$this->functions = &$this->map['functions'];
 	}
 
-	private function getLockPath(Paths $paths, $filePath)
+	public function getModifiedTime($absolutePath)
 	{
-		$lockDirectory = $this->getLockDirectory($paths);
-		$relativePath = $this->getRelativeLockPath($paths, $filePath);
-		return $paths->join($lockDirectory, 'file', $relativePath);
+		$files = $this->getFiles($absolutePath);
+
+		return $this->getModifiedTimeInternal($files);
 	}
 
-	private function getLockDirectory(Paths $paths)
+	public function setModifiedTime($absolutePath, $time)
 	{
-		$temporaryDirectory = sys_get_temp_dir();
+		$index = $this->getFiles($absolutePath);
 
-		return $paths->join($temporaryDirectory, 'locks');
+		$this->modified[$index] = $time;
+
+		echo "map: ", json_encode($this->map, JSON_PRETTY_PRINT), "\n";
 	}
 
-	private function getRelativeLockPath(Paths $paths, $filePath)
+	private function getFiles($absolutePath)
 	{
-		$filePath = str_replace('_', '__', $filePath);
+		$relativePath = $this->paths->getRelativePath($this->baseDirectory, $absolutePath);
 
-		$data = $paths->deserialize($filePath);
+		$data = $this->paths->deserialize($relativePath);
 		$atoms = $data->getAtoms();
 
-		return implode('_', $atoms) . '.lock';
+		$files = &$this->files;
+
+		foreach ($atoms as $atom) {
+			if (!is_array($files)) {
+				// TODO: exception:
+				return null;
+			}
+
+			$files = &$files[$atom];
+		}
+
+		return $files;
 	}
 
-	public function get($key, &$value)
+	private function getModifiedTimeInternal($input)
 	{
-		$this->lock->getShared();
-
-		$success = $this->read($key, $value);
-
-		$this->lock->unlock();
-
-		return $success;
-	}
-
-	private function read($key, &$value)
-	{
-		if (!$this->file->read($values)) {
-			return false;
+		if (is_array($input)) {
+			return array_map(array($this, 'getModifiedTimeInternal'), $input);
 		}
 
-		if (!is_array($values)) {
-			return false;
+		if (is_integer($input) && isset($this->modified[$input])) {
+			return $this->modified[$input];
 		}
 
-		if (!array_key_exists($key, $values)) {
-			return false;
-		}
-
-		$value = $values[$key];
-		return true;
-	}
-
-	public function set($key, $value)
-	{
-		$this->lock->getExclusive();
-
-		$success = $this->write($key, $value);
-
-		$this->lock->unlock();
-
-		return $success;
-	}
-
-	private function write($key, $value)
-	{
-		if (!$this->file->read($values)) {
-			$values = array();
-		}
-
-		if (!is_array($values)) {
-			// TODO: throw an exception instead
-			return false;
-		}
-
-		$values[$key] = $value;
-
-		return $this->file->write($values);
+		return null;
 	}
 }

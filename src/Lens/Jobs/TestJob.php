@@ -53,6 +53,9 @@ class TestJob implements Job
 	/** @var string */
 	private $postPhp;
 
+	/** @var boolean */
+	private $isCoverageEnabled;
+
 	/** @var Processor */
 	private $processor;
 
@@ -65,7 +68,7 @@ class TestJob implements Job
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $cache, $contextPhp, $prePhp, array $script = null, $postPhp, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $src, $cache, $contextPhp, $prePhp, array $script = null, $postPhp, $isCoverageEnabled, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->src = $src;
@@ -74,6 +77,7 @@ class TestJob implements Job
 		$this->prePhp = $prePhp;
 		$this->script = $script;
 		$this->postPhp = $postPhp;
+		$this->isCoverageEnabled = $isCoverageEnabled;
 		$this->processor = $processor;
 		$this->process = &$process;
 		$this->results = &$results;
@@ -82,7 +86,7 @@ class TestJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = array($this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->script, $this->postPhp);
+		$arguments = array($this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->script, $this->postPhp, $this->isCoverageEnabled);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -108,7 +112,7 @@ class TestJob implements Job
 
 		Exceptions::on($sendResults);
 
-		$test->run($this->contextPhp, $this->prePhp, $this->script, $this->postPhp);
+		$test->run($this->contextPhp, $this->prePhp, $this->script, $this->postPhp, $this->isCoverageEnabled);
 
 		Exceptions::off();
 

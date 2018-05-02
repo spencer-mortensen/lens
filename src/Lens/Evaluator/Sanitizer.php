@@ -27,6 +27,7 @@ namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Php\CallParser;
 use Lens_0_0_56\Lens\Php\Code;
+use Lens_0_0_56\Lens\Php\Resolver;
 use Lens_0_0_56\Lens\Php\Semantics;
 use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
@@ -39,11 +40,19 @@ class Sanitizer
 	/** @var CallParser */
 	private $parser;
 
-	public function __construct()
+	/** @var Resolver */
+	private $resolver;
+
+	/** @var array */
+	private $mockFunctions;
+
+	public function __construct($isFunction, array $mockFunctions)
 	{
 		// TODO: dependency injection
 		$this->paths = Paths::getPlatformPaths();
 		$this->parser = new CallParser();
+		$this->resolver = new Resolver($isFunction);
+		$this->mockFunctions = $mockFunctions;
 	}
 
 	public function sanitize($type, $namespace, array $uses, $definitionPhp)
@@ -108,7 +117,7 @@ class Sanitizer
 			return;
 		}
 
-		$class = $this->getAbsolutePath($namespace, $uses, $value);
+		$class = $this->resolver->resolve($namespace, $uses, $value, false);
 
 		if (Semantics::isUnsafeClass($class)) {
 			$class = "Lens\\{$class}";
@@ -118,80 +127,15 @@ class Sanitizer
 
 	private function analyzeFunction($namespace, array $uses, $position, $value, array &$functions, array &$edits)
 	{
-		$function = $this->getFunction($namespace, $uses, $value);
+		$function = $this->resolver->resolve($namespace, $uses, $value, true);
 
 		if (Semantics::isUnsafeFunction($function)) {
 			$function = "Lens\\{$function}";
 			$edits[$position] = array(strlen($value), "\\{$function}");
 			$functions[$function] = $function;
-		} elseif (!Semantics::isInternalFunction($function)) {
+		} elseif (!Semantics::isPhpFunction($function)) {
 			$functions[$function] = $function;
 		}
-	}
-
-	// Namespaces: null, 'A', 'A\\B', ...
-	private function getFunction($namespace, array $uses, $call)
-	{
-		$delimiter = strrpos($call, '\\');
-
-		if ($delimiter === false) {
-			$prefix = null;
-			$name = $call;
-		} else {
-			$prefix = substr($call, 0, max($delimiter, 1));
-			$name = substr($call, $delimiter + 1);
-		}
-
-		$path = $this->getAbsolutePath($namespace, $uses, $prefix);
-		$function = $this->getAbsoluteFunction($path, $name);
-
-		if (($prefix === null) && !function_exists($function)) {
-			$function = $name;
-		}
-
-		return $function;
-	}
-
-	// Absolute paths: null, 'A', A\\B', ...
-	private function getAbsolutePath($namespace, array $uses, $prefix)
-	{
-		if ($prefix === null) {
-			return $namespace;
-		}
-
-		if (substr($prefix, 0, 1) === '\\') {
-			$path = substr($prefix, 1);
-
-			if (strlen($path) === 0) {
-				return null;
-			}
-
-			return $path;
-		}
-
-		$names = explode('\\', $prefix);
-		$baseName = $names[0];
-
-		if (isset($uses[$baseName])) {
-			$names[0] = $uses[$baseName];
-			return implode('\\', $names);
-		}
-
-		if ($namespace === null) {
-			return $prefix;
-		}
-
-		array_unshift($names, $namespace);
-		return implode('\\', $names);
-	}
-
-	private function getAbsoluteFunction($path, $name)
-	{
-		if ($path === null) {
-			return $name;
-		}
-
-		return "{$path}\\{$name}";
 	}
 
 	private function applyEdits($subject, array $edits)
@@ -217,7 +161,7 @@ class Sanitizer
 
 		foreach ($functions as $function) {
 			$this->getCoreMockPath($function, $pathPhp) ||
-			$this->getUserLivePath($function, $pathPhp);
+			$this->getUserPath($function, $pathPhp);
 
 			$lines[] = Code::getRequireOncePhp($pathPhp);
 		}
@@ -233,17 +177,23 @@ class Sanitizer
 
 		$function = substr($function, 5);
 		$relativePath = $this->getRelativeFilePath($function);
-		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('files', 'mocks', 'functions', $relativePath);
+		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('functions', 'mock', $relativePath);
 		$pathPhp = 'LENS_CORE_DIRECTORY . ' . Code::getValuePhp($relativePath);
 
 		return true;
 	}
 
-	private function getUserLivePath($function, &$pathPhp)
+	private function getUserPath($function, &$pathPhp)
 	{
+		if (isset($this->mockFunctions[$function])) {
+			$directory = 'mock';
+		} else {
+			$directory = 'live';
+		}
+
 		// TODO: this is undoubtedly duplicated elsewhere:
 		$relativePath = $this->getRelativeFilePath($function);
-		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('functions', 'live', $relativePath);
+		$relativePath = DIRECTORY_SEPARATOR . $this->paths->join('functions', $directory, $relativePath);
 		$pathPhp = 'LENS_CACHE_DIRECTORY . ' . Code::getValuePhp($relativePath);
 
 		return true;

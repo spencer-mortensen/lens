@@ -44,18 +44,22 @@ class CacheJob implements Job
 	/** @var string */
 	private $cache;
 
-	public function __construct($executable, $project, $src, $autoload, $cache)
+	/** @var array */
+	private $mockFunctions;
+
+	public function __construct($executable, $project, $src, $autoload, $cache, array $mockFunctions)
 	{
 		$this->executable = $executable;
 		$this->project = $project;
 		$this->src = $src;
 		$this->autoload = $autoload;
 		$this->cache = $cache;
+		$this->mockFunctions = $mockFunctions;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->project, $this->src, $this->autoload, $this->cache);
+		$arguments = array($this->project, $this->src, $this->autoload, $this->cache, $this->mockFunctions);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -65,7 +69,7 @@ class CacheJob implements Job
 
 	public function start()
 	{
-		$builder = new CacheBuilder($this->project, $this->src, $this->autoload, $this->cache);
+		$builder = new CacheBuilder($this->project, $this->src, $this->autoload, $this->cache, $this->mockFunctions);
 		$builder->build();
 	}
 

@@ -40,7 +40,7 @@ class CoverageExtractor
 
 	public function __construct($srcDirectory)
 	{
-		$this->isCoverageEnabled = function_exists('xdebug_start_code_coverage');
+		$this->isCoverageEnabled = function_exists('xdebug_start_code_coverage') && isset($srcDirectory);
 		$this->srcDirectory = $srcDirectory;
 	}
 

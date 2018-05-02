@@ -56,7 +56,7 @@ class Finder
 	const AUTOLOAD = 'autoload.php';
 
 	/** @var string */
-	const SETTINGS = 'settings.ini';
+	const SETTINGS = 'settings.yml';
 
 	/** @var string */
 	const SRC = 'src';
@@ -94,7 +94,7 @@ class Finder
 	/** @var string|null */
 	private $autoload;
 
-	/** @var Settings */
+	/** @var string|null */
 	private $settings;
 
 	/** @var string|null */

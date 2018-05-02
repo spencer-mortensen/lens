@@ -36,6 +36,6 @@ class Url
 	const LENS_INSTALLATION = 'http://lens.guide/get-started/install-lens/';
 	const LENS_ISSUES = 'https://github.com/Spencer-Mortensen/lens/issues';
 	const LENS_REPORTS = 'http://lens.guide/reference/executable/';
-	const LENS_SETTINGS = 'http://lens.guide/reference/organization/lens/settings.ini/';
+	const LENS_SETTINGS = 'http://lens.guide/reference/organization/lens/settings.yml/';
 	const LENS_TESTS_FILE_SYNTAX = 'http://lens.guide/reference/tests-file/';
 }

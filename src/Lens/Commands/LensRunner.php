@@ -29,14 +29,16 @@ use Lens_0_0_56\Lens\Arguments;
 use Lens_0_0_56\Lens\Browser;
 use Lens_0_0_56\Lens\Environment;
 use Lens_0_0_56\Lens\Evaluator\Evaluator;
+use Lens_0_0_56\Lens\Evaluator\Sanitizer;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Finder;
 use Lens_0_0_56\Lens\LensException;
-use Lens_0_0_56\Lens\Reports\Tap;
-use Lens_0_0_56\Lens\Reports\Text;
-use Lens_0_0_56\Lens\Reports\XUnit;
+use Lens_0_0_56\Lens\Php\Semantics;
+use Lens_0_0_56\Lens\Php\SuiteParser;
+use Lens_0_0_56\Lens\Reports\TapReport;
+use Lens_0_0_56\Lens\Reports\TextReport;
+use Lens_0_0_56\Lens\Reports\XUnitReport;
 use Lens_0_0_56\Lens\Settings;
-use Lens_0_0_56\Lens\SuiteParser;
 use Lens_0_0_56\Lens\Summarizer;
 use Lens_0_0_56\Lens\Url;
 use Lens_0_0_56\Lens\Web;
@@ -79,14 +81,19 @@ class LensRunner implements Command
 		$executable = $this->arguments->getExecutable();
 		$project = $this->finder->getProject();
 		$src = $this->finder->getSrc();
-		$autoload = $this->finder->getAutoload();
 		$cache = $this->finder->getCache();
 		$tests = $this->finder->getTests();
+		$autoload = $this->finder->getAutoload();
+
+		$settings = $this->getSettings();
+		$mockClasses = $this->getMockClasses($settings);
+		$mockFunctions = $this->getMockFunctions($settings);
+
+		$sanitizer = new Sanitizer(array($this, 'isFunction'), $mockFunctions);
+		$evaluator = new Evaluator($executable, $this->filesystem, $sanitizer);
 
 		$suites = $this->getSuites($paths);
-
-		$evaluator = new Evaluator($executable, $this->filesystem);
-		list($suites, $code, $coverage) = $evaluator->run($project, $src, $autoload, $cache, $suites);
+		list($suites, $code, $coverage) = $evaluator->run($project, $src, $autoload, $cache, $suites, $mockClasses, $mockFunctions);
 
 		$results = array(
 			'name' => 'Lens', // TODO: let the user provide the project name in the configuration file
@@ -100,7 +107,7 @@ class LensRunner implements Command
 		$stdout = $report->getReport($results);
 		$stderr = null;
 
-		if ($this->isUpdateAvailable() && ($reportType === 'text')) {
+		if ($this->isUpdateAvailable($settings) && ($reportType === 'text')) {
 			$stdout .= "\n\nA newer version of Lens is available:\n" . Url::LENS_INSTALLATION;
 		}
 
@@ -121,15 +128,63 @@ class LensRunner implements Command
 		return true;
 	}
 
-	private function isUpdateAvailable()
+	private function getMockClasses($settings)
 	{
-		$settingsPath = $this->finder->getSettings();
+		if ($settings === null) {
+			return array();
+		}
 
-		if ($settingsPath === null) {
+		$mockClasses = $settings->get('mockClasses');
+
+		if ($mockClasses === null) {
+			return array();
+		}
+
+		return array_combine($mockClasses, $mockClasses);
+	}
+
+	private function getMockFunctions($settings)
+	{
+		if ($settings === null) {
+			return array();
+		}
+
+		$mockFunctions = $settings->get('mockFunctions');
+
+		if ($mockFunctions === null) {
+			return array();
+		}
+
+		return array_combine($mockFunctions, $mockFunctions);
+	}
+
+	public function isFunction($function)
+	{
+		return Semantics::isPhpFunction($function) || $this->isUserFunction($function);
+	}
+
+	private function isUserFunction($function)
+	{
+		$cache = $this->finder->getCache();
+
+		if ($cache === null) {
 			return false;
 		}
 
-		$settings = new Settings($this->filesystem, $settingsPath);
+		// TODO: this is repeated elsewhere:
+		$names = explode('\\', $function);
+		$relativePath = $this->paths->join($names) . '.php';
+		$absolutePath = $this->paths->join($cache, 'functions', 'live', $relativePath);
+
+		return $this->filesystem->isFile($absolutePath);
+	}
+
+	private function isUpdateAvailable($settings)
+	{
+		if ($settings === null) {
+			return false;
+		}
+
 		$checkForUpdates = $settings->get('checkForUpdates');
 
 		if (!$checkForUpdates) {
@@ -149,7 +204,16 @@ class LensRunner implements Command
 
 		$url = Url::LENS_CHECK_FOR_UPDATES;
 		$query = http_build_query($data);
+
+		set_error_handler(function () {});
+
 		$latestVersion = file_get_contents("{$url}?{$query}");
+
+		restore_error_handler();
+
+		if ($latestVersion === false) {
+			return false;
+		}
 
 		return Re::match('^[0-9]+\\.[0-9]+\\.[0-9]+$', $latestVersion) &&
 			(LensVersion::VERSION !== $latestVersion);
@@ -179,13 +243,13 @@ class LensRunner implements Command
 	{
 		switch ($type) {
 			case 'xunit':
-				return new XUnit();
+				return new XUnitReport();
 
 			case 'tap':
-				return new Tap();
+				return new TapReport();
 
 			default:
-				return new Text($autoload);
+				return new TextReport($autoload);
 		}
 	}
 
@@ -207,6 +271,17 @@ class LensRunner implements Command
 
 	}
 	*/
+
+	private function getSettings()
+	{
+		$path = $this->finder->getSettings();
+
+		if ($path === null) {
+			return null;
+		}
+
+		return new Settings($this->filesystem, $path);
+	}
 
 	private function getSuites(array $paths)
 	{

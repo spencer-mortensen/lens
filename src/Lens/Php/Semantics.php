@@ -37,14 +37,14 @@ class Semantics
 		return isset(self::$classIdentifiers[$name]);
 	}
 
-	public static function isInternalFunction($name)
+	public static function isPhpFunction($name)
 	{
-		if (self::$internalFunctions === null) {
+		if (self::$phpFunctions === null) {
 			$names = get_defined_functions()['internal'];
-			self::$internalFunctions = array_combine($names, $names);
+			self::$phpFunctions = array_combine($names, $names);
 		}
 
-		return isset(self::$internalFunctions[$name]);
+		return isset(self::$phpFunctions[$name]);
 	}
 
 	public static function getUnsafeFunctions()
@@ -259,7 +259,62 @@ class Semantics
 		'getmyuid' => 'getmyuid',
 		'get_current_user' => 'get_current_user',
 		'getmyinode' => 'getmyinode',
-		'getlastmod' => 'getlastmod'
+		'getlastmod' => 'getlastmod',
+
+		// Stream functions
+		// 'set_socket_blocking' => 'set_socket_blocking', # PHP < 7.0.0
+		'stream_bucket_append' => 'stream_bucket_append',
+		'stream_bucket_make_writeable' => 'stream_bucket_make_writeable',
+		'stream_bucket_new' => 'stream_bucket_new',
+		'stream_bucket_prepend' => 'stream_bucket_prepend',
+		'stream_context_create' => 'stream_context_create',
+		'stream_context_get_default' => 'stream_context_get_default',
+		'stream_context_get_options' => 'stream_context_get_options',
+		'stream_context_get_params' => 'stream_context_get_params',
+		'stream_context_set_default' => 'stream_context_set_default',
+		'stream_context_set_option' => 'stream_context_set_option',
+		'stream_context_set_params' => 'stream_context_set_params',
+		'stream_copy_to_stream' => 'stream_copy_to_stream',
+		// 'stream_encoding' => 'stream_encoding', # Unknown
+		'stream_filter_append' => 'stream_filter_append',
+		'stream_filter_prepend' => 'stream_filter_prepend',
+		'stream_filter_register' => 'stream_filter_register',
+		'stream_filter_remove' => 'stream_filter_remove',
+		'stream_get_contents' => 'stream_get_contents',
+		'stream_get_filters' => 'stream_get_filters',
+		'stream_get_line' => 'stream_get_line',
+		'stream_get_meta_data' => 'stream_get_meta_data',
+		'stream_get_transports' => 'stream_get_transports',
+		'stream_get_wrappers' => 'stream_get_wrappers',
+		'stream_is_local' => 'stream_is_local',
+		// 'stream_isatty' => 'stream_isatty', # PHP >= 7.2.0
+		// 'stream_notification_callback' => 'stream_notification_callback', # Unknown
+		'stream_register_wrapper' => 'stream_register_wrapper',
+		'stream_resolve_include_path' => 'stream_resolve_include_path',
+		'stream_select' => 'stream_select',
+		'stream_set_blocking' => 'stream_set_blocking',
+		'stream_set_chunk_size' => 'stream_set_chunk_size',
+		'stream_set_read_buffer' => 'stream_set_read_buffer',
+		'stream_set_timeout' => 'stream_set_timeout',
+		'stream_set_write_buffer' => 'stream_set_write_buffer',
+		'stream_socket_accept' => 'stream_socket_accept',
+		'stream_socket_client' => 'stream_socket_client',
+		'stream_socket_enable_crypto' => 'stream_socket_enable_crypto',
+		'stream_socket_get_name' => 'stream_socket_get_name',
+		'stream_socket_pair' => 'stream_socket_pair',
+		'stream_socket_recvfrom' => 'stream_socket_recvfrom',
+		'stream_socket_sendto' => 'stream_socket_sendto',
+		'stream_socket_server' => 'stream_socket_server',
+		'stream_socket_shutdown' => 'stream_socket_shutdown',
+		'stream_supports_lock' => 'stream_supports_lock',
+		'stream_wrapper_register' => 'stream_wrapper_register',
+		'stream_wrapper_restore' => 'stream_wrapper_restore',
+		'stream_wrapper_unregister' => 'stream_wrapper_unregister',
+
+		// Miscellaneous
+		'sleep' => 'sleep',
+		'time_nanosleep' => 'time_nanosleep',
+		'usleep' => 'usleep'
 	);
 
 	// TODO: Finish this list:
@@ -269,5 +324,5 @@ class Semantics
 		'PDOStatement' => 'PDOStatement'
 	);
 
-	private static $internalFunctions;
+	private static $phpFunctions;
 }

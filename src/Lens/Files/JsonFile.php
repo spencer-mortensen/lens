@@ -49,7 +49,7 @@ class JsonFile implements File
 
 	public function write($value)
 	{
-		$contents = json_encode($value);
+		$contents = json_encode($value, JSON_PRETTY_PRINT);
 
 		return $this->file->write($contents);
 	}

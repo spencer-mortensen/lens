@@ -95,12 +95,13 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($contextPhp, $prePhp, array $script = null, $postPhp)
+	public function run($contextPhp, $prePhp, array $script = null, $postPhp, $isCoverageEnabled)
 	{
-		$prePhp = Code::combine($contextPhp, $prePhp);
-		$postPhp = Code::combine($contextPhp, $postPhp);
 		$this->script = $script;
 		$this->examiner = new Examiner();
+
+		$prePhp = Code::combine($contextPhp, $prePhp);
+		$postPhp = Code::combine($contextPhp, $postPhp);
 
 		$this->prepare();
 
@@ -117,7 +118,7 @@ class Test
 		}
 
 		Agent::start($contextPhp, $this->script);
-		$this->startCoverage();
+		$this->startCoverage($isCoverageEnabled);
 
 		Exceptions::on(array($this, 'postPhp'));
 
@@ -132,7 +133,7 @@ class Test
 	{
 		// TODO: this is duplicated elsewhere:
 		// TODO: move this to the finder?
-		$lensCoreDirectory = dirname(dirname(dirname(__DIR__)));
+		$lensCoreDirectory = $this->paths->join(dirname(dirname(dirname(__DIR__))), 'files');
 
 		define('LENS_CORE_DIRECTORY', $lensCoreDirectory);
 		define('LENS_CACHE_DIRECTORY', $this->cache);
@@ -208,9 +209,9 @@ class Test
 		return $namespace;
 	}
 
-	private function startCoverage()
+	private function startCoverage($isCoverageEnabled)
 	{
-		if (($this->script === null) || ($this->src === null)) {
+		if (!$isCoverageEnabled) {
 			return;
 		}
 

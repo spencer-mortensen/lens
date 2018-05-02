@@ -40,7 +40,6 @@ use ReflectionFunction;
 Assumptions:
 
  * The user autoloader uses "require_once" or "include_once" (rather than "require" or "include")
- * The autoload file defines the user autoloader, and may include files that define classes or functions, but the autoload file itself is a pure controller and doesn't contain any such definitions
  * The "src" directory contains only source code (no controller scripts, or constant definitions, or global variables)
  * The "src" directory contains scripts that have no fatal syntax errors (i.e. all files must all be parseable)
  * The source files use the common namespace format (not the brace format) with parseable method calls
@@ -76,7 +75,13 @@ class CacheBuilder
 	/** @var Sanitizer */
 	private $sanitizer;
 
-	public function __construct($projectDirectory, $srcDirectory, $autoloadFile, $cacheDirectory)
+	/** @var array */
+	private $scannedDirectories;
+
+	/** @var array */
+	private $modifiedFiles;
+
+	public function __construct($projectDirectory, $srcDirectory, $autoloadFile, $cacheDirectory, array $mockFunctions)
 	{
 		$this->projectDirectory = $projectDirectory;
 		$this->srcDirectory = $srcDirectory;
@@ -86,17 +91,31 @@ class CacheBuilder
 		$this->filesystem = new Filesystem();
 		$this->watcher = $this->getWatcher();
 		$this->parser = new FileParser();
-		$this->sanitizer = new Sanitizer();
+		$this->sanitizer = new Sanitizer('function_exists', $mockFunctions);
+	}
+
+	private function getWatcher()
+	{
+		$filePath = $this->paths->join($this->cacheDirectory, 'modified.json');
+		$cacheFile = new JsonFile($this->filesystem, $filePath);
+		return new Watcher($cacheFile, $this->projectDirectory);
 	}
 
 	public function build()
 	{
+		$this->scannedDirectories = array();
+		$this->modifiedFiles = array();
+
 		$directories = array();
 
 		$this->getChildDirectories($this->srcDirectory, $directories);
 
 		$declarations = new Declarations();
 		$declarations->start();
+
+		if ($this->watcher->isModifiedFile($this->autoloadFile)) {
+			$this->modifiedFiles[$this->autoloadFile] = $this->autoloadFile;
+		}
 
 		$this->requireOnce($this->autoloadFile);
 
@@ -105,42 +124,13 @@ class CacheBuilder
 		}
 
 		while ($declarations->get($file, $classes, $functions)) {
-			if ($this->autoloadFile === $file) {
-				continue;
-			}
+			if ($file !== $this->autoloadFile) {
+				$parentDirectory = dirname($file);
 
-			// TODO: continue here:
-			// Scan the parent directory (if it hasn't already been scanned)
-			/*
-			$parentDirectory = $this->getParentDirectory($file);
-
-			$isModified = $this->watcher->isModifiedFile($file);
-
-			if (!isset($directories[$parentDirectory])) {
 				$this->scanDirectory($parentDirectory);
-				$directories[$parentDirectory] = $parentDirectory;
-			}
-			*/
-
-			$filePhp = $this->filesystem->read($file);
-
-			list($namespace, $uses) = $this->parser->parse($filePhp);
-
-			// TODO: What if  the $path is not a fully-qualified class name? (Maybe it's a partial namespace path?)
-			// TODO: Support the function and constant use-statements: http://php.net/manual/en/language.namespaces.importing.php
-			foreach ($uses as $alias => $path) {
-				class_exists($path, true);
 			}
 
-			foreach ($classes as $class) {
-				$this->addLiveClass($class, $namespace, $uses, $filePhp);
-				$this->addMockClass($class);
-			}
-
-			foreach ($functions as $function) {
-				$this->addLiveFunction($function, $namespace, $uses, $filePhp);
-				$this->addMockFunction($function);
-			}
+			$this->addFile($file, $classes, $functions);
 		}
 	}
 
@@ -161,6 +151,12 @@ class CacheBuilder
 
 	private function scanDirectory($directoryPath)
 	{
+		$scannedDirectory = &$this->scannedDirectories[$directoryPath];
+
+		if ($scannedDirectory !== null) {
+			return;
+		}
+
 		$changes = $this->watcher->getDirectoryChanges($directoryPath);
 
 		foreach ($changes as $filePath => $exists) {
@@ -169,26 +165,17 @@ class CacheBuilder
 			}
 
 			// TODO: if the file is modified or deleted:
-			$this->removeCachedFile($filePath);
+			$this->removeFile($filePath);
 
 			// TODO: if the file is new or modified:
 			if ($exists) {
 				$this->requireOnce($filePath);
+
+				$this->modifiedFiles[$filePath] = $filePath;
 			}
 		}
-	}
 
-	private function requireOnce($filePath)
-	{
-		// TODO: exception handling
-		require_once $filePath;
-	}
-
-	private function getWatcher()
-	{
-		$filePath = $this->paths->join($this->cacheDirectory, 'modified.json');
-		$cacheFile = new JsonFile($this->filesystem, $filePath);
-		return new Watcher($cacheFile, $this->projectDirectory);
+		$scannedDirectory = $directoryPath;
 	}
 
 	// TODO: this is repeated elsewhere
@@ -197,15 +184,49 @@ class CacheBuilder
 		return substr($path, -4) === '.php';
 	}
 
-	private function removeCachedFile($path)
+	private function removeFile($file)
 	{
-		// echo "remove from cache: $path\n";
+		echo "remove: $file\n";
 	}
 
-	private function getParentDirectory($file)
+	private function requireOnce($filePath)
 	{
-		// TODO: use the "Paths" class:
-		return dirname($file);
+		// TODO: exception handling
+		require_once $filePath;
+	}
+
+	private function addFile($file, array $classes, array $functions)
+	{
+		if (!$this->isModifiedFile($file)) {
+			return;
+		}
+
+		echo "add: $file\n";
+
+		$filePhp = $this->filesystem->read($file);
+
+		list($namespace, $uses) = $this->parser->parse($filePhp);
+
+		// TODO: What if  the $path is not a fully-qualified class name? (Maybe it's a partial namespace path?)
+		// TODO: Support the function and constant use-statements: http://php.net/manual/en/language.namespaces.importing.php
+		foreach ($uses as $alias => $path) {
+			class_exists($path, true);
+		}
+
+		foreach ($classes as $class) {
+			$this->addLiveClass($class, $namespace, $uses, $filePhp);
+			$this->addMockClass($class);
+		}
+
+		foreach ($functions as $function) {
+			$this->addLiveFunction($function, $namespace, $uses, $filePhp);
+			$this->addMockFunction($function);
+		}
+	}
+
+	private function isModifiedFile($filePath)
+	{
+		return isset($this->modifiedFiles[$filePath]);
 	}
 
 	// TODO: use the regular expressions class:

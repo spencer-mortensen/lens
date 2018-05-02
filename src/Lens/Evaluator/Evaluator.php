@@ -30,6 +30,7 @@ use Lens_0_0_56\Lens\Jobs\CoverageJob;
 use Lens_0_0_56\Lens\Jobs\TestJob;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Php\Code;
+use Lens_0_0_56\Lens\Settings;
 
 class Evaluator
 {
@@ -45,17 +46,34 @@ class Evaluator
 	/** @var Processor */
 	private $processor;
 
-	public function __construct($executable, $filesystem)
+	public function __construct($executable, Filesystem $filesystem, Sanitizer $sanitizer)
 	{
 		$this->executable = $executable;
 		$this->filesystem = $filesystem;
-		$this->sanitizer = new Sanitizer();
+		$this->sanitizer = $sanitizer;
+		// TODO: dependency injection:
 		$this->processor = new Processor();
 	}
 
-	public function run($project, $src, $autoload, $cache, array $suites)
+	private function getMocks($settings, array &$classes = null, array &$functions = null)
 	{
-		$this->updateCache($project, $src, $autoload, $cache);
+		if ($settings !== null) {
+			$classes = $settings->get('mockClasses');
+			$functions = $settings->get('mockFunctions');
+		}
+
+		if ($classes === null) {
+			$classes = array();
+		}
+
+		if ($functions === null) {
+			$functions = array();
+		}
+	}
+
+	public function run($project, $src, $autoload, $cache, array $suites, array $mockClasses, array $mockFunctions)
+	{
+		$this->updateCache($project, $src, $autoload, $cache, $mockFunctions);
 
 		// TODO: run this only if coverage is enabled:
 		$this->startCoverage($src, $autoload, $code, $executableLines);
@@ -71,9 +89,9 @@ class Evaluator
 		return array($suites, $code, $coverage);
 	}
 
-	private function updateCache($project, $src, $autoload, $cache)
+	private function updateCache($project, $src, $autoload, $cache, array $mockFunctions)
 	{
-		$job = new CacheJob($this->executable, $project, $src, $autoload, $cache);
+		$job = new CacheJob($this->executable, $project, $src, $autoload, $cache, $mockFunctions);
 		$process = $this->processor->getProcess($job);
 
 		$this->processor->start($process);
@@ -167,7 +185,7 @@ class Evaluator
 			foreach ($suite['tests'] as $testLine => &$test) {
 				$namespace = $suite['namespace'];
 				$uses = $suite['uses'];
-				$actualPhp = $test['code'];
+				$actualPhp = $this->sanitizer->sanitize('code', $namespace, $uses, $test['code']);
 				$contextPhp = Code::getContextPhp($namespace, $uses);
 
 				foreach ($test['cases'] as $caseLine => &$case) {
@@ -200,6 +218,7 @@ class Evaluator
 			$fixturePhp,
 			$script,
 			$actualPhp,
+			true,
 			$actualResults,
 			$actualCoverage
 		);
@@ -209,13 +228,14 @@ class Evaluator
 			$cache,
 			$contextPhp,
 			$fixturePhp,
-			null,
+			$script,
 			$expectedPhp,
+			false,
 			$expectedResults
 		);
 	}
 
-	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, array $script = null, $php, &$results, &$coverage = null)
+	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, array $script, $php, $isCoverageEnabled, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
@@ -225,6 +245,7 @@ class Evaluator
 			$fixturePhp,
 			$script,
 			$php,
+			$isCoverageEnabled,
 			$this->processor,
 			$process,
 			$results,

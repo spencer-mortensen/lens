@@ -164,7 +164,7 @@ class LensException extends Exception
 		$message = "Unable to find the source-code directory.";
 
 		$help = array(
-			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.ini\" file and customize the \"src\" path. You can read more about the \"settings.ini\" file here:\n" . Url::LENS_SETTINGS
+			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.yml\" file and customize the \"src\" path. You can read more about the \"settings.yml\" file here:\n" . Url::LENS_SETTINGS
 		);
 
 		return new self($code, $severity, $message, $help);
@@ -179,7 +179,7 @@ class LensException extends Exception
 		$message = "Unable to find the autoload file.";
 
 		$help = array(
-			"If you do have an autoloader, then add the autoloader path to your \"settings.ini\" file:\n" . Url::LENS_SETTINGS,
+			"If you do have an autoloader, then add the autoloader path to your \"settings.yml\" file:\n" . Url::LENS_SETTINGS,
 			"If you don't have an autoloader, then create one now:\n" . Url::LENS_AUTOLOADER
 		);
 

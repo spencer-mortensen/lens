@@ -55,9 +55,9 @@ class LensCache implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($project, $src, $autoload, $cache) = $arguments;
+		list($project, $src, $autoload, $cache, $mockFunctions) = $arguments;
 
-		$job = new CacheJob($executable, $project, $src, $autoload, $cache);
+		$job = new CacheJob($executable, $project, $src, $autoload, $cache, $mockFunctions);
 		$process = new ShellServerProcess($job);
 
 		$process->run();
