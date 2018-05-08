@@ -30,7 +30,6 @@ use Lens_0_0_56\Lens\Jobs\CoverageJob;
 use Lens_0_0_56\Lens\Jobs\TestJob;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Php\Code;
-use Lens_0_0_56\Lens\Settings;
 
 class Evaluator
 {
@@ -55,29 +54,13 @@ class Evaluator
 		$this->processor = new Processor();
 	}
 
-	private function getMocks($settings, array &$classes = null, array &$functions = null)
-	{
-		if ($settings !== null) {
-			$classes = $settings->get('mockClasses');
-			$functions = $settings->get('mockFunctions');
-		}
-
-		if ($classes === null) {
-			$classes = array();
-		}
-
-		if ($functions === null) {
-			$functions = array();
-		}
-	}
-
 	public function run($project, $src, $autoload, $cache, array $suites, array $mockClasses, array $mockFunctions)
 	{
 		$this->updateCache($project, $src, $autoload, $cache, $mockFunctions);
 
 		// TODO: run this only if coverage is enabled:
 		$this->startCoverage($src, $autoload, $code, $executableLines);
-		$this->startTests($src, $cache, $suites, $executedLines);
+		$this->startTests($src, $cache, $suites, $mockClasses, $executedLines);
 		$this->processor->finish();
 
 		if (isset($executableLines, $executedLines)) {
@@ -177,7 +160,7 @@ class Evaluator
 		return $coverage;
 	}
 
-	private function startTests($src, $cache, array &$suites, array &$coverage = null)
+	private function startTests($src, $cache, array &$suites, array $mockClasses, array &$coverage = null)
 	{
 		$coverage = array();
 
@@ -200,6 +183,7 @@ class Evaluator
 						$actualPhp,
 						$expectedPhp,
 						$case['script'],
+						$mockClasses,
 						$case['results']['actual'],
 						$case['results']['expected'],
 						$coverage[]
@@ -209,15 +193,16 @@ class Evaluator
 		}
 	}
 
-	private function startTest($src, $cache, $contextPhp, $fixturePhp, $actualPhp, $expectedPhp, array $script = null, &$actualResults, &$expectedResults, &$actualCoverage)
+	private function startTest($src, $cache, $contextPhp, $fixturePhp, $actualPhp, $expectedPhp, array $script, array $mockClasses, &$actualResults, &$expectedResults, &$actualCoverage)
 	{
 		$this->startTestJob(
 			$src,
 			$cache,
 			$contextPhp,
 			$fixturePhp,
-			$script,
 			$actualPhp,
+			$script,
+			$mockClasses,
 			true,
 			$actualResults,
 			$actualCoverage
@@ -228,14 +213,15 @@ class Evaluator
 			$cache,
 			$contextPhp,
 			$fixturePhp,
-			$script,
 			$expectedPhp,
+			$script,
+			$mockClasses,
 			false,
 			$expectedResults
 		);
 	}
 
-	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, array $script, $php, $isCoverageEnabled, &$results, &$coverage = null)
+	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, $php, array $script, array $mockClasses, $isCoverageEnabled, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
@@ -243,8 +229,9 @@ class Evaluator
 			$cache,
 			$contextPhp,
 			$fixturePhp,
-			$script,
 			$php,
+			$script,
+			$mockClasses,
 			$isCoverageEnabled,
 			$this->processor,
 			$process,

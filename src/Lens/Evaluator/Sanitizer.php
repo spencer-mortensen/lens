@@ -27,7 +27,7 @@ namespace Lens_0_0_56\Lens\Evaluator;
 
 use Lens_0_0_56\Lens\Php\CallParser;
 use Lens_0_0_56\Lens\Php\Code;
-use Lens_0_0_56\Lens\Php\Resolver;
+use Lens_0_0_56\Lens\Php\Namespacing;
 use Lens_0_0_56\Lens\Php\Semantics;
 use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
@@ -40,8 +40,8 @@ class Sanitizer
 	/** @var CallParser */
 	private $parser;
 
-	/** @var Resolver */
-	private $resolver;
+	/** @var callable */
+	private $isFunction;
 
 	/** @var array */
 	private $mockFunctions;
@@ -51,7 +51,7 @@ class Sanitizer
 		// TODO: dependency injection
 		$this->paths = Paths::getPlatformPaths();
 		$this->parser = new CallParser();
-		$this->resolver = new Resolver($isFunction);
+		$this->isFunction = $isFunction;
 		$this->mockFunctions = $mockFunctions;
 	}
 
@@ -62,8 +62,10 @@ class Sanitizer
 		$functions = array();
 		$edits = array();
 
+		$namespacing = new Namespacing($this->isFunction, $namespace, $uses);
+
 		foreach ($tokens as $token) {
-			$this->analyzeToken($namespace, $uses, $token, $functions, $edits);
+			$this->analyzeToken($namespacing, $token, $functions, $edits);
 		}
 
 		$requirePhp = $this->getRequirePhp($functions);
@@ -96,45 +98,45 @@ class Sanitizer
 		}
 	}
 
-	private function analyzeToken($namespace, array $uses, array $token, array &$functions, array &$edits)
+	private function analyzeToken(Namespacing $namespacing, array $token, array &$functions, array &$edits)
 	{
 		list($type, $position, $value) = $token;
 
 		switch ($type) {
 			default: // ClassParser::TYPE_CLASS
-				$this->analyzeClass($namespace, $uses, $position, $value, $edits);
+				$this->analyzeClass($namespacing, $position, $value, $edits);
 				break;
 
 			case CallParser::TYPE_FUNCTION:
-				$this->analyzeFunction($namespace, $uses, $position, $value, $functions, $edits);
+				$this->analyzeFunction($namespacing, $position, $value, $functions, $edits);
 				break;
 		}
 	}
 
-	private function analyzeClass($namespace, array $uses, $position, $value, array &$edits)
+	private function analyzeClass(Namespacing $namespacing, $position, $relativeClass, array &$edits)
 	{
-		if (Semantics::isClassIdentifier($value)) {
+		if (Semantics::isClassIdentifier($relativeClass)) {
 			return;
 		}
 
-		$class = $this->resolver->resolve($namespace, $uses, $value, false);
+		$absoluteClass = $namespacing->getAbsoluteClass($relativeClass);
 
-		if (Semantics::isUnsafeClass($class)) {
-			$class = "Lens\\{$class}";
-			$edits[$position] = array(strlen($value), "\\{$class}");
+		if (Semantics::isUnsafeClass($absoluteClass)) {
+			$absoluteClass = "Lens\\{$absoluteClass}";
+			$edits[$position] = array(strlen($relativeClass), "\\{$absoluteClass}");
 		}
 	}
 
-	private function analyzeFunction($namespace, array $uses, $position, $value, array &$functions, array &$edits)
+	private function analyzeFunction(Namespacing $namespacing, $position, $relativeFunction, array &$functions, array &$edits)
 	{
-		$function = $this->resolver->resolve($namespace, $uses, $value, true);
+		$absoluteFunction = $namespacing->getAbsoluteFunction($relativeFunction);
 
-		if (Semantics::isUnsafeFunction($function)) {
-			$function = "Lens\\{$function}";
-			$edits[$position] = array(strlen($value), "\\{$function}");
-			$functions[$function] = $function;
-		} elseif (!Semantics::isPhpFunction($function)) {
-			$functions[$function] = $function;
+		if (Semantics::isUnsafeFunction($absoluteFunction)) {
+			$absoluteFunction = "Lens\\{$absoluteFunction}";
+			$edits[$position] = array(strlen($relativeFunction), "\\{$absoluteFunction}");
+			$functions[$absoluteFunction] = $absoluteFunction;
+		} elseif (!Semantics::isPhpFunction($absoluteFunction)) {
+			$functions[$absoluteFunction] = $absoluteFunction;
 		}
 	}
 

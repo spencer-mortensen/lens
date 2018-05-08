@@ -63,8 +63,8 @@ class Settings
 		$autoload = self::getNonEmptyString($input['autoload']);
 		$cache = self::getNonEmptyString($input['cache']);
 		$checkForUpdates = self::getBoolean($input['checkForUpdates']);
-		$mockClasses = self::getStringList($input['mockClasses']);
-		$mockFunctions = self::getStringList($input['mockFunctions']);
+		$mockClasses = self::getNamespaceList($input['mockClasses']);
+		$mockFunctions = self::getNamespaceList($input['mockFunctions']);
 
 		if ($checkForUpdates === null) {
 			$checkForUpdates = true;
@@ -98,14 +98,23 @@ class Settings
 		return $value;
 	}
 
-	private static function getStringList(&$value)
+	private static function getNamespaceList(&$input)
 	{
-		if (!is_array($value)) {
+		if (!is_array($input)) {
 			return null;
 		}
 
-		$value = array_filter($value, 'is_string');
-		return array_values($value);
+		$output = array();
+
+		foreach ($input as $namespace) {
+			if (!is_string($namespace)) {
+				continue;
+			}
+
+			$output[] = ltrim($namespace, '\\');
+		}
+
+		return $output;
 	}
 
 	public function get($key)

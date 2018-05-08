@@ -128,7 +128,7 @@ class LensRunner implements Command
 		return true;
 	}
 
-	private function getMockClasses($settings)
+	private function getMockClasses(Settings $settings = null)
 	{
 		if ($settings === null) {
 			return array();
@@ -143,7 +143,7 @@ class LensRunner implements Command
 		return array_combine($mockClasses, $mockClasses);
 	}
 
-	private function getMockFunctions($settings)
+	private function getMockFunctions(Settings $settings = null)
 	{
 		if ($settings === null) {
 			return array();
@@ -179,7 +179,7 @@ class LensRunner implements Command
 		return $this->filesystem->isFile($absolutePath);
 	}
 
-	private function isUpdateAvailable($settings)
+	private function isUpdateAvailable(Settings $settings = null)
 	{
 		if ($settings === null) {
 			return false;
@@ -249,7 +249,7 @@ class LensRunner implements Command
 				return new TapReport();
 
 			default:
-				return new TextReport($autoload);
+				return new TextReport(array($this, 'isFunction'), $autoload);
 		}
 	}
 

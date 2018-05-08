@@ -30,9 +30,13 @@ use Lens_0_0_56\Lens\Archivist\Comparer;
 use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\Lens\Formatter;
 use Lens_0_0_56\Lens\Paragraph;
+use Lens_0_0_56\Lens\Php\Namespacing;
 
 class TextReport implements Report
 {
+	/** @var callable */
+	private $isFunction;
+
 	/** @var string */
 	private $autoload;
 
@@ -48,8 +52,9 @@ class TextReport implements Report
 	/** @var null|array */
 	private $failedTest;
 
-	public function __construct($autoload)
+	public function __construct($isFunction, $autoload)
 	{
+		$this->isFunction = $isFunction;
 		$this->autoload = $autoload;
 		$this->comparer = new Comparer();
 		$this->passedTestsCount = 0;
@@ -152,7 +157,7 @@ class TextReport implements Report
 
 	private function getFixtureIssues($namespace, array $uses, array $state)
 	{
-		$formatter = self::getFormatter($namespace, $uses, $state['variables']);
+		$formatter = $this->getFormatter($namespace, $uses, $state['variables']);
 
 		$sections = array(
 			self::getUnexpectedMessages($this->getExceptionMessages($formatter, $state['exception'])),
@@ -172,8 +177,8 @@ class TextReport implements Report
 		$actualVariables = array_merge($actual['pre']['variables'], $actual['post']['variables']);
 		$expectedVariables = array_merge($expected['pre']['variables'], $expected['post']['variables']);
 
-		$actualFormatter = self::getFormatter($namespace, $uses, $actualVariables);
-		$expectedFormatter = self::getFormatter($namespace, $uses, $expectedVariables);
+		$actualFormatter = $this->getFormatter($namespace, $uses, $actualVariables);
+		$expectedFormatter = $this->getFormatter($namespace, $uses, $expectedVariables);
 
 		// TODO: display ALL side-effects (NOT just the differences)
 		$sections = array(
@@ -342,10 +347,11 @@ class TextReport implements Report
 		return implode("\n", $output);
 	}
 
-	private static function getFormatter($namespace, array $uses, array $variables)
+	private function getFormatter($namespace, array $uses, array $variables)
 	{
+		$namespacing = new Namespacing($this->isFunction, $namespace, $uses);
 		$objectNames = self::getObjectNames($variables);
-		return new Formatter($namespace, $uses, $objectNames);
+		return new Formatter($namespacing, $objectNames);
 	}
 
 	private static function getObjectNames(array $variables)

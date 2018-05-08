@@ -26,14 +26,12 @@
 namespace Lens_0_0_56\Lens;
 
 use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
+use Lens_0_0_56\Lens\Php\Namespacing;
 
 class Formatter
 {
-	/** @var string */
-	private $namespace;
-
-	/** @var array */
-	private $uses;
+	/** @var Namespacing */
+	private $namespacing;
 
 	/** @var array */
 	private $objectNames;
@@ -44,10 +42,9 @@ class Formatter
 	/** @var string */
 	private $currentDirectory;
 
-	public function __construct($namespace, array $uses, array $objectNames)
+	public function __construct(Namespacing $namespacing, array $objectNames)
 	{
-		$this->namespace = $namespace;
-		$this->uses = $uses;
+		$this->namespacing = $namespacing;
 		$this->objectNames = $objectNames;
 		$this->displayer = new Displayer();
 		$this->currentDirectory = getcwd(); // TODO
@@ -180,7 +177,8 @@ class Formatter
 		list($context, $method, $arguments) = $call;
 
 		if ($context === null) {
-			return $this->getFunctionCall($method, $arguments) . $this->getActionText($action);
+			$relativeMethod = $this->namespacing->getRelativeFunction($method);
+			return $this->getFunctionCall($relativeMethod, $arguments) . $this->getActionText($action);
 		}
 
 		if (is_string($context)) {
@@ -192,7 +190,7 @@ class Formatter
 
 	private function getStaticMethodCall($class, $method, array $arguments, $action)
 	{
-		$relativeContext = $this->getRelativeNamespace($class);
+		$relativeContext = $this->namespacing->getRelativeClass($class);
 		$functionText = $this->getFunctionCall($method, $arguments);
 		$actionText = $this->getActionText($action);
 
@@ -203,7 +201,7 @@ class Formatter
 	{
 		if ($method === '__construct') {
 			$absoluteClass = $object->getClass();
-			$relativeClass = $this->getRelativeNamespace($absoluteClass);
+			$relativeClass = $this->namespacing->getRelativeClass($absoluteClass);
 			$argumentsPhp = $this->getArgumentsText($arguments);
 
 			if ($action === null) {
@@ -231,26 +229,6 @@ class Formatter
 		}
 
 		return " // {$action}";
-	}
-
-	private function getRelativeNamespace($absoluteName)
-	{
-		foreach ($this->uses as $alias => $path) {
-			$length = strlen($path);
-
-			if (strncmp($absoluteName, $path, $length) === 0) {
-				return substr_replace($absoluteName, $alias, 0, $length);
-			}
-		}
-
-		$path = "{$this->namespace}\\";
-		$length = strlen($path);
-
-		if (strncmp($absoluteName, $path, $length) === 0) {
-			return substr($absoluteName, $length);
-		}
-
-		return "\\{$absoluteName}";
 	}
 
 	private function getFunctionCall($function, array $arguments)

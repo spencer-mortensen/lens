@@ -123,14 +123,14 @@ class CacheBuilder
 			$this->scanDirectory($directory);
 		}
 
-		while ($declarations->get($file, $classes, $functions)) {
+		while ($declarations->get($file, $classes, $functions, $interfaces, $traits)) {
 			if ($file !== $this->autoloadFile) {
 				$parentDirectory = dirname($file);
 
 				$this->scanDirectory($parentDirectory);
 			}
 
-			$this->addFile($file, $classes, $functions);
+			$this->addFile($file, $classes, $functions, $interfaces, $traits);
 		}
 	}
 
@@ -195,13 +195,11 @@ class CacheBuilder
 		require_once $filePath;
 	}
 
-	private function addFile($file, array $classes, array $functions)
+	private function addFile($file, array $classes, array $functions, array $interfaces, array $traits)
 	{
 		if (!$this->isModifiedFile($file)) {
 			return;
 		}
-
-		echo "add: $file\n";
 
 		$filePhp = $this->filesystem->read($file);
 
@@ -221,6 +219,14 @@ class CacheBuilder
 		foreach ($functions as $function) {
 			$this->addLiveFunction($function, $namespace, $uses, $filePhp);
 			$this->addMockFunction($function);
+		}
+
+		foreach ($interfaces as $interface) {
+			// TODO: support interfaces
+		}
+
+		foreach ($traits as $trait) {
+			// TODO: support traits
 		}
 	}
 

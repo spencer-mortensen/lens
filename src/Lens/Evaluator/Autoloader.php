@@ -30,15 +30,28 @@ use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Autoloader
 {
+	/** @var string */
+	private $core;
+
+	/** @var string|null */
+	private $cache;
+
+	/** @var array */
+	private $mockClasses;
+
 	/** @var Paths */
 	private $paths;
 
 	/** @var Filesystem */
 	private $filesystem;
 
-	public function __construct()
+	public function __construct($core, $cache, array $mockClasses)
 	{
-		// TODO: dependency injection
+		$this->core = $core;
+		$this->cache = $cache;
+		$this->mockClasses = $mockClasses;
+
+		// TODO: dependency injection:
 		$this->paths = Paths::getPlatformPaths();
 		$this->filesystem = new Filesystem();
 	}
@@ -50,11 +63,12 @@ class Autoloader
 
 	public function autoload($class)
 	{
-		$this->getCoreMockPath($class, $filePath) ||
-		$this->getUserMockPath($class, $filePath);
+		$this->getCoreMockPath($class, $path) ||
+		$this->getUserMockPath($class, $path) ||
+		$this->getUserLivePath($class, $path);
 
-		if ($this->filesystem->isFile($filePath)) {
-			include $filePath;
+		if ($this->filesystem->isFile($path)) {
+			include $path;
 		}
 	}
 
@@ -64,22 +78,27 @@ class Autoloader
 			return false;
 		}
 
-		// TODO: this is duplicated elsewhere
-		$lensCoreDirectory = dirname(dirname(dirname(__DIR__)));
-
 		$class = substr($class, 5);
 		$relativeFilePath = $this->getRelativeFilePath($class);
-
-		$absoluteFilePath = $this->paths->join($lensCoreDirectory, 'files', 'mocks', 'classes', $relativeFilePath);
+		$absoluteFilePath = $this->paths->join($this->core, 'files', 'mocks', 'classes', $relativeFilePath);
 		return true;
 	}
 
 	private function getUserMockPath($class, &$absoluteFilePath)
 	{
-		$relativeFilePath = $this->getRelativeFilePath($class);
+		if (!isset($this->mockClasses[$class])) {
+			return false;
+		}
 
-		// TODO: autoload mock classes when necessary:
-		$absoluteFilePath = $this->paths->join(LENS_CACHE_DIRECTORY, 'classes', 'live', $relativeFilePath);
+		$relativeFilePath = $this->getRelativeFilePath($class);
+		$absoluteFilePath = $this->paths->join($this->cache, 'classes', 'mock', $relativeFilePath);
+		return true;
+	}
+
+	private function getUserLivePath($class, &$absoluteFilePath)
+	{
+		$relativeFilePath = $this->getRelativeFilePath($class);
+		$absoluteFilePath = $this->paths->join($this->cache, 'classes', 'live', $relativeFilePath);
 		return true;
 	}
 

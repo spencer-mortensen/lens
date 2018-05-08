@@ -58,10 +58,10 @@ class Test
 	private $preState;
 
 	/** @var null|array */
-	private $script;
-
-	/** @var null|array */
 	private $postState;
+
+	/** @var array */
+	private $script;
 
 	/** @var CoverageExtractor */
 	private $coverageExtractor;
@@ -95,7 +95,7 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($contextPhp, $prePhp, array $script = null, $postPhp, $isCoverageEnabled)
+	public function run($contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isCoverageEnabled)
 	{
 		$this->script = $script;
 		$this->examiner = new Examiner();
@@ -103,7 +103,7 @@ class Test
 		$prePhp = Code::combine($contextPhp, $prePhp);
 		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		$this->prepare();
+		$this->prepare($mockClasses);
 
 		Exceptions::on(array($this, 'prePhp'));
 
@@ -129,7 +129,7 @@ class Test
 		$this->postPhp();
 	}
 
-	private function prepare()
+	private function prepare(array $mockClasses)
 	{
 		// TODO: this is duplicated elsewhere:
 		// TODO: move this to the finder?
@@ -138,7 +138,7 @@ class Test
 		define('LENS_CORE_DIRECTORY', $lensCoreDirectory);
 		define('LENS_CACHE_DIRECTORY', $this->cache);
 
-		$autoloader = new Autoloader();
+		$autoloader = new Autoloader($lensCoreDirectory, $this->cache, $mockClasses);
 		$autoloader->enable();
 	}
 
