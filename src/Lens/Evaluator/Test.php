@@ -161,6 +161,8 @@ class Test
 
 		if (is_array($state)) {
 			$state['calls'] = $calls;
+
+			unset($state['constants']['LENS_CORE_DIRECTORY'], $state['constants']['LENS_CACHE_DIRECTORY']);
 		}
 
 		return $this->archivist->archive($state);
