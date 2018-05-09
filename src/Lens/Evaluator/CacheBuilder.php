@@ -222,11 +222,11 @@ class CacheBuilder
 		}
 
 		foreach ($interfaces as $interface) {
-			// TODO: support interfaces
+			$this->addInterface($interface, $namespace, $uses, $filePhp);
 		}
 
 		foreach ($traits as $trait) {
-			// TODO: support traits
+			$this->addTrait($trait, $namespace, $uses, $filePhp);
 		}
 	}
 
@@ -310,34 +310,55 @@ class CacheBuilder
 		$file->write($code);
 	}
 
+	private function addInterface($interface, $namespace, $uses, $filePhp)
+	{
+		$path = $this->getInterfacePath($interface);
+
+		$reflection = new ReflectionClass($interface);
+		$interfacePhp = $this->getDefinitionPhp($reflection, $filePhp);
+
+		$this->write($namespace, $uses, $interfacePhp, $path);
+	}
+
+	private function addTrait($trait, $namespace, $uses, $filePhp)
+	{
+		// TODO: add trait
+	}
+
 	private function getLiveClassPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
-		return $this->paths->join($this->cacheDirectory, 'classes', 'live', $relativePath) . '.php';
+		return $this->paths->join($this->cacheDirectory, 'classes', 'live', $relativePath);
 	}
 
 	private function getMockClassPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
-		return $this->paths->join($this->cacheDirectory, 'classes', 'mock', $relativePath) . '.php';
+		return $this->paths->join($this->cacheDirectory, 'classes', 'mock', $relativePath);
 	}
 
 	private function getLiveFunctionPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
-		return $this->paths->join($this->cacheDirectory, 'functions', 'live', $relativePath) . '.php';
+		return $this->paths->join($this->cacheDirectory, 'functions', 'live', $relativePath);
 	}
 
 	private function getMockFunctionPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
-		return $this->paths->join($this->cacheDirectory, 'functions', 'mock', $relativePath) . '.php';
+		return $this->paths->join($this->cacheDirectory, 'functions', 'mock', $relativePath);
+	}
+
+	private function getInterfacePath($interface)
+	{
+		$relativePath = $this->getRelativePath($interface);
+		return $this->paths->join($this->cacheDirectory, 'interfaces', $relativePath);
 	}
 
 	private function getRelativePath($namespacePath)
 	{
 		$parts = explode('\\', $namespacePath);
-		return $this->paths->join($parts);
+		return $this->paths->join($parts) . '.php';
 	}
 
 	private function getMockClassCode($class)
