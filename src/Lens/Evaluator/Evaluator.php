@@ -221,7 +221,7 @@ class Evaluator
 		);
 	}
 
-	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, $php, array $script, array $mockClasses, $isCoverageEnabled, &$results, &$coverage = null)
+	private function startTestJob($src, $cache, $contextPhp, $fixturePhp, $php, array $script, array $mockClasses, $isActual, &$results, &$coverage = null)
 	{
 		$job = new TestJob(
 			$this->executable,
@@ -232,7 +232,7 @@ class Evaluator
 			$php,
 			$script,
 			$mockClasses,
-			$isCoverageEnabled,
+			$isActual,
 			$this->processor,
 			$process,
 			$results,

@@ -36,49 +36,38 @@ class MockBuilder
 {
 	public function getMockClassPhp($className)
 	{
-		// TODO: mock interfaces, abstract classes, and missing classes
-		// TODO: check that the $namespacedClass exists
+		// TODO: mock missing classes, traits, interfaces
 		$class = new ReflectionClass($className);
 
+		if ($class->isTrait()) {
+			return $this->getTraitPhp($class);
+		}
+
+		return $this->getClassPhp($class);
+	}
+
+	private function getTraitPhp(ReflectionClass $class)
+	{
 		$namePhp = $class->getShortName();
-		$php = "class {$namePhp}";
+		$php = "trait {$namePhp}";
 
-		if ($class->isAbstract()) {
-			$php = "abstract {$php}";
-		}
-
-		if ($class->isFinal()) {
-			$php = "final {$php}";
-		}
-
-		$parent = $class->getParentClass();
-
-		if ($parent !== false) {
-			$parentName = $parent->getName();
-			$php .= " extends \\{$parentName}";
-		}
-
-		$methodsPhp = $this->getMethodsListPhp($class);
+		$methodsPhp = $this->getTraitMethodsListPhp($class);
 		$php .= "\n{\n{$methodsPhp}\n}";
 
 		return $php;
 	}
 
-	private function getMethodsListPhp(ReflectionClass $class)
+	private function getTraitMethodsListPhp(ReflectionClass $trait)
 	{
 		$methodsPhp = array();
 
-		$this->addMethod($methodsPhp, 'public', '__construct', '');
-		$this->addMethod($methodsPhp, 'public', '__call', '$function, array $arguments', '$this', '$function', '$arguments');
-		$this->addMethod($methodsPhp, 'public static', '__callStatic', '$function, array $arguments', '__CLASS__', '$function', '$arguments');
-		$this->addMethod($methodsPhp, 'public', '__get', '$name');
-		$this->addMethod($methodsPhp, 'public', '__set', '$name, $value');
-		$this->addMethod($methodsPhp, 'public', '__isset', '$name');
-		$this->addMethod($methodsPhp, 'public', '__unset', '$name');
-		$this->addMethod($methodsPhp, 'public', '__toString', '');
-		$this->addMethod($methodsPhp, 'public', '__invoke', '');
-		$this->addMethod($methodsPhp, 'public static', '__setState', 'array $properties', '__CLASS__', '__FUNCTION__', 'func_get_args()');
+		$this->addUserMethods($trait, $methodsPhp);
 
+		return implode("\n\n", $methodsPhp);
+	}
+
+	private function addUserMethods(ReflectionClass $class, array &$methodsPhp)
+	{
 		$methods = $class->getMethods(ReflectionMethod::IS_PUBLIC);
 
 		foreach ($methods as $method) { /** @var ReflectionMethod $method */
@@ -91,17 +80,6 @@ class MockBuilder
 
 			$methodPhp = $this->getMethodPhp($method);
 		}
-
-		return implode("\n\n", $methodsPhp);
-	}
-
-	private function addMethod(array &$methods, $typePhp, $namePhp, $parametersPhp, $contextPhp = '$this', $functionPhp = '__FUNCTION__', $argumentsPhp = 'func_get_args()')
-	{
-		$typePhp .= ' function';
-		$bodyPhp = $this->getAgentPhp("\t", $contextPhp, $functionPhp, $argumentsPhp);
-		$methodPhp = $this->getFunctionPhp("\t", $typePhp, $namePhp, $parametersPhp, $bodyPhp);
-
-		$methods[$namePhp] = $methodPhp;
 	}
 
 	private function getMethodPhp(ReflectionMethod $method)
@@ -266,6 +244,75 @@ class MockBuilder
 		return '$this';
 	}
 
+	private function getAgentPhp($padding, $contextPhp, $functionPhp, $argumentsPhp)
+	{
+		return "\n{$padding}{\n{$padding}\treturn eval(Agent::call({$contextPhp}, {$functionPhp}, {$argumentsPhp}));\n{$padding}}";
+	}
+
+	private function getFunctionPhp($padding, $typePhp, $namePhp, $parametersPhp, $bodyPhp)
+	{
+		return "{$padding}{$typePhp} {$namePhp}({$parametersPhp}){$bodyPhp}";
+	}
+
+	private function getClassPhp(ReflectionClass $class)
+	{
+		$namePhp = $class->getShortName();
+		$php = "class {$namePhp}";
+
+		if ($class->isAbstract()) {
+			$php = "abstract {$php}";
+		}
+
+		if ($class->isFinal()) {
+			$php = "final {$php}";
+		}
+
+		$parent = $class->getParentClass();
+
+		if ($parent !== false) {
+			$parentName = $parent->getName();
+			$php .= " extends \\{$parentName}";
+		}
+
+		$methodsPhp = $this->getClassMethodsListPhp($class);
+		$php .= "\n{\n{$methodsPhp}\n}";
+
+		return $php;
+	}
+
+	private function getClassMethodsListPhp(ReflectionClass $class)
+	{
+		$methodsPhp = array();
+
+		$this->addMagicMethods($methodsPhp);
+		$this->addUserMethods($class, $methodsPhp);
+
+		return implode("\n\n", $methodsPhp);
+	}
+
+	private function addMagicMethods(array &$methodsPhp)
+	{
+		$this->addMethod($methodsPhp, 'public', '__construct', '');
+		$this->addMethod($methodsPhp, 'public', '__call', '$function, array $arguments', '$this', '$function', '$arguments');
+		$this->addMethod($methodsPhp, 'public static', '__callStatic', '$function, array $arguments', '__CLASS__', '$function', '$arguments');
+		$this->addMethod($methodsPhp, 'public', '__get', '$name');
+		$this->addMethod($methodsPhp, 'public', '__set', '$name, $value');
+		$this->addMethod($methodsPhp, 'public', '__isset', '$name');
+		$this->addMethod($methodsPhp, 'public', '__unset', '$name');
+		$this->addMethod($methodsPhp, 'public', '__toString', '');
+		$this->addMethod($methodsPhp, 'public', '__invoke', '');
+		$this->addMethod($methodsPhp, 'public static', '__setState', 'array $properties', '__CLASS__', '__FUNCTION__', 'func_get_args()');
+	}
+
+	private function addMethod(array &$methods, $typePhp, $namePhp, $parametersPhp, $contextPhp = '$this', $functionPhp = '__FUNCTION__', $argumentsPhp = 'func_get_args()')
+	{
+		$typePhp .= ' function';
+		$bodyPhp = $this->getAgentPhp("\t", $contextPhp, $functionPhp, $argumentsPhp);
+		$methodPhp = $this->getFunctionPhp("\t", $typePhp, $namePhp, $parametersPhp, $bodyPhp);
+
+		$methods[$namePhp] = $methodPhp;
+	}
+
 	public function getMockFunctionPhp($namespacedFunction)
 	{
 		$function = new ReflectionFunction($namespacedFunction);
@@ -275,15 +322,5 @@ class MockBuilder
 		$bodyPhp = $this->getAgentPhp('', 'null', '__FUNCTION__', 'func_get_args()');
 
 		return $this->getFunctionPhp('', 'function', $namePhp, $parametersPhp, $bodyPhp);
-	}
-
-	private function getAgentPhp($padding, $contextPhp, $functionPhp, $argumentsPhp)
-	{
-		return "\n{$padding}{\n{$padding}\treturn eval(Agent::call({$contextPhp}, {$functionPhp}, {$argumentsPhp}));\n{$padding}}";
-	}
-
-	private function getFunctionPhp($padding, $typePhp, $namePhp, $parametersPhp, $bodyPhp)
-	{
-		return "{$padding}{$typePhp} {$namePhp}({$parametersPhp}){$bodyPhp}";
 	}
 }

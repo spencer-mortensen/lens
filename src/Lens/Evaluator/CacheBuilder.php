@@ -226,7 +226,8 @@ class CacheBuilder
 		}
 
 		foreach ($traits as $trait) {
-			$this->addTrait($trait, $namespace, $uses, $filePhp);
+			$this->addLiveTrait($trait, $namespace, $uses, $filePhp);
+			$this->addMockTrait($trait);
 		}
 	}
 
@@ -290,6 +291,25 @@ class CacheBuilder
 		$file->write($code);
 	}
 
+	private function getMockClassCode($class)
+	{
+		// TODO: absorb this into the "MockBuilder"
+		$reflection = new ReflectionClass($class);
+		$namespace = $reflection->getNamespaceName();
+
+		$uses = array(
+			'Agent' => __NAMESPACE__ . '\\Agent'
+		);
+
+		$tagPhp = Code::getTagPhp();
+		$contextPhp = Code::getContextPhp($namespace, $uses);
+
+		$builder = new MockBuilder();
+		$classPhp = $builder->getMockClassPhp($class);
+
+		return Code::combine($tagPhp, $contextPhp, $classPhp) . "\n";
+	}
+
 	private function addLiveFunction($function, $namespace, array $uses, $filePhp)
 	{
 		$path = $this->getLiveFunctionPath($function);
@@ -310,7 +330,26 @@ class CacheBuilder
 		$file->write($code);
 	}
 
-	private function addInterface($interface, $namespace, $uses, $filePhp)
+	private function getMockFunctionCode($function)
+	{
+		// TODO: absorb this into the "MockBuilder"
+		$reflection = new ReflectionFunction($function);
+		$namespace = $reflection->getNamespaceName();
+
+		$uses = array(
+			'Agent' => __NAMESPACE__ . '\\Agent'
+		);
+
+		$tagPhp = Code::getTagPhp();
+		$contextPhp = Code::getContextPhp($namespace, $uses);
+
+		$builder = new MockBuilder();
+		$functionPhp = $builder->getMockFunctionPhp($function);
+
+		return Code::combine($tagPhp, $contextPhp, $functionPhp) . "\n";
+	}
+
+	private function addInterface($interface, $namespace, array $uses, $filePhp)
 	{
 		$path = $this->getInterfacePath($interface);
 
@@ -320,9 +359,24 @@ class CacheBuilder
 		$this->write($namespace, $uses, $interfacePhp, $path);
 	}
 
-	private function addTrait($trait, $namespace, $uses, $filePhp)
+	private function addLiveTrait($trait, $namespace, array $uses, $filePhp)
 	{
-		// TODO: add trait
+		$path = $this->getLiveTraitPath($trait);
+
+		$reflection = new ReflectionClass($trait);
+		$traitPhp = $this->getDefinitionPhp($reflection, $filePhp);
+		$traitPhp = $this->sanitizer->sanitize('trait', $namespace, $uses, $traitPhp);
+
+		$this->write($namespace, $uses, $traitPhp, $path);
+	}
+
+	private function addMockTrait($trait)
+	{
+		$path = $this->getMockTraitPath($trait);
+		$code = $this->getMockClassCode($trait);
+
+		$file = new TextFile($this->filesystem, $path);
+		$file->write($code);
 	}
 
 	private function getLiveClassPath($class)
@@ -355,47 +409,21 @@ class CacheBuilder
 		return $this->paths->join($this->cacheDirectory, 'interfaces', $relativePath);
 	}
 
+	private function getLiveTraitPath($class)
+	{
+		$relativePath = $this->getRelativePath($class);
+		return $this->paths->join($this->cacheDirectory, 'traits', 'live', $relativePath);
+	}
+
+	private function getMockTraitPath($class)
+	{
+		$relativePath = $this->getRelativePath($class);
+		return $this->paths->join($this->cacheDirectory, 'traits', 'mock', $relativePath);
+	}
+
 	private function getRelativePath($namespacePath)
 	{
 		$parts = explode('\\', $namespacePath);
 		return $this->paths->join($parts) . '.php';
-	}
-
-	private function getMockClassCode($class)
-	{
-		// TODO: absorb this into the "MockBuilder"
-		$reflection = new ReflectionClass($class);
-		$namespace = $reflection->getNamespaceName();
-
-		$uses = array(
-			'Agent' => __NAMESPACE__ . '\\Agent'
-		);
-
-		$tagPhp = Code::getTagPhp();
-		$contextPhp = Code::getContextPhp($namespace, $uses);
-
-		$builder = new MockBuilder();
-		$classPhp = $builder->getMockClassPhp($class);
-
-		return Code::combine($tagPhp, $contextPhp, $classPhp) . "\n";
-	}
-
-	private function getMockFunctionCode($function)
-	{
-		// TODO: absorb this into the "MockBuilder"
-		$reflection = new ReflectionFunction($function);
-		$namespace = $reflection->getNamespaceName();
-
-		$uses = array(
-			'Agent' => __NAMESPACE__ . '\\Agent'
-		);
-
-		$tagPhp = Code::getTagPhp();
-		$contextPhp = Code::getContextPhp($namespace, $uses);
-
-		$builder = new MockBuilder();
-		$functionPhp = $builder->getMockFunctionPhp($function);
-
-		return Code::combine($tagPhp, $contextPhp, $functionPhp) . "\n";
 	}
 }

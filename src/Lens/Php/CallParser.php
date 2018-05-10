@@ -39,6 +39,7 @@ class CallParser extends Parser
 	public function __construct()
 	{
 		$grammar = <<<'EOS'
+trait: AND classDeclaration openingBrace classBody closingBrace
 class: AND classDeclaration openingBrace classBody closingBrace
 classDeclaration: RE [^{]+
 openingBrace: STRING {
@@ -74,6 +75,11 @@ EOS;
 	{
 		$rule = $this->rules->getRule($ruleName);
 		return $this->run($rule, $input);
+	}
+
+	public function getTrait(array $matches)
+	{
+		return $matches[2];
 	}
 
 	public function getClass(array $matches)

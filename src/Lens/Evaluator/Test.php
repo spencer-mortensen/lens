@@ -95,7 +95,7 @@ class Test
 		return $this->coverage;
 	}
 
-	public function run($contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isCoverageEnabled)
+	public function run($contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual)
 	{
 		$this->script = $script;
 		$this->examiner = new Examiner();
@@ -103,7 +103,12 @@ class Test
 		$prePhp = Code::combine($contextPhp, $prePhp);
 		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		$this->prepare($mockClasses);
+		// TODO: this is duplicated elsewhere:
+		// TODO: move this to the finder?
+		$lensCoreDirectory = $this->paths->join(dirname(dirname(dirname(__DIR__))), 'files');
+
+		$autoloader = new Autoloader($lensCoreDirectory, $this->cache, $mockClasses);
+		$autoloader->enable();
 
 		Exceptions::on(array($this, 'prePhp'));
 
@@ -118,28 +123,19 @@ class Test
 		}
 
 		Agent::start($contextPhp, $this->script);
-		$this->startCoverage($isCoverageEnabled);
 
 		Exceptions::on(array($this, 'postPhp'));
+
+		if ($isActual) {
+			$autoloader->enableLiveMode();
+			$this->startCoverage();
+		}
 
 		$this->examiner->run($postPhp);
 
 		Exceptions::off();
 
 		$this->postPhp();
-	}
-
-	private function prepare(array $mockClasses)
-	{
-		// TODO: this is duplicated elsewhere:
-		// TODO: move this to the finder?
-		$lensCoreDirectory = $this->paths->join(dirname(dirname(dirname(__DIR__))), 'files');
-
-		define('LENS_CORE_DIRECTORY', $lensCoreDirectory);
-		define('LENS_CACHE_DIRECTORY', $this->cache);
-
-		$autoloader = new Autoloader($lensCoreDirectory, $this->cache, $mockClasses);
-		$autoloader->enable();
 	}
 
 	public function prePhp()
@@ -211,12 +207,8 @@ class Test
 		return $namespace;
 	}
 
-	private function startCoverage($isCoverageEnabled)
+	private function startCoverage()
 	{
-		if (!$isCoverageEnabled) {
-			return;
-		}
-
 		$this->coverageExtractor = new CoverageExtractor($this->src);
 		$this->coverageExtractor->start();
 

@@ -26,6 +26,7 @@
 namespace Lens_0_0_56\Lens\Evaluator;
 
 use Error;
+use ErrorException;
 use Exception;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
 
@@ -105,19 +106,6 @@ class Examiner
 		$this->state['constants'] = self::getConstants();
 	}
 
-	public function onFatalError()
-	{
-		$this->isUsable = false;
-		$this->state['variables'] = array();
-		$this->getLastError();
-		$this->setGlobalState();
-	}
-
-	public function onError($level, $message, $file, $line)
-	{
-		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
-	}
-
 	private static function getOutput()
 	{
 		$output = ob_get_clean();
@@ -182,17 +170,17 @@ class Examiner
 		return $userConstants;
 	}
 
-	private function getLastError()
+	public function onFatalError(ErrorException $exception)
 	{
-		$error = error_get_last();
+		$this->isUsable = false;
+		$this->state['variables'] = array();
+		$this->onError($exception->getSeverity(), $exception->getMessage(), $exception->getFile(), $exception->getLine());
+		$this->setGlobalState();
+	}
 
-		if (function_exists('error_clear_last')) {
-			error_clear_last();
-		}
-
-		if (is_array($error)) {
-			$this->state['errors'][] = self::getErrorValue($error['type'], $error['message'], $error['file'], $error['line']);
-		}
+	public function onError($level, $message, $file, $line)
+	{
+		$this->state['errors'][] = self::getErrorValue($level, $message, $file, $line);
 	}
 
 	private static function getErrorValue($level, $message, $file, $line)

@@ -85,6 +85,10 @@ class Sanitizer
 				$rule = 'function';
 				break;
 
+			case 'trait':
+				$rule = 'trait';
+				break;
+
 			default:
 				$rule = 'functionBody';
 				break;

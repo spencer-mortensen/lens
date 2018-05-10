@@ -45,6 +45,12 @@ class Autoloader
 	/** @var Filesystem */
 	private $filesystem;
 
+	/** @var integer */
+	private $depth;
+
+	/** @var integer|null */
+	private $mockDepth;
+
 	public function __construct($core, $cache, array $mockClasses)
 	{
 		$this->core = $core;
@@ -54,25 +60,57 @@ class Autoloader
 		// TODO: dependency injection:
 		$this->paths = Paths::getPlatformPaths();
 		$this->filesystem = new Filesystem();
+		$this->depth = 0;
+		$this->mockDepth = null;
 	}
 
 	public function enable()
 	{
+		define('LENS_CORE_DIRECTORY', $this->core);
+		define('LENS_CACHE_DIRECTORY', $this->cache);
+
 		spl_autoload_register(array($this, 'autoload'));
 	}
 
-	public function autoload($class)
+	public function enableLiveMode()
 	{
-		$this->getCoreMockPath($class, $path) ||
-		$this->getUserMockPath($class, $path) ||
-		$this->getUserLivePath($class, $path);
+		$this->mockDepth = $this->depth;
+	}
 
-		if ($this->filesystem->isFile($path)) {
-			include $path;
+	public function autoload($name)
+	{
+		if ($this->mockDepth !== null) {
+			unset($this->mockClasses[$name]);
+		}
+
+		++$this->depth;
+
+		$this->autoloadClass($name) ||
+		$this->autoloadInterface($name) ||
+		$this->autoloadTrait($name);
+
+		--$this->depth;
+
+		if ($this->mockDepth == $this->depth) {
+			$this->mockDepth = null;
 		}
 	}
 
-	private function getCoreMockPath($class, &$absoluteFilePath)
+	private function autoloadClass($class)
+	{
+		$this->getCoreMockClassPath($class, $path) ||
+		$this->getUserMockClassPath($class, $path) ||
+		$this->getUserLiveClassPath($class, $path);
+
+		if (!$this->filesystem->isFile($path)) {
+			return false;
+		}
+
+		include $path;
+		return true;
+	}
+
+	private function getCoreMockClassPath($class, &$absoluteFilePath)
 	{
 		if (strncmp($class, 'Lens\\', 5) !== 0) {
 			return false;
@@ -84,7 +122,7 @@ class Autoloader
 		return true;
 	}
 
-	private function getUserMockPath($class, &$absoluteFilePath)
+	private function getUserMockClassPath($class, &$absoluteFilePath)
 	{
 		if (!isset($this->mockClasses[$class])) {
 			return false;
@@ -95,10 +133,61 @@ class Autoloader
 		return true;
 	}
 
-	private function getUserLivePath($class, &$absoluteFilePath)
+	private function getUserLiveClassPath($class, &$absoluteFilePath)
 	{
 		$relativeFilePath = $this->getRelativeFilePath($class);
 		$absoluteFilePath = $this->paths->join($this->cache, 'classes', 'live', $relativeFilePath);
+		return true;
+	}
+
+	private function autoloadInterface($interface)
+	{
+		$this->getUserLiveInterfacePath($interface, $path);
+
+		if (!$this->filesystem->isFile($path)) {
+			return false;
+		}
+
+		include $path;
+		return true;
+	}
+
+	// TODO: this is duplicated in the "CacheBuilder":
+	private function getUserLiveInterfacePath($class, &$absoluteFilePath)
+	{
+		$relativeFilePath = $this->getRelativeFilePath($class);
+		$absoluteFilePath = $this->paths->join($this->cache, 'interfaces', $relativeFilePath);
+		return true;
+	}
+
+	private function autoloadTrait($class)
+	{
+		$this->getUserMockTraitPath($class, $path) ||
+		$this->getUserLiveTraitPath($class, $path);
+
+		if (!$this->filesystem->isFile($path)) {
+			return false;
+		}
+
+		include $path;
+		return true;
+	}
+
+	private function getUserMockTraitPath($class, &$absoluteFilePath)
+	{
+		if (!isset($this->mockClasses[$class])) {
+			return false;
+		}
+
+		$relativeFilePath = $this->getRelativeFilePath($class);
+		$absoluteFilePath = $this->paths->join($this->cache, 'traits', 'mock', $relativeFilePath);
+		return true;
+	}
+
+	private function getUserLiveTraitPath($class, &$absoluteFilePath)
+	{
+		$relativeFilePath = $this->getRelativeFilePath($class);
+		$absoluteFilePath = $this->paths->join($this->cache, 'traits', 'live', $relativeFilePath);
 		return true;
 	}
 
