@@ -26,23 +26,22 @@
 namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
-use Lens_0_0_56\Lens\Browser;
+use Lens_0_0_56\Lens\CaseText;
 use Lens_0_0_56\Lens\Environment;
-use Lens_0_0_56\Lens\Evaluator\Evaluator;
-use Lens_0_0_56\Lens\Evaluator\Sanitizer;
+use Lens_0_0_56\Lens\Evaluator\CoverageBuilder;
+use Lens_0_0_56\Lens\Evaluator\Processor;
+use Lens_0_0_56\Lens\Evaluator\TestsBuilder;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Finder;
+use Lens_0_0_56\Lens\Jobs\CacheJob;
 use Lens_0_0_56\Lens\LensException;
 use Lens_0_0_56\Lens\Php\Semantics;
-use Lens_0_0_56\Lens\Php\SuiteParser;
 use Lens_0_0_56\Lens\Reports\TapReport;
 use Lens_0_0_56\Lens\Reports\TextReport;
 use Lens_0_0_56\Lens\Reports\XUnitReport;
 use Lens_0_0_56\Lens\Settings;
-use Lens_0_0_56\Lens\Summarizer;
 use Lens_0_0_56\Lens\Url;
 use Lens_0_0_56\Lens\Web;
-use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 
@@ -85,24 +84,47 @@ class LensRunner implements Command
 		$tests = $this->finder->getTests();
 		$autoload = $this->finder->getAutoload();
 
+		// TODO: move this to the "Finder":
+		$lensCore = $this->paths->join(dirname(dirname(dirname(__DIR__))), 'files');
+
 		$settings = $this->getSettings();
 		$mockClasses = $this->getMockClasses($settings);
 		$mockFunctions = $this->getMockFunctions($settings);
 
-		$sanitizer = new Sanitizer(array($this, 'isFunction'), $mockFunctions);
-		$evaluator = new Evaluator($executable, $this->filesystem, $sanitizer);
+		$processor = new Processor();
 
-		$suites = $this->getSuites($paths);
-		list($suites, $code, $coverage) = $evaluator->run($project, $src, $autoload, $cache, $suites, $mockClasses, $mockFunctions);
+		// Update the source-code cache
+		// TODO: make this robust against compile-time fatal syntax errors:
+		$job = new CacheJob($executable, $project, $src, $autoload, $cache, $mockFunctions);
+		$processor->run($job);
+		// TODO: create blank entries in the "coverage.json" file (where coverage information is needed)
 
+		$processor->finish();
+
+		// Build the tests cache
+		$isFunction = array($this, 'isFunction');
+		$testsBuilder = new TestsBuilder($executable, $lensCore, $src, $tests, $cache, $isFunction, $processor, $this->paths, $this->filesystem);
+		$testsBuilder->start($paths, $mockClasses, $mockFunctions);
+
+		// Build the executable-lines cache
+		$coverageBuilder = new CoverageBuilder($executable, $lensCore, $src, $cache, $processor);
+		$coverageBuilder->start();
+
+		$processor->finish();
+
+		$coverageBuilder->stop();
+		$testsBuilder->stop();
+
+		$suites = $testsBuilder->getSuites();
+
+		// TODO: move this to the "TestsBuilder"
+		// TODO: let the user provide the project name in the configuration file
 		$results = array(
-			'name' => 'Lens', // TODO: let the user provide the project name in the configuration file
-			'suites' => $this->useRelativePaths($tests, $suites)
+			'name' => 'Lens',
+			'suites' => $suites
 		);
 
-		$summarizer = new Summarizer();
-		$summarizer->summarize($results);
-
+		/*
 		$report = $this->getReport($reportType, $autoload);
 		$stdout = $report->getReport($results);
 		$stderr = null;
@@ -110,6 +132,12 @@ class LensRunner implements Command
 		if ($this->isUpdateAvailable($settings) && ($reportType === 'text')) {
 			$stdout .= "\n\nA newer version of Lens is available:\n" . Url::LENS_INSTALLATION;
 		}
+		*/
+
+		$executableStatements = $coverageBuilder->getCoverage();
+
+		echo json_encode($executableStatements), "\n";
+		exit;
 
 		if (isset($code, $coverage)) {
 			$web = new Web($this->filesystem);
@@ -117,9 +145,7 @@ class LensRunner implements Command
 			$web->coverage($src, $coveragePath, $code, $coverage);
 		}
 
-		$isSuccessful = ($results['summary']['failed'] === 0);
-
-		if ($isSuccessful) {
+		if ($this->isSuccessful($results)) {
 			$exitCode = 0;
 		} else {
 			$exitCode = LensException::CODE_FAILURES;
@@ -241,15 +267,18 @@ class LensRunner implements Command
 
 	private function getReport($type, $autoload)
 	{
+		$caseText = new CaseText();
+		$caseText->setAutoload($autoload);
+
 		switch ($type) {
 			case 'xunit':
-				return new XUnitReport();
+				return new XUnitReport($caseText);
 
 			case 'tap':
-				return new TapReport();
+				return new TapReport($caseText);
 
 			default:
-				return new TextReport(array($this, 'isFunction'), $autoload);
+				return new TextReport($caseText);
 		}
 	}
 
@@ -272,6 +301,34 @@ class LensRunner implements Command
 	}
 	*/
 
+	// TODO: limit this to just the tests that were specified by the user
+	private function isSuccessful(array $project)
+	{
+		foreach ($project['suites'] as $suite) {
+			foreach ($suite['tests'] as $test) {
+				foreach ($test['cases'] as $case) {
+					if (!$this->isPassing($case['issues'])) {
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	// TODO: this is duplicated elsewhere
+	private function isPassing(array $issues)
+	{
+		foreach ($issues as $issue) {
+			if (is_array($issue)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	private function getSettings()
 	{
 		$path = $this->finder->getSettings();
@@ -281,36 +338,5 @@ class LensRunner implements Command
 		}
 
 		return new Settings($this->filesystem, $path);
-	}
-
-	private function getSuites(array $paths)
-	{
-		$browser = new Browser($this->filesystem, $this->paths);
-		$files = $browser->browse($paths);
-
-		$suites = array();
-		$parser = new SuiteParser();
-
-		foreach ($files as $path => $contents) {
-			try {
-				$suites[$path] = $parser->parse($contents);
-			} catch (ParserException $exception) {
-				throw LensException::invalidTestsFileSyntax($path, $contents, $exception);
-			}
-		}
-
-		return $suites;
-	}
-
-	private function useRelativePaths($testsDirectory, array $input)
-	{
-		$output = array();
-
-		foreach ($input as $absolutePath => $value) {
-			$relativePath = $this->paths->getRelativePath($testsDirectory, $absolutePath);
-			$output[$relativePath] = $value;
-		}
-
-		return $output;
 	}
 }

@@ -42,6 +42,12 @@ class Processor extends ParallelProcessor
 		$this->useForks = function_exists('pcntl_fork');
 	}
 
+	public function run(Job $job)
+	{
+		$process = $this->getProcess($job);
+		$this->start($process);
+	}
+
 	public function getProcess(Job $job)
 	{
 		if ($this->useForks) {

@@ -25,30 +25,49 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
+use Lens_0_0_56\Lens\CaseText;
+use Lens_0_0_56\Lens\Paragraph;
+
 class TapReport implements Report
 {
+	/** @var CaseText */
+	private $caseText;
+
+	public function __construct(CaseText $caseText)
+	{
+		$this->caseText = $caseText;
+	}
+
 	public function getReport(array $project)
 	{
-		$cases = self::getCases($project['suites']);
+		$cases = $this->getCases($project);
 
 		$output = array(
-			self::getVersion(),
-			self::getPlan($cases)
+			$this->getVersion(),
+			$this->getPlan($cases)
 		);
 
-		self::addTestLines($cases, $output);
+		$output = array_merge($output, $cases);
 
 		return implode("\n", $output);
 	}
 
-	private static function getCases(array $suites)
+	private function getCases(array $project)
 	{
 		$cases = array();
 
-		foreach ($suites as $testsFile => $suite) {
+		$id = 0;
+
+		foreach ($project['suites'] as $suiteFile => $suite) {
+			$this->caseText->setSuite($suiteFile, $suite['namespace'], $suite['uses']);
+
 			foreach ($suite['tests'] as $testLine => $test) {
+				$this->caseText->setTest($test['code']);
+
 				foreach ($test['cases'] as $caseLine => $case) {
-					$cases[] = array($testsFile, $caseLine, $case['summary']['pass']);
+					$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+
+					$cases[] = $this->getCaseText(++$id, $suiteFile, $caseLine, $case['issues']);
 				}
 			}
 		}
@@ -56,47 +75,53 @@ class TapReport implements Report
 		return $cases;
 	}
 
-	private static function getVersion()
+	private function getCaseText($id, $testsFile, $caseLine, array $issues)
+	{
+		$titleText = "{$testsFile}:{$caseLine}";
+
+		if ($this->isPassing($issues)) {
+			return $this->getPassingCaseText($id, $titleText);
+		}
+
+		return $this->getFailingCaseText($id, $titleText);
+	}
+
+	// TODO: this is duplicated elsewhere
+	private function isPassing(array $issues)
+	{
+		foreach ($issues as $issue) {
+			if (is_array($issue)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function getPassingCaseText($id, $titleText)
+	{
+		return "ok {$id} - {$titleText}";
+	}
+
+	private function getFailingCaseText($id, $titleText)
+	{
+		$caseText = $this->caseText->getText();
+		$caseText = substr_replace($caseText, '*  ', 0, 3);
+		$descriptionText = "---\n>\n{$caseText}\n...";
+		$descriptionText = Paragraph::indent($descriptionText, '  ');
+
+		return "not ok {$id} - {$titleText}\n{$descriptionText}";
+	}
+
+	private function getVersion()
 	{
 		return 'TAP version 13';
 	}
 
-	private static function getPlan(array $cases)
+	private function getPlan(array $cases)
 	{
 		$count = count($cases);
 
 		return "1..{$count}";
-	}
-
-	private static function addTestLines(array $cases, array &$output)
-	{
-		foreach ($cases as $i => $case) {
-			list($testsFile, $caseLine, $isPassing) = $case;
-			$id = $i + 1;
-
-			$output[] = self::getCaseText($id, $testsFile, $caseLine, $isPassing);
-		}
-	}
-
-	private static function getCaseText($id, $testsFile, $caseLine, $isPassing)
-	{
-		$passingText = self::getPassingText($isPassing);
-		$descriptionText = self::getDescriptionText($testsFile, $caseLine);
-
-		return "{$passingText} {$id} - {$descriptionText}";
-	}
-
-	private static function getPassingText($isPassing)
-	{
-		if ($isPassing) {
-			return 'ok';
-		}
-
-		return 'not ok';
-	}
-
-	private static function getDescriptionText($testsFile, $caseLine)
-	{
-		return "{$testsFile}:{$caseLine}";
 	}
 }

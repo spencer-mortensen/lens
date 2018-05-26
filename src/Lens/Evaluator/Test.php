@@ -29,12 +29,16 @@ use Lens_0_0_56\Lens\Archivist\Archivist;
 use Lens_0_0_56\Lens\Filesystem;
 use Lens_0_0_56\Lens\Php\Code;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 use Lens_0_0_56\SpencerMortensen\Paths\Paths;
 
 class Test
 {
 	/** @var string */
 	private $executable;
+
+	/** @var string */
+	private $lensCore;
 
 	/** @var string */
 	private $src;
@@ -63,16 +67,17 @@ class Test
 	/** @var array */
 	private $script;
 
-	/** @var CoverageExtractor */
-	private $coverageExtractor;
+	/** @var Xdebug */
+	private $xdebug;
 
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct($executable, $src, $cache)
+	public function __construct($executable, $lensCore, $src, $cache)
 	{
 		// TODO: dependency injection
 		$this->executable = $executable;
+		$this->lensCore = $lensCore;
 		$this->src = $src;
 		$this->cache = $cache;
 		$this->archivist = new Archivist();
@@ -103,11 +108,7 @@ class Test
 		$prePhp = Code::combine($contextPhp, $prePhp);
 		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		// TODO: this is duplicated elsewhere:
-		// TODO: move this to the finder?
-		$lensCoreDirectory = $this->paths->join(dirname(dirname(dirname(__DIR__))), 'files');
-
-		$autoloader = new Autoloader($lensCoreDirectory, $this->cache, $mockClasses);
+		$autoloader = new Autoloader($this->lensCore, $this->cache, $mockClasses);
 		$autoloader->enable();
 
 		Exceptions::on(array($this, 'prePhp'));
@@ -209,18 +210,69 @@ class Test
 
 	private function startCoverage()
 	{
-		$this->coverageExtractor = new CoverageExtractor($this->src);
-		$this->coverageExtractor->start();
+		$this->xdebug = new Xdebug(true);
+		$this->xdebug->start();
 
 	}
 
 	private function stopCoverage()
 	{
-		if ($this->coverageExtractor === null) {
+		if ($this->xdebug === null) {
 			return;
 		}
 
-		$this->coverageExtractor->stop();
-		$this->coverage = $this->coverageExtractor->getCoverage();
+		$this->xdebug->stop();
+		$coverage = $this->xdebug->getCoverage();
+
+		if ($coverage === null) {
+			return;
+		}
+
+		$this->coverage = $this->getRelevantCoverage($coverage);
+	}
+
+	private function getRelevantCoverage(array $coverage)
+	{
+		$output = array(
+			'classes' => array(),
+			'functions' => array(),
+			'traits' => array()
+		);
+
+		foreach ($coverage as $file => $lines) {
+			if (!$this->isCacheFile($file)) {
+				continue;
+			}
+
+			$path = $this->getRelativePath($file);
+
+			if (substr($path, 0, 13) === 'classes\\live\\') {
+				$class = substr($path, 13);
+				$output['classes'][$class] = $lines;
+			}
+
+			// TODO: support functions, traits
+		}
+
+		return $output;
+	}
+
+	private function isCacheFile($file)
+	{
+		return !self::isEvaluatedCode($file) &&
+			$this->paths->isChildPath($this->cache, $file);
+	}
+
+	private static function isEvaluatedCode($path)
+	{
+		return Re::match('\\([0-9]+\\) : eval\\(\\)\'d code$', $path);
+	}
+
+	private function getRelativePath($file)
+	{
+		$relativePath = $this->paths->getRelativePath($this->cache, $file);
+		$data = $this->paths->deserialize($relativePath);
+		$atoms = $data->getAtoms();
+		return substr(implode('\\', $atoms), 0, -4);
 	}
 }

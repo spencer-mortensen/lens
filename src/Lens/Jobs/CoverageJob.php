@@ -25,10 +25,9 @@
 
 namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\Coverage;
+use Lens_0_0_56\Lens\Evaluator\Autoloader;
+use Lens_0_0_56\Lens\Evaluator\StatementsExtractor;
 use Lens_0_0_56\Lens\Filesystem;
-use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
 
 class CoverageJob implements Job
 {
@@ -36,38 +35,30 @@ class CoverageJob implements Job
 	private $executable;
 
 	/** @var string */
-	private $srcDirectory;
-
-	/** @var array */
-	private $relativePaths;
+	private $lensCoreDirectory;
 
 	/** @var string */
-	private $autoloadPath;
+	private $cacheDirectory;
 
-	/** @var null|ServerProcess */
-	private $process;
+	/** @var string */
+	private $filePath;
 
-	/** @var array */
-	private $code;
+	/** @var array|null */
+	private $lineNumbers;
 
-	/** @var Coverage */
-	private $coverage;
-
-	public function __construct($executable, $srcDirectory, array $relativePaths, $autoloadPath, ServerProcess &$process = null, &$code, &$coverage)
+	public function __construct($executable, $lensCoreDirectory, $cacheDirectory, $filePath, array &$lineNumbers = null)
 	{
 		$this->executable = $executable;
-		$this->srcDirectory = $srcDirectory;
-		$this->relativePaths = $relativePaths;
-		$this->autoloadPath = $autoloadPath;
-		$this->process = &$process;
+		$this->lensCoreDirectory = $lensCoreDirectory;
+		$this->cacheDirectory = $cacheDirectory;
+		$this->filePath = $filePath;
 
-		$this->code = &$code;
-		$this->coverage = &$coverage;
+		$this->lineNumbers = &$lineNumbers;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->srcDirectory, $this->relativePaths, $this->autoloadPath);
+		$arguments = array($this->lensCoreDirectory, $this->cacheDirectory, $this->filePath);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -77,29 +68,17 @@ class CoverageJob implements Job
 
 	public function start()
 	{
-		$process = $this->process;
-		// TODO: dependency injection:
+		$mockClasses = array();
+
 		$filesystem = new Filesystem();
-		$coverager = new Coverage($filesystem);
+		$autoloader = new Autoloader($this->lensCoreDirectory, $this->cacheDirectory, $mockClasses);
+		$extractor = new StatementsExtractor($filesystem, $autoloader);
 
-		$sendResult = function () use ($process, $coverager) {
-			$code = $coverager->getCode();
-			$coverage = $coverager->getCoverage();
-
-			$process->sendResult(array($code, $coverage));
-		};
-
-		Exceptions::on($sendResult);
-
-		$coverager->run($this->srcDirectory, $this->relativePaths, $this->autoloadPath);
-
-		Exceptions::off();
-
-		call_user_func($sendResult);
+		return $extractor->getLineNumbers($this->filePath);
 	}
 
 	public function stop($message)
 	{
-		list($this->code, $this->coverage) = $message;
+		$this->lineNumbers = $message;
 	}
 }

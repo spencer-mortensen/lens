@@ -55,9 +55,9 @@ class LensCoverage implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($srcDirectory, $relativePaths, $autoloadPath) = $arguments;
+		list($lensCoreDirectory, $cacheDirectory, $filePath) = $arguments;
 
-		$job = new CoverageJob($executable, $srcDirectory, $relativePaths, $autoloadPath, $process, $code, $coverage);
+		$job = new CoverageJob($executable, $lensCoreDirectory, $cacheDirectory, $filePath, $lineNumbers);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

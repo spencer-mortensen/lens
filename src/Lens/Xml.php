@@ -67,7 +67,7 @@ class Xml
 	{
 		$text = htmlspecialchars($text, ENT_XML1 | ENT_COMPAT | ENT_DISALLOWED | ENT_NOQUOTES, 'UTF-8');
 		$text = str_replace("\t", '     ', $text);
-		$text = str_replace(' ', '&nbsp;', $text);
+		$text = str_replace(' ', '&#160;', $text);
 
 		return $text;
 	}

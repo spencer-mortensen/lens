@@ -30,71 +30,6 @@ use Lens_0_0_56\SpencerMortensen\Parser\Rule;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
 use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
 
-/*
-project: {
-	"name": <name>
-	"suites": {
-		<file>: <suite>
-	},
-	"summary": {
-		"passed": ...,
-		"failed": ...
-	}
-}
-
-suite: {
-	"namespace": "...",
-	"uses": {
-		<alias>: <namespace>
-	},
-	"tests": {
-		<line>: <test>
-	},
-	"summary": {
-		"passed": ...
-		"failed": ...
-	}
-}
-
-test: {
-	"actual": "...",
-	"cases": {
-		<line>: <case>
-	}
-	"summary": {
-		"passed": ...
-		"failed": ...
-	}
-}
-
-case: {
-	"text": "...",
-	"code": {
-		"fixture": "...",
-		"expected": "...",
-		"script": [...]
-	},
-	"results": <results>|null,
-	"summary": {
-		"pass": false|true,
-		"issues": "..."|null
-	}
-}
-
-results: {
-	"expected": {
-		"pre": <state>|null,
-		"post": <state>|null,
-		"diff": <state>|null
-	},
-	"actual": {
-		"pre": <state>|null,
-		"post": <state>|null,
-		"diff": <state>|null
-	}
-}
-*/
-
 class SuiteParser extends Parser
 {
 	/** @var Rule */
@@ -279,7 +214,9 @@ EOS;
 			$line => array(
 				'input' => $input,
 				'output' => $output,
-				'script' => $script
+				'script' => $script,
+				'issues' => null,
+				'coverage' => null
 			)
 		);
 	}

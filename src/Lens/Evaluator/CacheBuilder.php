@@ -379,6 +379,7 @@ class CacheBuilder
 		$file->write($code);
 	}
 
+	// TODO: this is duplicated elsewhere:
 	private function getLiveClassPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
@@ -391,6 +392,7 @@ class CacheBuilder
 		return $this->paths->join($this->cacheDirectory, 'classes', 'mock', $relativePath);
 	}
 
+	// TODO: this is duplicated elsewhere:
 	private function getLiveFunctionPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);
@@ -409,6 +411,7 @@ class CacheBuilder
 		return $this->paths->join($this->cacheDirectory, 'interfaces', $relativePath);
 	}
 
+	// TODO: this is duplicated elsewhere:
 	private function getLiveTraitPath($class)
 	{
 		$relativePath = $this->getRelativePath($class);

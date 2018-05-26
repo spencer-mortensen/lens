@@ -25,7 +25,6 @@
 
 namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\Processor;
 use Lens_0_0_56\Lens\Evaluator\Test;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
@@ -34,6 +33,9 @@ class TestJob implements Job
 {
 	/** @var string */
 	private $executable;
+
+	/** @var string */
+	private $lensCore;
 
 	/** @var string */
 	private $src;
@@ -59,21 +61,22 @@ class TestJob implements Job
 	/** @var boolean */
 	private $isActual;
 
-	/** @var Processor */
-	private $processor;
-
-	/** @var null|ServerProcess */
+	/** @var ServerProcess|null */
 	private $process;
 
-	/** @var null|array */
-	private $results;
+	/** @var array|null */
+	private $preState;
 
-	/** @var null|array */
+	/** @var array|null */
+	private $postState;
+
+	/** @var array|null */
 	private $coverage;
 
-	public function __construct($executable, $src, $cache, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, Processor $processor, ServerProcess &$process = null, array &$results = null, array &$coverage = null)
+	public function __construct($executable, $lensCore, $src, $cache, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, ServerProcess &$process = null, array &$preState = null, array &$postState = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
+		$this->lensCore = $lensCore;
 		$this->src = $src;
 		$this->cache = $cache;
 		$this->contextPhp = $contextPhp;
@@ -82,15 +85,15 @@ class TestJob implements Job
 		$this->script = $script;
 		$this->mockClasses = $mockClasses;
 		$this->isActual = $isActual;
-		$this->processor = $processor;
 		$this->process = &$process;
-		$this->results = &$results;
+		$this->preState = &$preState;
+		$this->postState = &$postState;
 		$this->coverage = &$coverage;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
+		$arguments = array($this->lensCore, $this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -100,42 +103,30 @@ class TestJob implements Job
 
 	public function start()
 	{
-		$worker = $this->process;
-		$test = new Test($this->executable, $this->src, $this->cache);
+		$test = new Test($this->executable, $this->lensCore, $this->src, $this->cache);
+		$process = $this->process;
 
-		$sendResults = function () use ($worker, $test) {
-			$results = array(
-				'pre' => $test->getPreState(),
-				'post' => $test->getPostState()
+		$sendResult = function () use ($test, $process) {
+			$result = array(
+				$test->getPreState(),
+				$test->getPostState(),
+				$test->getCoverage()
 			);
 
-			$coverage = $test->getCoverage();
-
-			$worker->sendResult(array($results, $coverage));
+			$process->sendResult($result);
 		};
 
-		Exceptions::on($sendResults);
+		Exceptions::on($sendResult);
 
 		$test->run($this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
 
 		Exceptions::off();
 
-		call_user_func($sendResults);
+		call_user_func($sendResult);
 	}
 
 	public function stop($message)
 	{
-		if ($message === true) {
-			$this->reboot();
-			return;
-		}
-
-		list($this->results, $this->coverage) = $message;
-	}
-
-	private function reboot()
-	{
-		$this->process = $this->processor->getProcess($this);
-		$this->processor->start($this->process);
+		list($this->preState, $this->postState, $this->coverage) = $message;
 	}
 }

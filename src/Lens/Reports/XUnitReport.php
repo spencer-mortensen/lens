@@ -25,102 +25,143 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
+use Lens_0_0_56\Lens\CaseText;
 use Lens_0_0_56\Lens\Xml;
 
 class XUnitReport implements Report
 {
+	/** @var CaseText */
+	private $caseText;
+
+	public function __construct(CaseText $caseText)
+	{
+		$this->caseText = $caseText;
+	}
+
 	public function getReport(array $project)
 	{
 		$output = array(
-			self::getXmlTag(),
-			self::getProjectXml($project)
+			$this->getXmlTag(),
+			$this->getProjectXml($project)
 		);
 
 		return implode("\n\n", $output);
 	}
 
-	private static function getXmlTag()
+	private function getXmlTag()
 	{
 		return '<?xml version="1.0" encoding="UTF-8"?>';
 	}
 
-	private static function getProjectXml($project)
+	private function getProjectXml(array $project)
 	{
-		$element = 'testsuites';
+		$passed = 0;
+		$failed = 0;
+
+		$suiteResults = array();
+
+		foreach ($project['suites'] as $suiteFile => $suite) {
+			$suiteResults[] = $this->getSuiteXml($suiteFile, $suite, $suitePassed, $suiteFailed);
+
+			$passed += $suitePassed;
+			$failed += $suiteFailed;
+		}
+
+		$innerXml = implode("\n", $suiteResults);
 
 		$attributes = array(
 			'name' => $project['name'],
-			'tests' => $project['summary']['passed'],
-			'failures' => $project['summary']['failed']
+			'tests' => $passed + $failed,
+			'failures' => $failed
 		);
 
-		$children = array();
-
-		foreach ($project['suites'] as $file => $suite) {
-			$children[] = self::getSuiteXml($file, $suite);
-		}
-
-		$innerXml = implode("\n", $children);
-
-		return Xml::getElementXml($element, $attributes, $innerXml);
+		return Xml::getElementXml('testsuites', $attributes, $innerXml);
 	}
 
-	private static function getSuiteXml($name, array $suite)
+	private function getSuiteXml($suiteFile, array $suite, &$passed, &$failed)
 	{
-		$element = 'testsuite';
+		$this->caseText->setSuite($suiteFile, $suite['namespace'], $suite['uses']);
+
+		$passed = 0;
+		$failed = 0;
+
+		$testResults = array();
+
+		foreach ($suite['tests'] as $testLine => $test) {
+			$testResults[] = $this->getTestXml($test, $testPassed, $testFailed);
+
+			$passed += $testPassed;
+			$failed += $testFailed;
+		}
+
+		$innerXml = implode("\n", $testResults);
 
 		$attributes = array(
-			'name' => $name,
-			'tests' => $suite['summary']['passed'],
-			'failures' => $suite['summary']['failed']
+			'name' => $suiteFile,
+			'tests' => $passed + $failed,
+			'failures' => $failed
 		);
 
-		$children = array();
-
-		foreach ($suite['tests'] as $line => $test) {
-			$children[] = self::getTestXml($line, $test);
-		}
-
-		$innerXml = implode("\n", $children);
-
-		return Xml::getElementXml($element, $attributes, $innerXml);
+		return Xml::getElementXml('testsuite', $attributes, $innerXml);
 	}
 
-	private static function getTestXml($testLine, array $test)
+	private function getTestXml(array $test, &$passed, &$failed)
 	{
-		$children = array();
+		$this->caseText->setTest($test['code']);
+
+		$passed = 0;
+		$failed = 0;
+
+		$cases = array();
 
 		foreach ($test['cases'] as $caseLine => $case) {
-			$children[] = self::getCaseXml("Line {$caseLine}", $case);
+			$cases[] = $this->getCaseXml($caseLine, $case, $casePassed, $caseFailed);
+
+			$passed += $casePassed;
+			$failed += $caseFailed;
 		}
 
-		// TODO: return null if there are no test cases
-		return implode("\n", $children);
+		return implode("\n", $cases);
 	}
 
-	private static function getCaseXml($name, array $case)
+	private function getCaseXml($caseLine, array $case, &$passed, &$failed)
 	{
-		if ($case['summary']['pass']) {
+		$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+
+		if ($this->isPassing($case['issues'])) {
+			$passed = 1;
+			$failed = 0;
 			$innerXml = null;
 		} else {
-			$innerXml = self::getTestFailureXml($case);
+			$passed = 0;
+			$failed = 1;
+			$innerXml = $this->getTestFailureXml();
 		}
 
-		return self::getTestCaseXml($name, $innerXml);
-	}
-
-	private static function getTestFailureXml(array $case)
-	{
-		// TODO: show the actual test issues
-		return Xml::getElementXml('failure', array(), 'The test failed!');
-	}
-
-	private static function getTestCaseXml($name, $innerXml)
-	{
 		$attributes = array(
-			'name' => $name
+			'name' => "Line {$caseLine}"
 		);
 
 		return Xml::getElementXml('testcase', $attributes, $innerXml);
+	}
+
+	// TODO: this is duplicated elsewhere
+	private function isPassing(array $issues)
+	{
+		foreach ($issues as $issue) {
+			if (is_array($issue)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private function getTestFailureXml()
+	{
+		$caseText = $this->caseText->getText();
+		$innerXml = Xml::getTextXml($caseText);
+
+		return Xml::getElementXml('failure', array(), $innerXml);
 	}
 }

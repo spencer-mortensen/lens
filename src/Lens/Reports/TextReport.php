@@ -25,23 +25,13 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
-use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
-use Lens_0_0_56\Lens\Archivist\Comparer;
+use Lens_0_0_56\Lens\CaseText;
 use Lens_0_0_56\Lens\Php\Code;
-use Lens_0_0_56\Lens\Formatter;
-use Lens_0_0_56\Lens\Paragraph;
-use Lens_0_0_56\Lens\Php\Namespacing;
 
 class TextReport implements Report
 {
-	/** @var callable */
-	private $isFunction;
-
-	/** @var string */
-	private $autoload;
-
-	/** @var Comparer */
-	private $comparer;
+	/** @var CaseText */
+	private $caseText;
 
 	/** @var integer */
 	private $passedTestsCount;
@@ -52,11 +42,9 @@ class TextReport implements Report
 	/** @var null|array */
 	private $failedTest;
 
-	public function __construct($isFunction, $autoload)
+	public function __construct(CaseText $caseText)
 	{
-		$this->isFunction = $isFunction;
-		$this->autoload = $autoload;
-		$this->comparer = new Comparer();
+		$this->caseText = $caseText;
 		$this->passedTestsCount = 0;
 		$this->failedTestsCount = 0;
 		$this->failedTest = null;
@@ -64,15 +52,16 @@ class TextReport implements Report
 
 	public function getReport(array $project)
 	{
-		foreach ($project['suites'] as $testsFile => $suite) {
-			$namespace = $suite['namespace'];
-			$uses = $suite['uses'];
+		foreach ($project['suites'] as $suiteFile => $suite) {
+			$this->caseText->setSuite($suiteFile, $suite['namespace'], $suite['uses']);
 
 			foreach ($suite['tests'] as $testLine => $test) {
-				$testText = $test['code'];
+				$this->caseText->setTest($test['code']);
 
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->summarizeCase($namespace, $uses, $testsFile, $testLine, $testText, $caseLine, $case);
+					$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+
+					$this->summarizeCase($case['issues']);
 				}
 			}
 		}
@@ -88,248 +77,30 @@ class TextReport implements Report
 		return implode("\n\n", $output);
 	}
 
-	private function summarizeCase($namespace, array $uses, $testsFile, $testLine, $testText, $caseLine, array $case)
+	private function summarizeCase(array $issues)
 	{
-		$script = $case['script'];
-		$results = $case['results'];
-
-		if ($case['summary']['pass']) {
-			// TODO: use the counts from the $project array (rather than recompute them)
+		if ($this->isPassing($issues)) {
 			++$this->passedTestsCount;
 			return;
 		}
 
-		$caseText = $this->getCaseText($namespace, $uses, $testText, $case['input']);
-
-		$actual = $results['actual'];
-		$expected = $results['expected'];
-
-		if (!is_array($expected['diff'])) {
-			$issues = $this->getFixtureIssues($namespace, $uses, $expected['pre']);
-		} elseif (!is_array($actual['diff'])) {
-			$issues = $this->getFixtureIssues($namespace, $uses, $actual['pre']);
-		} else {
-			$issues = $this->getDifferenceIssues($namespace, $uses, $actual, $expected, $script);
-		}
-
 		if ($this->failedTest === null) {
-			$this->failedTest = $this->getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine);
+			$this->failedTest = $this->caseText->getText();
 		}
 
 		++$this->failedTestsCount;
 	}
 
-	private function getCaseText($namespace, array $uses, $testText, $inputText)
+	// TODO: this is duplicated elsewhere:
+	private function isPassing(array $issues)
 	{
-		$contextPhp = Code::getContextPhp($namespace, $uses);
-		$requirePhp = $this->getRequireAutoloadPhp();
-
-		$sections = array(
-			$contextPhp,
-			$requirePhp,
-			$this->getSectionText('// Input', $inputText),
-			$this->getSectionText('// Test', $testText)
-		);
-
-		$sections = array_filter($sections, 'is_string');
-
-		return implode("\n\n", $sections);
-	}
-
-	private function getRequireAutoloadPhp()
-	{
-		if ($this->autoload === null) {
-			return null;
-		}
-
-		$valuePhp = Code::getValuePhp($this->autoload);
-		return Code::getRequirePhp($valuePhp);
-	}
-
-	private function getSectionText($label, $code)
-	{
-		if ($code === null) {
-			return null;
-		}
-
-		return "{$label}\n{$code}";
-	}
-
-	private function getFixtureIssues($namespace, array $uses, array $state)
-	{
-		$formatter = $this->getFormatter($namespace, $uses, $state['variables']);
-
-		$sections = array(
-			self::getUnexpectedMessages($this->getExceptionMessages($formatter, $state['exception'])),
-			self::getUnexpectedMessages($this->getErrorMessages($formatter, $state['errors']))
-		);
-
-		// TODO: show a troubleshooting message when the $issuesText is empty
-		return implode("\n", call_user_func_array('array_merge', $sections));
-	}
-
-	private function getDifferenceIssues($namespace, array $uses, array $actual, array $expected, array $script)
-	{
-		$actualDiff = $actual['diff'];
-		$expectedDiff = $expected['diff'];
-
-		// TODO: use ALL of the variables (including the variables from the "\\ Output" section)
-		$actualVariables = array_merge($actual['pre']['variables'], $actual['post']['variables']);
-		$expectedVariables = array_merge($expected['pre']['variables'], $expected['post']['variables']);
-
-		$actualFormatter = $this->getFormatter($namespace, $uses, $actualVariables);
-		$expectedFormatter = $this->getFormatter($namespace, $uses, $expectedVariables);
-
-		// TODO: display ALL side-effects (NOT just the differences)
-		$sections = array(
-			self::getCallsMessages($actualFormatter, $expectedFormatter, $actual['post']['calls'], $expected['post']['calls'], $script),
-
-			self::getMissingMessages($this->getVariableMessages($expectedFormatter, $expectedDiff['variables'])),
-			self::getUnexpectedMessages($this->getVariableMessages($actualFormatter, $actualDiff['variables'])),
-
-			self::getMissingMessages($this->getGlobalMessages($expectedFormatter, $expectedDiff['globals'])),
-			self::getUnexpectedMessages($this->getGlobalMessages($actualFormatter, $actualDiff['globals'])),
-
-			self::getMissingMessages($this->getConstantMessages($expectedFormatter, $expectedDiff['constants'])),
-			self::getUnexpectedMessages($this->getConstantMessages($actualFormatter, $actualDiff['constants'])),
-
-			self::getMissingMessages($this->getOutputMessages($expectedFormatter, $expectedDiff['output'])),
-			self::getUnexpectedMessages($this->getOutputMessages($actualFormatter, $actualDiff['output'])),
-
-			self::getMissingMessages($this->getErrorMessages($expectedFormatter, $expectedDiff['errors'])),
-			self::getUnexpectedMessages($this->getErrorMessages($actualFormatter, $actualDiff['errors'])),
-
-			self::getMissingMessages($this->getExceptionMessages($expectedFormatter, $expectedDiff['exception'])),
-			self::getUnexpectedMessages($this->getExceptionMessages($actualFormatter, $actualDiff['exception'])),
-		);
-
-		return implode("\n", call_user_func_array('array_merge', $sections));
-	}
-
-	private static function getCallsMessages(Formatter $actualFormatter, Formatter $expectedFormatter, array $actualCalls, array $expectedCalls, array $script)
-	{
-		$output = array();
-
-		$comparer = new Comparer();
-
-		$n = max(count($actualCalls), count($expectedCalls));
-
-		for ($i = 0; $i < $n; ++$i) {
-			$expected = &$expectedCalls[$i];
-			$actual = &$actualCalls[$i];
-			$action = &$script[$i];
-
-			$isSame = $comparer->isSame($expected, $actual);
-
-			if ($isSame) {
-				$output[] = self::equal($expectedFormatter->getCall($expected, $action));
-			} else {
-				if ($expected !== null) {
-					$output[] = self::minus($expectedFormatter->getCall($expected, $action));
-				}
-
-				if ($actual !== null) {
-					$output[] = self::plus($actualFormatter->getCall($actual, $action));
-				}
+		foreach ($issues as $issue) {
+			if (is_array($issue)) {
+				return false;
 			}
 		}
 
-		return $output;
-	}
-
-	private function getUnexpectedMessages(array $messages)
-	{
-		return array_map(array(__CLASS__, 'plus'), $messages);
-	}
-
-	private function getMissingMessages(array $messages)
-	{
-		return array_map(array(__CLASS__, 'minus'), $messages);
-	}
-
-	private static function minus($message)
-	{
-		return ' - ' . $message;
-	}
-
-	private static function equal($message)
-	{
-		return '   ' . $message;
-	}
-
-	private static function plus($message)
-	{
-		return ' + ' . $message;
-	}
-
-	private function getOutputMessages(Formatter $formatter, $output)
-	{
-		if ($output === null) {
-			return array();
-		}
-
-		return array($formatter->getOutput($output));
-	}
-
-	private function getVariableMessages(Formatter $formatter, array $variables)
-	{
-		$messages = array();
-
-		foreach ($variables as $name => $value) {
-			$messages[] = $formatter->getVariable($name, $value);
-		}
-
-		return $messages;
-	}
-
-	private function getGlobalMessages(Formatter $formatter, array $globals)
-	{
-		$messages = array();
-
-		foreach ($globals as $name => $value) {
-			$messages[] = $formatter->getGlobal($name, $value);
-		}
-
-		return $messages;
-	}
-
-	private function getConstantMessages(Formatter $formatter, array $constants)
-	{
-		$messages = array();
-
-		foreach ($constants as $name => $value) {
-			$messages[] = $formatter->getConstant($name, $value);
-		}
-
-		return $messages;
-	}
-
-	private function getExceptionMessages(Formatter $formatter, ObjectArchive $exception = null)
-	{
-		if ($exception === null) {
-			return array();
-		}
-
-		return array($formatter->getException($exception));
-	}
-
-	private function getErrorMessages(Formatter $formatter, array $errors)
-	{
-		return array_map(array($formatter, 'getError'), $errors);
-	}
-
-	private function getFailedTestText($caseText, $issues, $testsFile, $testLine, $caseLine)
-	{
-		$caseText = Paragraph::wrap($caseText);
-		$caseText = Paragraph::indent($caseText, '   ');
-
-		$sections = array(
-			"{$testsFile} (Line {$caseLine}):",
-			$caseText,
-			"   // Output\n" . $issues
-		);
-
-		return implode("\n\n", $sections);
+		return true;
 	}
 
 	private function showSummary()
@@ -345,29 +116,5 @@ class TextReport implements Report
 		}
 
 		return implode("\n", $output);
-	}
-
-	private function getFormatter($namespace, array $uses, array $variables)
-	{
-		$namespacing = new Namespacing($this->isFunction, $namespace, $uses);
-		$objectNames = self::getObjectNames($variables);
-		return new Formatter($namespacing, $objectNames);
-	}
-
-	private static function getObjectNames(array $variables)
-	{
-		$names = array();
-
-		foreach ($variables as $name => $value) {
-			/** @var ObjectArchive $value */
-			if (!is_object($value) || $value->isResourceArchive()) {
-				continue;
-			}
-
-			$id = $value->getId();
-			$names[$id] = $name;
-		}
-
-		return $names;
 	}
 }
