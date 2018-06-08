@@ -38,11 +38,11 @@ class Autoloader
 		}
 	}
 
-	private function map($namespace, $relativePath)
+	private function map($namespace, $path)
 	{
 		$namespacePrefix = "{$namespace}\\";
 		$namespacePrefixLength = strlen($namespacePrefix);
-		$absolutePath = $this->projectDirectory . DIRECTORY_SEPARATOR . $relativePath;
+		$absolutePath = $this->getAbsolutePath($path);
 
 		$autoloader = function ($class) use ($namespacePrefix, $namespacePrefixLength, $absolutePath) {
 			if (strncmp($class, $namespacePrefix, $namespacePrefixLength) !== 0) {
@@ -59,5 +59,19 @@ class Autoloader
 		};
 
 		spl_autoload_register($autoloader);
+	}
+
+	private function getAbsolutePath($path)
+	{
+		if ($this->isAbsolutePath($path)) {
+			return $path;
+		}
+
+		return $this->projectDirectory . DIRECTORY_SEPARATOR . $path;
+	}
+
+	private function isAbsolutePath($path)
+	{
+		return substr($path, 0, 1) === '/';
 	}
 }

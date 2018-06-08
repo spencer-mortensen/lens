@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C) 2017 Spencer Mortensen
+ * Copyright (C) 2018 Spencer Mortensen
  *
  * This file is part of Html5.
  *
@@ -25,41 +25,22 @@
 
 namespace Lens_0_0_56\SpencerMortensen\Html5;
 
-class Html5
+class Text implements Node
 {
-	public static function getElementHtml($name, array $attributes = null, $innerHtml = null)
+	/** @var string */
+	private $text;
+
+	public function __construct($text)
 	{
-		$attributesHtml = self::getAttributesHtml($attributes);
-		return "<{$name}{$attributesHtml}>{$innerHtml}</{$name}>";
+		$this->text = $text;
 	}
 
-	private static function getAttributesHtml($attributes)
+	public function __toString()
 	{
-		if (count($attributes) === 0) {
-			return '';
-		}
-
-		$html = '';
-
-		foreach ($attributes as $name => $value) {
-			$valueHtml = self::attributeEncode($value);
-			$html .= " {$name}=\"{$valueHtml}\"";
-		}
-
-		return $html;
-	}
-
-	public static function getTextHtml($text)
-	{
-		$text = htmlspecialchars($text, ENT_HTML5 | ENT_DISALLOWED | ENT_NOQUOTES, 'UTF-8');
+		$text = htmlspecialchars($this->text, ENT_HTML5 | ENT_DISALLOWED | ENT_NOQUOTES, 'UTF-8');
 		$text = str_replace("\t", '    ', $text);
 		$text = str_replace(' ', '&nbsp;', $text);
 
 		return $text;
-	}
-
-	private static function attributeEncode($attribute)
-	{
-		return htmlspecialchars($attribute, ENT_HTML5 | ENT_COMPAT | ENT_DISALLOWED | ENT_COMPAT, 'UTF-8');
 	}
 }
