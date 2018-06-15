@@ -113,18 +113,25 @@ class WindowsPath implements Path
 		return $this->path->getAtoms();
 	}
 
-	public function append(...$arguments)
+	public function setAtoms(array $atoms)
+	{
+		$isAbsolute = $this->path->isAbsolute();
+		$path = new AtomicPath($isAbsolute, $atoms, self::$delimiter);
+		return new self($this->drive, $path);
+	}
+
+	public function add(...$arguments)
 	{
 		$drive = $this->drive;
 
-		$objects = array();
+		$objects = [];
 
 		foreach ($arguments as $argument) {
 			// TODO: check the drive components
 			$objects[] = $this->getPathObject($argument);
 		}
 
-		$path = $this->path->append($objects);
+		$path = $this->path->add($objects);
 
 		return new self($drive, $path);
 	}

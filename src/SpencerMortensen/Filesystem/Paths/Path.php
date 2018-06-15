@@ -31,11 +31,21 @@ interface Path
 
 	public function getAtoms();
 
+	public function setAtoms(array $atoms);
+
 	public function isAbsolute();
 
-	public function append(...$paths);
+	/**
+	 * @param array ...$paths
+	 * @return Path
+	 */
+	public function add(...$paths);
 
 	public function contains($path);
 
+	/**
+	 * @param mixed $path
+	 * @return Path
+	 */
 	public function getRelativePath($path);
 }

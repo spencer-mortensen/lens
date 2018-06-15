@@ -25,6 +25,8 @@
 
 namespace Lens_0_0_56\Lens\Commands;
 
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
+
 class ComposerInstall implements Command
 {
 	/** @var integer */
@@ -33,10 +35,10 @@ class ComposerInstall implements Command
 	/** @var integer */
 	const STDERR = 2;
 
-	/** @var string|null */
+	/** @var Path */
 	private $workingDirectory;
 
-	public function __construct($workingDirectory)
+	public function __construct(Path $workingDirectory)
 	{
 		$this->workingDirectory = $workingDirectory;
 	}
@@ -45,12 +47,13 @@ class ComposerInstall implements Command
 	{
 		$command = 'composer install';
 
-		$descriptor = array(
-			self::STDOUT => array('pipe', 'w'),
-			self::STDERR => array('pipe', 'w')
-		);
+		$descriptor = [
+			self::STDOUT => ['pipe', 'w'],
+			self::STDERR => ['pipe', 'w']
+		];
 
-		$process = proc_open($command, $descriptor, $pipes, $this->workingDirectory);
+		$workingDirectory = (string)$this->workingDirectory;
+		$process = proc_open($command, $descriptor, $pipes, $workingDirectory);
 
 		if (!is_resource($process)) {
 			return null;

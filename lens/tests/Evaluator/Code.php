@@ -17,4 +17,4 @@ $contextPhp = "namespace Example;";
 $beforePhp = "\$terminal = new \\Lens\\Mock\\Example\\Terminal();";
 $expectedPhp = "\$terminal->write();\n\$terminal->read();\nfgets(STDIN);\n\$output = 'text';";
 $actualPhp = "\$speller = new Speller(\$terminal);\n\$speller->start();";
-$script = array(null, "return \"cat\";", "return \"text\\n\";");
+$script = [null, "return \"cat\";", "return \"text\\n\";"];

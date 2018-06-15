@@ -81,21 +81,21 @@ $output = '"Lorem ipsum\\n"';
 
 
 // Input
-$input = array(0 => 'a');
+$input = [0 => 'a'];
 
 // Output
 $output = "array('a')";
 
 
 // Input
-$input = array(1 => 'a');
+$input = [1 => 'a'];
 
 // Output
 $output = "array(1 => 'a')";
 
 
 // Input
-$input = array('a' => 'A', 'b' => 'B');
+$input = ['a' => 'A', 'b' => 'B'];
 
 // Output
 $output = "array('a' => 'A', 'b' => 'B')";

@@ -49,12 +49,16 @@ class File
 	{
 		$path = (string)$this->path;
 
+		if (!file_exists($path)) {
+			return null;
+		}
+
 		set_error_handler(__CLASS__ . '::onError');
 		$contents = file_get_contents($path);
 		restore_error_handler();
 
 		if (!is_string($contents)) {
-			throw new ResultException('file_get_contents', array($path), $contents);
+			throw new ResultException('file_get_contents', [$path], $contents);
 		}
 
 		return $contents;
@@ -67,6 +71,11 @@ class File
 		}
 
 		$path = (string)$this->path;
+
+		if (!file_exists($path)) {
+			$parent = new Directory($this->path->add('..'));
+			$parent->write();
+		}
 
 		set_error_handler(__CLASS__ . '::onError');
 		$writtenBytes = file_put_contents($path, $value);
@@ -100,7 +109,7 @@ class File
 		restore_error_handler();
 
 		if ($isMoved !== true) {
-			throw new ResultException('rename', array($oldPathString, $newPathString), $isMoved);
+			throw new ResultException('rename', [$oldPathString, $newPathString], $isMoved);
 		}
 
 		$this->path = $newPath;
@@ -119,7 +128,7 @@ class File
 		restore_error_handler();
 
 		if ($isDeleted !== true) {
-			throw new ResultException('unlink', array($path), $isDeleted);
+			throw new ResultException('unlink', [$path], $isDeleted);
 		}
 	}
 
@@ -132,7 +141,7 @@ class File
 		restore_error_handler();
 
 		if (!is_int($time)) {
-			throw new ResultException('filemtime', array($path), $time);
+			throw new ResultException('filemtime', [$path], $time);
 		}
 
 		return $time;

@@ -99,7 +99,7 @@ class TerminalMessage
 			return false;
 		}
 
-		$lines = array();
+		$lines = [];
 
 		$displayer = new Displayer();
 
@@ -142,7 +142,7 @@ class TerminalMessage
 			return false;
 		}
 
-		$lines = array();
+		$lines = [];
 
 		foreach ($help as $paragraph) {
 			$line = Paragraph::wrap($paragraph);

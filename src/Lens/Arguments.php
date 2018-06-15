@@ -60,8 +60,8 @@ class Arguments
 
 	private static function read(array $arguments, &$executable, &$options, &$values)
 	{
-		$options = array();
-		$values = array();
+		$options = [];
+		$values = [];
 
 		$executable = array_shift($arguments);
 

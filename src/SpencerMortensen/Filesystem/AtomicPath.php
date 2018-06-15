@@ -66,7 +66,7 @@ class AtomicPath
 	private static function getStringAtoms($delimiter, $isAbsolute, $string)
 	{
 		$input = explode($delimiter, $string);
- 		$output = array();
+ 		$output = [];
 
 		self::appendAtoms($isAbsolute, $output, $input);
 
@@ -124,19 +124,22 @@ class AtomicPath
 	 * @param AtomicPath[] $arguments
 	 * @return AtomicPath
 	 */
-	public function append(array $arguments)
+	public function add(array $arguments)
 	{
 		$delimiter = $this->delimiter;
 		$isAbsolute = $this->isAbsolute;
 		$atoms = $this->atoms;
 
 		foreach ($arguments as $argument) {
-			if ($argument->isAbsolute()) {
-				throw new InvalidArgumentException();
-			}
-
 			$argumentAtoms = $argument->getAtoms();
-			$this->appendAtoms($isAbsolute, $atoms, $argumentAtoms);
+
+			// TODO: add unit tests for this:
+			if ($argument->isAbsolute()) {
+				$isAbsolute = true;
+				$atoms = $argumentAtoms;
+			} else {
+				self::appendAtoms($isAbsolute, $atoms, $argumentAtoms);
+			}
 		}
 
 		return new self($isAbsolute, $atoms, $delimiter);

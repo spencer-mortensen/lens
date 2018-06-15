@@ -25,10 +25,7 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
-use Lens_0_0_56\Lens\CaseText;
-use Lens_0_0_56\Lens\Php\Code;
-
-class TextReport implements Report
+class TextReport
 {
 	/** @var CaseText */
 	private $caseText;
@@ -66,9 +63,9 @@ class TextReport implements Report
 			}
 		}
 
-		$output = array(
+		$output = [
 			$this->showSummary()
-		);
+		];
 
 		if ($this->failedTest !== null) {
 			$output[] = $this->failedTest;
@@ -105,7 +102,7 @@ class TextReport implements Report
 
 	private function showSummary()
 	{
-		$output = array();
+		$output = [];
 
 		if (0 < $this->passedTestsCount) {
 			$output[] = "Passed tests: {$this->passedTestsCount}";

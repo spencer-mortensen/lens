@@ -67,13 +67,13 @@ class Semantics
 		return isset(self::$unsafeClasses[$name]);
 	}
 
-	private static $classIdentifiers = array(
+	private static $classIdentifiers = [
 		'parent' => 'parent',
 		'self' => 'self',
 		'static' => 'static'
-	);
+	];
 
-	private static $keywords = array(
+	private static $keywords = [
 		'__halt_compiler' => '__halt_compiler',
 		'abstract' => 'abstract',
 		'and' => 'and',
@@ -141,9 +141,9 @@ class Semantics
 		'while' => 'while',
 		'xor' => 'xor',
 		'yield' => 'yield'
-	);
+	];
 
-	private static $unsafeFunctions = array(
+	private static $unsafeFunctions = [
 		// TODO: Finish the date/time functions <http://php.net/manual/en/ref.datetime.php>
 		// Time functions
 		'microtime' => 'microtime',
@@ -315,14 +315,14 @@ class Semantics
 		'sleep' => 'sleep',
 		'time_nanosleep' => 'time_nanosleep',
 		'usleep' => 'usleep'
-	);
+	];
 
 	// TODO: Finish this list:
-	private static $unsafeClasses = array(
+	private static $unsafeClasses = [
 		'DateTime' => 'DateTime',
 		'PDO' => 'PDO',
 		'PDOStatement' => 'PDOStatement'
-	);
+	];
 
 	private static $phpFunctions;
 }

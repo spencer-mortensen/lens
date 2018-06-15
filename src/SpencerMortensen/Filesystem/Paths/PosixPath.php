@@ -62,15 +62,22 @@ class PosixPath implements Path
 		return $this->path->getAtoms();
 	}
 
-	public function append(...$arguments)
+	public function setAtoms(array $atoms)
 	{
-		$objects = array();
+		$isAbsolute = $this->path->isAbsolute();
+		$path = new AtomicPath($isAbsolute, $atoms, self::$delimiter);
+		return new self($path);
+	}
+
+	public function add(...$arguments)
+	{
+		$objects = [];
 
 		foreach ($arguments as $argument) {
 			$objects[] = $this->getPathObject($argument);
 		}
 
-		$path = $this->path->append($objects);
+		$path = $this->path->add($objects);
 
 		return new self($path);
 	}

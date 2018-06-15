@@ -25,8 +25,9 @@
 
 namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\Test;
+use Lens_0_0_56\Lens\Tests\Test;
 use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
 
 class TestJob implements Job
@@ -34,13 +35,10 @@ class TestJob implements Job
 	/** @var string */
 	private $executable;
 
-	/** @var string */
+	/** @var Path */
 	private $lensCore;
 
-	/** @var string */
-	private $src;
-
-	/** @var string */
+	/** @var Path */
 	private $cache;
 
 	/** @var string */
@@ -73,11 +71,10 @@ class TestJob implements Job
 	/** @var array|null */
 	private $coverage;
 
-	public function __construct($executable, $lensCore, $src, $cache, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, ServerProcess &$process = null, array &$preState = null, array &$postState = null, array &$coverage = null)
+	public function __construct($executable, Path $lensCore, Path $cache, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, ServerProcess &$process = null, array &$preState = null, array &$postState = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
 		$this->lensCore = $lensCore;
-		$this->src = $src;
 		$this->cache = $cache;
 		$this->contextPhp = $contextPhp;
 		$this->prePhp = $prePhp;
@@ -93,7 +90,7 @@ class TestJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensCore, $this->src, $this->cache, $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
+		$arguments = [(string)$this->lensCore, (string)$this->cache, $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual];
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -103,15 +100,15 @@ class TestJob implements Job
 
 	public function start()
 	{
-		$test = new Test($this->executable, $this->lensCore, $this->src, $this->cache);
+		$test = new Test($this->lensCore, $this->cache);
 		$process = $this->process;
 
 		$sendResult = function () use ($test, $process) {
-			$result = array(
+			$result = [
 				$test->getPreState(),
 				$test->getPostState(),
 				$test->getCoverage()
-			);
+			];
 
 			$process->sendResult($result);
 		};

@@ -92,7 +92,7 @@ class ResultException extends ErrorException
 			$valuesText = $this->getMapText($array);
 		}
 
-		return "array({$valuesText})";
+		return "[{$valuesText}]";
 	}
 
 	private function isList(array $array)
@@ -112,7 +112,7 @@ class ResultException extends ErrorException
 
 	private function getListText(array $array)
 	{
-		$elements = array();
+		$elements = [];
 
 		foreach ($array as $value) {
 			$elements[] = $this->getValueText($value);
@@ -123,7 +123,7 @@ class ResultException extends ErrorException
 
 	private function getMapText(array $array)
 	{
-		$elements = array();
+		$elements = [];
 
 		foreach ($array as $key => $value) {
 			$keyText = $this->getValueText($key);
@@ -146,7 +146,7 @@ class ResultException extends ErrorException
 
 	private function getProperties($object)
 	{
-		$output = array();
+		$output = [];
 
 		$class = new ReflectionClass($object);
 

@@ -75,10 +75,10 @@ $output = "Lorem ipsum\n";
 
 
 // Input
-$input = array('a' => 'A', 'b' => 'B', 'Z');
+$input = ['a' => 'A', 'b' => 'B', 'Z'];
 
 // Output
-$output = array('a' => 'A', 'b' => 'B', 'Z');
+$output = ['a' => 'A', 'b' => 'B', 'Z'];
 
 
 /*
@@ -89,7 +89,7 @@ $input = new \stdClass();
 $output = new ObjectArchive(
 	spl_object_hash($input),
 	get_class($input),
-	array()
+	[]
 );
 */
 
@@ -102,7 +102,7 @@ $input = new \Example\Archivist\Object\Loop();
 $output = new ObjectArchive(
 	spl_object_hash($input),
 	'Example\\Archivist\\Object\\Loop',
-	array()
+	[]
 );
 */
 

@@ -38,7 +38,7 @@ class DataExtractor
 	 */
 	public function getData($exception)
 	{
-		return array(
+		return [
 			'class' => get_class($exception),
 			'code' => $exception->getCode(),
 			'message' => $exception->getMessage(),
@@ -46,7 +46,7 @@ class DataExtractor
 			'line' => $exception->getLine(),
 			'properties' => $this->getExceptionProperties($exception),
 			'exception' => $this->getPreviousExceptionData($exception)
-		);
+		];
 	}
 
 	/**
@@ -68,7 +68,7 @@ class DataExtractor
 		$class = new ReflectionClass($object);
 		$properties = $class->getProperties();
 
-		$output = array();
+		$output = [];
 
 		/** @var ReflectionProperty $property */
 		foreach ($properties as $property) {

@@ -1,0 +1,148 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+a {
+	text-decoration: none;
+}
+
+a[href]:hover, a[href]:active {
+	text-decoration: underline;
+}
+
+html {
+	font-size: 20px;
+}
+
+body {
+	background-color: #fff;
+	color: #111111;
+	font-family: 'Lora', serif;
+}
+
+header {
+	display: block;
+	padding: 6em 6em 1em 6em;
+}
+
+header ul {
+	font-size: 1.2599em;
+	list-style-type: none;
+}
+
+header li {
+	display: inline-block;
+	line-height: 1.5em;
+	color: #cccccc;
+}
+
+header li::after {
+	content: '\203A';
+	padding: 0 .25em;
+}
+
+header a {
+	color: #111111;
+	font-weight: bold;
+}
+
+header a[href] {
+	font-weight: normal;
+}
+
+article {
+	display: block;
+	line-height: 1.5em;
+	padding: 0 6em 6em 6em;
+	max-width: 50%;
+	min-width: 664px;
+}
+
+article ul {
+	list-style-type: none;
+}
+
+article a {
+	color: #111111;
+}
+
+.percent {
+	display: inline-block;
+	margin: 0 .5em;
+	width: 6em;
+	height: 1em;
+	position: relative;
+}
+
+.percent::before, .percent::after {
+	content: "";
+	display: inline-block;
+	width: .5em;
+	height: 1em;
+	position: absolute;
+}
+
+.percent::before {
+	left: -.5em;
+	-moz-border-radius: .5em 0 0 .5em;
+	-webkit-border-radius: .5em 0 0 .5em;
+	border-radius: .5em 0 0 .5em;
+}
+
+.percent::after {
+	right: -.5em;
+	-moz-border-radius: 0 .5em .5em 0;
+	-webkit-border-radius: 0 .5em .5em 0;
+	border-radius: 0 .5em .5em 0;
+}
+
+.low::before, .low, .low::after {
+	background-color: #ee1111;
+}
+
+.medium::before, .medium, .medium::after {
+	background-color: #ffaa22;
+}
+
+.high::before, .high, .high::after {
+	background-color: #32cd32;
+}
+
+.perfect::before, .perfect, .perfect::after {
+	background-color: #3e9c42;
+}
+
+/* LINE-BY-LINE CODE COVERAGE: */
+
+table {
+	border-spacing: 0;
+	border-collapse: collapse;
+	font-size: .7937em;
+	line-height: 1.5em;
+	min-width: 100%;
+	left: -3em;
+	position: relative;
+}
+
+th {
+	color: #cccccc;
+	font-weight: normal;
+	padding-right: .75em;
+	text-align: right;
+	width: 2.25em;
+}
+
+td {
+	font-family: "Inconsolata", monospace;
+}
+
+.pass {
+	color: #224422;
+	background-color: #ddffdd;
+}
+
+.fail {
+	color: #442222;
+	background-color: #ffdddd;
+}

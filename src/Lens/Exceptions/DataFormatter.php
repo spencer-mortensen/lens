@@ -36,7 +36,7 @@ class DataFormatter
 	 */
 	public function formatExceptionData(array $data, $depth = 0)
 	{
-		$lines = array();
+		$lines = [];
 
 		$padding = str_repeat(' ', ++$depth * 3);
 

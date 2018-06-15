@@ -25,31 +25,36 @@
 
 namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\CacheBuilder;
+use Lens_0_0_56\Lens\Cache\Cache;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
 
 class CacheJob implements Job
 {
 	/** @var string */
 	private $executable;
 
-	/** @var string */
+	/** @var Path */
+	private $core;
+
+	/** @var Path */
 	private $project;
 
-	/** @var string */
+	/** @var Path */
 	private $src;
 
-	/** @var string */
+	/** @var Path */
 	private $autoload;
 
-	/** @var string */
+	/** @var Path */
 	private $cache;
 
 	/** @var array */
 	private $mockFunctions;
 
-	public function __construct($executable, $project, $src, $autoload, $cache, array $mockFunctions)
+	public function __construct($executable, Path $core, Path $project, Path $src, Path $autoload, Path $cache, array $mockFunctions)
 	{
 		$this->executable = $executable;
+		$this->core = $core;
 		$this->project = $project;
 		$this->src = $src;
 		$this->autoload = $autoload;
@@ -59,17 +64,17 @@ class CacheJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = array($this->project, $this->src, $this->autoload, $this->cache, $this->mockFunctions);
+		$arguments = [(string)$this->core, (string)$this->project, (string)$this->src, (string)$this->autoload, (string)$this->cache, $this->mockFunctions];
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
 
-		return "{$this->executable} --internal-cache={$encoded}";
+		return "{$this->executable} --internal-source={$encoded}";
 	}
 
 	public function start()
 	{
-		$builder = new CacheBuilder($this->project, $this->src, $this->autoload, $this->cache, $this->mockFunctions);
+		$builder = new Cache($this->core, $this->project, $this->src, $this->autoload, $this->cache, $this->mockFunctions);
 		$builder->build();
 	}
 

@@ -75,7 +75,7 @@ class Code
 			return null;
 		}
 
-		$usesPhp = array();
+		$usesPhp = [];
 
 		foreach ($uses as $name => $path) {
 			$usesPhp[] = self::getUsePhp($name, $path);

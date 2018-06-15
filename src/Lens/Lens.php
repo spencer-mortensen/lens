@@ -29,7 +29,7 @@ use Error;
 use Exception;
 use Lens_0_0_56\Lens\Exceptions\TerminalMessage;
 use Lens_0_0_56\Lens\Exceptions\LogMessage;
-use Lens_0_0_56\Lens\Commands\LensCache;
+use Lens_0_0_56\Lens\Commands\LensSource;
 use Lens_0_0_56\Lens\Commands\LensCoverage;
 use Lens_0_0_56\Lens\Commands\LensRunner;
 use Lens_0_0_56\Lens\Commands\LensTest;
@@ -44,14 +44,14 @@ class Lens
 	/** @var Arguments */
 	private $arguments;
 
+	// lens --version  # get the installed version of Lens
+	// lens [$path ...] --clover=... --coverage=... --tap=... --text=... --xunit=...  # run the specified tests
 	// lens --internal-coverage=... # get code coverage (private)
 	// lens --internal-test=... # get test results (private)
-	// lens --internal-cache=... # generate a portion of the cache
-	// lens --version  # get the installed version of Lens
-	// lens --report=$report --coverage=$coverage $path ...  # run the specified tests
+	// lens --internal-source=... # generate the source-code cache (private)
 	public function __construct()
 	{
-		Exceptions::on(array($this, 'onError'));
+		Exceptions::on([$this, 'onError']);
 
 		try {
 			$this->logger = new Logger('lens');
@@ -75,7 +75,7 @@ class Lens
 	{
 		return $this->runCoverage($stdout, $stderr, $exitCode) ||
 			$this->runTest($stdout, $stderr, $exitCode) ||
-			$this->runCache($stdout, $stderr, $exitCode) ||
+			$this->runSource($stdout, $stderr, $exitCode) ||
 			$this->runVersion($stdout, $stderr, $exitCode) ||
 			$this->runRunner($stdout, $stderr, $exitCode);
 	}
@@ -92,9 +92,9 @@ class Lens
 		return $test->run($stdout, $stderr, $exitCode);
 	}
 
-	private function runCache(&$stdout, &$stderr, &$exitCode)
+	private function runSource(&$stdout, &$stderr, &$exitCode)
 	{
-		$cache = new LensCache($this->arguments);
+		$cache = new LensSource($this->arguments);
 		return $cache->run($stdout, $stderr, $exitCode);
 	}
 
@@ -174,6 +174,6 @@ class Lens
 		$stderr = $message->getText();
 		$exitCode = $exception->getCode();
 
-		return array($stdout, $stderr, $exitCode);
+		return [$stdout, $stderr, $exitCode];
 	}
 }

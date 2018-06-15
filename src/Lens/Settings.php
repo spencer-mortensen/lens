@@ -25,12 +25,12 @@
 
 namespace Lens_0_0_56\Lens;
 
-use Lens_0_0_56\Lens\Files\TextFile;
 use Lens_0_0_56\Mustangostang\Spyc\Spyc as Yaml;
+use Lens_0_0_56\SpencerMortensen\Filesystem\File;
 
 class Settings
 {
-	/** @var TextFile */
+	/** @var File */
 	private $file;
 
 	/** @var Yaml */
@@ -42,13 +42,18 @@ class Settings
 	/** @var array */
 	private $values;
 
-	public function __construct(Filesystem $filesystem, $path)
+	public function __construct(File $file)
 	{
-		$file = new TextFile($filesystem, $path);
 		$yaml = new Yaml();
 
-		$file->read($content);
-		$input = $yaml->load($content);
+		$content = $file->read();
+
+		if ($content === null) {
+			$input = [];
+		} else {
+			$input = $yaml->load($content);
+		}
+
 		$values = $this->getValues($input);
 
 		$this->file = $file;
@@ -70,14 +75,14 @@ class Settings
 			$checkForUpdates = true;
 		}
 
-		return array(
+		return [
 			'src' => $src,
 			'autoload' => $autoload,
 			'cache' => $cache,
 			'checkForUpdates' => $checkForUpdates,
 			'mockClasses' => $mockClasses,
 			'mockFunctions' => $mockFunctions
-		);
+		];
 	}
 
 	private static function getNonEmptyString(&$value)
@@ -104,7 +109,7 @@ class Settings
 			return null;
 		}
 
-		$output = array();
+		$output = [];
 
 		foreach ($input as $namespace) {
 			if (!is_string($namespace)) {

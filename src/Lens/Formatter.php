@@ -151,7 +151,7 @@ class Formatter
 	private static function getTrail($path)
 	{
 		if (strlen($path) === 0) {
-			return array();
+			return [];
 		}
 
 		return explode('/', $path);
@@ -244,7 +244,7 @@ class Formatter
 			return '';
 		}
 
-		$output = array();
+		$output = [];
 
 		foreach ($argumentsArchive as $argumentValueArchive) {
 			$output[] = $this->displayer->display($argumentValueArchive);

@@ -27,6 +27,7 @@ namespace Lens_0_0_56\Lens\Commands;
 
 use Lens_0_0_56\Lens\Arguments;
 use Lens_0_0_56\Lens\Jobs\CoverageJob;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
 use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensCoverage implements Command
@@ -55,9 +56,15 @@ class LensCoverage implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($lensCoreDirectory, $cacheDirectory, $filePath) = $arguments;
+		list($lensCoreString, $cacheString, $fileString) = $arguments;
 
-		$job = new CoverageJob($executable, $lensCoreDirectory, $cacheDirectory, $filePath, $lineNumbers);
+		// TODO: dependency injection?
+		$filesystem = new Filesystem();
+		$lensCore = $filesystem->getPath($lensCoreString);
+		$cache = $filesystem->getPath($cacheString);
+		$file = $filesystem->getPath($fileString);
+
+		$job = new CoverageJob($executable, $lensCore, $cache, $file, $lineNumbers);
 		$process = new ShellServerProcess($job);
 
 		$process->run();

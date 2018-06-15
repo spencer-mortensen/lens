@@ -30,7 +30,8 @@ use ErrorException;
 use Exception;
 use Lens_0_0_56\Lens\Commands\LensVersion;
 use Lens_0_0_56\SpencerMortensen\Parser\ParserException;
-use Lens_0_0_56\SpencerMortensen\Paths\Paths;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
 
 class LensException extends Exception
 {
@@ -109,9 +110,9 @@ class LensException extends Exception
 
 		$message = "Unknown Lens command.";
 
-		$help = array(
+		$help = [
 			"Here is a list of the Lens commands that you can use:\n" . Url::LENS_COMMAND
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
@@ -128,9 +129,9 @@ class LensException extends Exception
 
 		$message = "Lens encountered an error.";
 
-		$help = array(
+		$help = [
 			"Check the issues page to see if there is a solution, or help others by filing a bug report:\n" . Url::LENS_ISSUES
-		);
+		];
 
 		$data = null;
 
@@ -145,12 +146,12 @@ class LensException extends Exception
 
 		$message = "Unable to find the \"lens\" directory.";
 
-		$help = array(
+		$help = [
 			"Do you have a \"lens\" directory? If not, you should check out this short guide to get started:\n" . Url::LENS_GUIDE,
 			"Is your lens directory called \"lens\"? You should use that name exactly, without any spelling or capitalization differences.",
 			"Is your \"lens\" directory located right inside your project directory?",
 			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/lens/tests"
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
@@ -163,9 +164,9 @@ class LensException extends Exception
 
 		$message = "Unable to find the source-code directory.";
 
-		$help = array(
+		$help = [
 			"Is your source-code directory called \"src\"? Is it located right inside your project directory? If not, then you should open your \"settings.yml\" file and customize the \"src\" path. You can read more about the \"settings.yml\" file here:\n" . Url::LENS_SETTINGS
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
@@ -178,15 +179,15 @@ class LensException extends Exception
 
 		$message = "Unable to find the autoload file.";
 
-		$help = array(
+		$help = [
 			"If you do have an autoloader, then add the autoloader path to your \"settings.yml\" file:\n" . Url::LENS_SETTINGS,
 			"If you don't have an autoloader, then create one now:\n" . Url::LENS_AUTOLOADER
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
 
-	public static function missingComposerDirectory($absoluteProjectPath)
+	public static function missingComposerDirectory(Path $absoluteProjectPath)
 	{
 		$code = self::CODE_MISSING_COMPOSER_DIRECTORY;
 
@@ -196,23 +197,24 @@ class LensException extends Exception
 
 		$composerCommand = self::getComposerInstallCommand($absoluteProjectPath);
 
-		$help = array(
+		$help = [
 			"Is Composer installed? You should install Composer now, if you haven't already:\n" . Url::COMPOSER_INSTALLATION,
 			"Once Composer is installed, you should download the project dependencies like this:\n$composerCommand"
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
 
-	private static function getComposerInstallCommand($absoluteProjectPath)
+	private static function getComposerInstallCommand(Path $absoluteProjectPath)
 	{
 		$relativeProjectPath = self::getRelativePath($absoluteProjectPath);
+		$relativeProjectAtoms = $relativeProjectPath->getAtoms();
 
-		if ($relativeProjectPath === '.') {
+		if (count($relativeProjectAtoms) === 0) {
 			return 'composer install';
 		}
 
-		$escapedRelativeProjectPath = escapeshellarg($relativeProjectPath);
+		$escapedRelativeProjectPath = escapeshellarg((string)$relativeProjectPath);
 		return "composer --working-dir={$escapedRelativeProjectPath} install";
 	}
 
@@ -224,59 +226,60 @@ class LensException extends Exception
 
 		$message = "The settings file isn't a valid INI file.";
 
-		$help = array(
+		$help = [
 			"Here is an article about the INI file format:\n" . Url::INI_SYNTAX
-		);
+		];
 
 		// TODO: convert this absolute path into a relative path (based on the current working directory)
 		$error = trim($exception->getMessage());
-		$data = array(
-			'file' => $path,
+		$data = [
+			'file' => (string)$path,
 			'error' => $error
-		);
+		];
 
 		return new self($code, $severity, $message, $help, $data, $exception);
 	}
 
-	public static function invalidTestsPath($path)
+	public static function invalidTestsPath($input)
 	{
 		$code = self::CODE_INVALID_TESTS_PATH;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = self::getInvalidPathMessage($path, 'a tests file or directory');
+		$message = self::getInvalidPathMessage($input, 'a tests file or directory');
 
 		$help = null;
 
-		$data = array(
-			'path' => $path
-		);
+		$data = [
+			'path' => $input
+		];
 
 		return new self($code, $severity, $message, $help, $data);
 	}
 
-	private static function getInvalidPathMessage($path, $description)
+	private static function getInvalidPathMessage($input, $description)
 	{
+		// TODO: use the "Filesystem":
 		// TODO: display all quotations in double quotes:
 		$displayer = new Displayer();
 
-		if (!is_string($path) || (strlen($path) === 0)) {
-			$testsDirectoryValue = self::getValueDescription($path);
+		if (!is_string($input) || (strlen($input) === 0)) {
+			$testsDirectoryValue = self::getValueDescription($input);
 			return "Expected a path to {$description}, but received {$testsDirectoryValue} instead";
 		}
 
-		if (!file_exists($path)) {
-			$testsDirectoryValue = $displayer->display($path);
+		if (!file_exists($input)) {
+			$testsDirectoryValue = $displayer->display($input);
 			return "Expected a path to {$description}, but there doesn't seem to be anything at {$testsDirectoryValue}";
 		}
 
-		if (!is_dir($path) && !is_file($path)) {
-			$testsDirectoryValue = $displayer->display($path);
+		if (!is_dir($input) && !is_file($input)) {
+			$testsDirectoryValue = $displayer->display($input);
 			return "Expected a path to {$description}, but {$testsDirectoryValue} is not a file or a directory";
 		}
 
-		if (!is_readable($path)) {
-			$testsDirectoryValue = $displayer->display($path);
+		if (!is_readable($input)) {
+			$testsDirectoryValue = $displayer->display($input);
 			return "Expected a path to {$description}, but {$testsDirectoryValue} is not readable";
 		}
 
@@ -326,7 +329,7 @@ class LensException extends Exception
 		}
 	}
 
-	public static function invalidTestsFileSyntax($path, $contents, ParserException $exception)
+	public static function invalidTestsFileSyntax(Path $path, $contents, ParserException $exception)
 	{
 		$code = self::CODE_INVALID_TESTS_FILE_SYNTAX;
 
@@ -336,21 +339,21 @@ class LensException extends Exception
 
 		// TODO: add $data array with "expected" and "actual"
 
-		$help = array(
+		$help = [
 			"Here is an article about the syntax of a tests file:\n" . Url::LENS_TESTS_FILE_SYNTAX
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}
 
-	private static function getTestsFileInvalidSyntaxMessage($absolutePath, $contents, ParserException $exception)
+	private static function getTestsFileInvalidSyntaxMessage(Path $absolutePath, $contents, ParserException $exception)
 	{
 		$position = $exception->getState();
 		$expectation = $exception->getRule();
 
 		$displayer = new Displayer();
 		$relativePath = self::getRelativePath($absolutePath);
-		$pathText = $displayer->display($relativePath);
+		$pathText = $displayer->display((string)$relativePath);
 
 		$message = "Syntax error in {$pathText}: ";
 
@@ -375,13 +378,12 @@ class LensException extends Exception
 		return $message;
 	}
 
-	private static function getRelativePath($absolutePath)
+	private static function getRelativePath(Path $absolutePath)
 	{
 		$filesystem = new Filesystem();
-		$paths = Paths::getPlatformPaths();
 
-		$currentDirectory = $filesystem->getCurrentDirectory();
-		return $paths->getRelativePath($currentDirectory, $absolutePath);
+		$currentDirectoryPath = $filesystem->getCurrentDirectoryPath();
+		return $currentDirectoryPath->getRelativePath($absolutePath);
 	}
 
 	private static function getCoordinates($input, $position)
@@ -392,7 +394,7 @@ class LensException extends Exception
 		$lastLine = array_pop($lines);
 		$y = strlen($lastLine) + 1;
 
-		return array($x, $y);
+		return [$x, $y];
 	}
 
 	public static function getTail($input, $position)
@@ -441,10 +443,10 @@ class LensException extends Exception
 
 		$version = LensVersion::VERSION;
 
-		$help = array(
+		$help = [
 			"Make sure that the report name is spelled correctly. Here is a list of the supported reports:\n" . Url::LENS_REPORTS,
 			"Are you using the current version of Lens? (Your version is \"lens {$version}.\") If you need it, you can get the current version here:\n" . Url::LENS_INSTALLATION
-		);
+		];
 
 		return new self($code, $severity, $message, $help);
 	}

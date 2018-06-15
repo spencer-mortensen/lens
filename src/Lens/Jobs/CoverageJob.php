@@ -25,40 +25,42 @@
 
 namespace Lens_0_0_56\Lens\Jobs;
 
-use Lens_0_0_56\Lens\Evaluator\Autoloader;
-use Lens_0_0_56\Lens\Evaluator\StatementsExtractor;
-use Lens_0_0_56\Lens\Filesystem;
+use Lens_0_0_56\Lens\Tests\Autoloader;
+use Lens_0_0_56\Lens\Tests\StatementsExtractor;
+use Lens_0_0_56\SpencerMortensen\Filesystem\File;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
 
 class CoverageJob implements Job
 {
 	/** @var string */
 	private $executable;
 
-	/** @var string */
-	private $lensCoreDirectory;
+	/** @var Path */
+	private $lensCore;
 
-	/** @var string */
-	private $cacheDirectory;
+	/** @var Path */
+	private $cache;
 
-	/** @var string */
-	private $filePath;
+	/** @var Path */
+	private $file;
 
 	/** @var array|null */
 	private $lineNumbers;
 
-	public function __construct($executable, $lensCoreDirectory, $cacheDirectory, $filePath, array &$lineNumbers = null)
+	public function __construct($executable, Path $lensCore, Path $cache, Path $file, array &$lineNumbers = null)
 	{
 		$this->executable = $executable;
-		$this->lensCoreDirectory = $lensCoreDirectory;
-		$this->cacheDirectory = $cacheDirectory;
-		$this->filePath = $filePath;
+		$this->lensCore = $lensCore;
+		$this->cache = $cache;
+		$this->file = $file;
 
 		$this->lineNumbers = &$lineNumbers;
 	}
 
 	public function getCommand()
 	{
-		$arguments = array($this->lensCoreDirectory, $this->cacheDirectory, $this->filePath);
+		$arguments = [(string)$this->lensCore, (string)$this->cache, (string)$this->file];
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -68,13 +70,13 @@ class CoverageJob implements Job
 
 	public function start()
 	{
-		$mockClasses = array();
-
+		$mockClasses = [];
 		$filesystem = new Filesystem();
-		$autoloader = new Autoloader($this->lensCoreDirectory, $this->cacheDirectory, $mockClasses);
-		$extractor = new StatementsExtractor($filesystem, $autoloader);
+		$autoloader = new Autoloader($filesystem, $this->lensCore, $this->cache, $mockClasses);
+		$extractor = new StatementsExtractor($autoloader);
+		$file = new File($this->file);
 
-		return $extractor->getLineNumbers($this->filePath);
+		return $extractor->getLineNumbers($file);
 	}
 
 	public function stop($message)

@@ -131,7 +131,7 @@ class Displayer
 
 	private function getZeroIndexedArrayRows(array $array)
 	{
-		$rows = array();
+		$rows = [];
 
 		foreach ($array as $key => $value) {
 			$rows[] = $this->display($value);
@@ -142,7 +142,7 @@ class Displayer
 
 	private function getAssociativeArrayRows(array $array)
 	{
-		$rows = array();
+		$rows = [];
 
 		foreach ($array as $key => $value) {
 			$rows[] = $this->display($key) . ' => ' . $this->display($value);
@@ -155,7 +155,7 @@ class Displayer
 	{
 		$body = implode(', ', $rows);
 
-		return "array({$body})";
+		return "[{$body}]";
 	}
 
 	private function showResource(ResourceArchive $resource)
@@ -183,7 +183,7 @@ class Displayer
 
 	private function getClassPropertiesText(array $input)
 	{
-		$output = array();
+		$output = [];
 
 		foreach ($input as $class => $properties) {
 			$classText = $this->showString($class);

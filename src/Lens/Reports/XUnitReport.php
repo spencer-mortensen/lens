@@ -25,10 +25,7 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
-use Lens_0_0_56\Lens\CaseText;
-use Lens_0_0_56\Lens\Xml;
-
-class XUnitReport implements Report
+class XUnitReport
 {
 	/** @var CaseText */
 	private $caseText;
@@ -40,10 +37,10 @@ class XUnitReport implements Report
 
 	public function getReport(array $project)
 	{
-		$output = array(
+		$output = [
 			$this->getXmlTag(),
 			$this->getProjectXml($project)
-		);
+		];
 
 		return implode("\n\n", $output);
 	}
@@ -58,7 +55,7 @@ class XUnitReport implements Report
 		$passed = 0;
 		$failed = 0;
 
-		$suiteResults = array();
+		$suiteResults = [];
 
 		foreach ($project['suites'] as $suiteFile => $suite) {
 			$suiteResults[] = $this->getSuiteXml($suiteFile, $suite, $suitePassed, $suiteFailed);
@@ -69,11 +66,11 @@ class XUnitReport implements Report
 
 		$innerXml = implode("\n", $suiteResults);
 
-		$attributes = array(
+		$attributes = [
 			'name' => $project['name'],
 			'tests' => $passed + $failed,
 			'failures' => $failed
-		);
+		];
 
 		return Xml::getElementXml('testsuites', $attributes, $innerXml);
 	}
@@ -85,7 +82,7 @@ class XUnitReport implements Report
 		$passed = 0;
 		$failed = 0;
 
-		$testResults = array();
+		$testResults = [];
 
 		foreach ($suite['tests'] as $testLine => $test) {
 			$testResults[] = $this->getTestXml($test, $testPassed, $testFailed);
@@ -96,11 +93,11 @@ class XUnitReport implements Report
 
 		$innerXml = implode("\n", $testResults);
 
-		$attributes = array(
+		$attributes = [
 			'name' => $suiteFile,
 			'tests' => $passed + $failed,
 			'failures' => $failed
-		);
+		];
 
 		return Xml::getElementXml('testsuite', $attributes, $innerXml);
 	}
@@ -112,7 +109,7 @@ class XUnitReport implements Report
 		$passed = 0;
 		$failed = 0;
 
-		$cases = array();
+		$cases = [];
 
 		foreach ($test['cases'] as $caseLine => $case) {
 			$cases[] = $this->getCaseXml($caseLine, $case, $casePassed, $caseFailed);
@@ -138,9 +135,9 @@ class XUnitReport implements Report
 			$innerXml = $this->getTestFailureXml();
 		}
 
-		$attributes = array(
+		$attributes = [
 			'name' => "Line {$caseLine}"
-		);
+		];
 
 		return Xml::getElementXml('testcase', $attributes, $innerXml);
 	}
@@ -162,6 +159,6 @@ class XUnitReport implements Report
 		$caseText = $this->caseText->getText();
 		$innerXml = Xml::getTextXml($caseText);
 
-		return Xml::getElementXml('failure', array(), $innerXml);
+		return Xml::getElementXml('failure', [], $innerXml);
 	}
 }

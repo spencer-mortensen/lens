@@ -37,7 +37,7 @@ class Archivist
 
 	public function __construct()
 	{
-		$this->archivedObjects = array();
+		$this->archivedObjects = [];
 	}
 
 	public function archive($value)
@@ -61,7 +61,7 @@ class Archivist
 
 	private function archiveArray(array $input)
 	{
-		$output = array();
+		$output = [];
 
 		foreach ($input as $key => $value) {
 			$output[$key] = $this->archive($value);
@@ -81,7 +81,7 @@ class Archivist
 		}
 
 		$class = get_class($object);
-		$properties = array();
+		$properties = [];
 
 		$archive = new ObjectArchive($id, $class, $properties);
 
@@ -93,7 +93,7 @@ class Archivist
 
 	private function archiveProperties($object)
 	{
-		$output = array();
+		$output = [];
 
 		$class = new ReflectionClass($object);
 

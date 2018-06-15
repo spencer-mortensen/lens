@@ -25,10 +25,9 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
-use Lens_0_0_56\Lens\CaseText;
 use Lens_0_0_56\Lens\Paragraph;
 
-class TapReport implements Report
+class TapReport
 {
 	/** @var CaseText */
 	private $caseText;
@@ -42,10 +41,10 @@ class TapReport implements Report
 	{
 		$cases = $this->getCases($project);
 
-		$output = array(
+		$output = [
 			$this->getVersion(),
 			$this->getPlan($cases)
-		);
+		];
 
 		$output = array_merge($output, $cases);
 
@@ -54,7 +53,7 @@ class TapReport implements Report
 
 	private function getCases(array $project)
 	{
-		$cases = array();
+		$cases = [];
 
 		$id = 0;
 

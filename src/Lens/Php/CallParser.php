@@ -109,7 +109,7 @@ EOS;
 
 	private static function merge(array $array)
 	{
-		$array = array_filter($array, array('self', 'isNonNull'));
+		$array = array_filter($array, ['self', 'isNonNull']);
 
 		if (0 < count($array)) {
 			$array = call_user_func_array('array_merge', $array);
@@ -143,8 +143,8 @@ EOS;
 
 		$position = $this->getPosition() - strlen($match[0]);
 
-		$token = array(self::TYPE_FUNCTION, $position, $function);
-		return array($token);
+		$token = [self::TYPE_FUNCTION, $position, $function];
+		return [$token];
 	}
 
 	public function getConstructorCall(array $match)
@@ -152,8 +152,8 @@ EOS;
 		$class = $match[2];
 		$position = $this->getPosition() - strlen($match[0]) + strlen($match[1]);
 
-		$token = array(self::TYPE_CLASS, $position, $class);
-		return array($token);
+		$token = [self::TYPE_CLASS, $position, $class];
+		return [$token];
 	}
 
 	public function getStaticMethodCall(array $match)
@@ -161,8 +161,8 @@ EOS;
 		$class = $match[1];
 		$position = $this->getPosition() - strlen($match[0]);
 
-		$token = array(self::TYPE_CLASS, $position, $class);
-		return array($token);
+		$token = [self::TYPE_CLASS, $position, $class];
+		return [$token];
 	}
 
 	public function getComment()

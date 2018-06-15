@@ -57,7 +57,7 @@ class Directory
 			return $names;
 		}
 
-		$children = array();
+		$children = [];
 
 		foreach ($names as $name) {
 			$children[] = $this->getChild($name);
@@ -68,7 +68,7 @@ class Directory
 
 	private function scan($directoryPath)
 	{
-		$contents = array();
+		$contents = [];
 
 		set_error_handler(__CLASS__ . '::onError');
 
@@ -91,7 +91,7 @@ class Directory
 
 	private function getChild($name)
 	{
-		$childPath = $this->path->append($name);
+		$childPath = $this->path->add($name);
 
 		if (is_dir((string)$childPath)) {
 			return new Directory($childPath);
@@ -113,7 +113,7 @@ class Directory
 		restore_error_handler();
 
 		if ($isCreated !== true) {
-			throw new ResultException('mkdir', array($path, self::$mode, true), $isCreated);
+			throw new ResultException('mkdir', [$path, self::$mode, true], $isCreated);
 		}
 	}
 
@@ -137,7 +137,7 @@ class Directory
 		restore_error_handler();
 
 		if ($isMoved !== true) {
-			throw new ResultException('rename', array($oldPathString, $newPathString), $isMoved);
+			throw new ResultException('rename', [$oldPathString, $newPathString], $isMoved);
 		}
 
 		$this->path = $newPath;
@@ -162,7 +162,7 @@ class Directory
 		restore_error_handler();
 
 		if ($isDeleted !== true) {
-			throw new ResultException('rmdir', array($path), $isDeleted);
+			throw new ResultException('rmdir', [$path], $isDeleted);
 		}
 	}
 
@@ -175,7 +175,7 @@ class Directory
 		restore_error_handler();
 
 		if (!is_int($time)) {
-			throw new ResultException('filemtime', array($path), $time);
+			throw new ResultException('filemtime', [$path], $time);
 		}
 
 		return $time;
