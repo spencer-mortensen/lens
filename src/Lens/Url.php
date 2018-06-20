@@ -29,13 +29,13 @@ class Url
 {
 	const COMPOSER_INSTALLATION = 'https://getcomposer.org/doc/00-intro.md';
 	const INI_SYNTAX = 'https://en.wikipedia.org/wiki/INI_file';
-	const LENS_AUTOLOADER = 'http://lens.guide/reference/organization/lens/autoload.php/';
+	const LENS_AUTOLOADER = 'http://lens.guide/support/organization/lens/autoload.php/';
 	const LENS_CHECK_FOR_UPDATES = 'http://lens.guide/check-for-updates/';
-	const LENS_COMMAND = 'http://lens.guide/reference/executable/';
-	const LENS_GUIDE = 'http://lens.guide/get-started/write-a-test/';
-	const LENS_INSTALLATION = 'http://lens.guide/get-started/install-lens/';
-	const LENS_ISSUES = 'https://github.com/Spencer-Mortensen/lens/issues';
-	const LENS_REPORTS = 'http://lens.guide/reference/executable/';
-	const LENS_SETTINGS = 'http://lens.guide/reference/organization/lens/settings.yml/';
-	const LENS_TESTS_FILE_SYNTAX = 'http://lens.guide/reference/tests-file/';
+	const LENS_COMMAND = 'http://lens.guide/support/executable/';
+	const LENS_GUIDE = 'http://lens.guide/guide/';
+	const LENS_INSTALLATION = 'http://lens.guide/guide/';
+	const LENS_ISSUES = 'https://github.com/spencer-mortensen/lens/issues';
+	const LENS_REPORTS = 'http://lens.guide/support/executable/';
+	const LENS_SETTINGS = 'http://lens.guide/support/organization/lens/settings.yml/';
+	const LENS_TESTS_FILE_SYNTAX = 'http://lens.guide/support/tests-file/';
 }
