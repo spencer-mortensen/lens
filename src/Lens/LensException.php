@@ -423,8 +423,8 @@ class LensException extends Exception
 			case 'subjectLabel':
 				return "a test label (\"// Test\\n\")";
 
-			case 'outputLabel':
-				return "an output label (\"// Output\\n\")";
+			case 'effectLabel':
+				return "an effect label (\"// Effect\\n\")";
 
 			default:
 				throw new ErrorException("Undefined expectation ({$expectation})", null, E_USER_ERROR, __FILE__, __LINE__);

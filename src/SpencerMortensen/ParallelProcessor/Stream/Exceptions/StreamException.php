@@ -68,21 +68,21 @@ class StreamException extends Exception
 
 		$message = 'The stream seems to be closed.';
 
-		return array($code, $data, $message);
+		return [$code, $data, $message];
 	}
 
 	private function getOther($value)
 	{
 		$code = self::CODE_OTHER;
 
-		$data = array(
+		$data = [
 			'stream' => $value
-		);
+		];
 
 		$valueText = self::getTypeText($value);
 		$message = "Expected a stream, but received {$valueText} instead.";
 
-		return array($code, $data, $message);
+		return [$code, $data, $message];
 	}
 
 	private static function getTypeText($value)

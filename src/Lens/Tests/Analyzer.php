@@ -87,7 +87,7 @@ class Analyzer
 
 	private function getDifferenceIssues(array $script, array $expected, array $actual)
 	{
-		// TODO: use ALL of the variables (including the variables from the "\\ Input" and "\\ Output" sections)
+		// TODO: use ALL of the variables (including the variables from the "\\ Cause" and "\\ Effect" sections)
 		$expectedVariables = $expected['variables'];
 		$actualVariables = $actual['variables'];
 

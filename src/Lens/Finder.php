@@ -83,7 +83,7 @@ class Finder
 	/** @var Path|null */
 	private $cache;
 
-	/** @var Path|null */
+	/** @var Path */
 	private $tests;
 
 	/** @var Path|null */

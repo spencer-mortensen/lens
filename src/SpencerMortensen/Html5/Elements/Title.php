@@ -34,7 +34,7 @@ class Title extends Element
 	{
 		$name = 'title';
 
-		$children = array($text);
+		$children = [$text];
 
 		$hasClosingTag = true;
 

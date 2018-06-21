@@ -40,9 +40,9 @@ class ReadIncompleteException extends Exception
 
 		$message = "Read {$bytesRead} bytes from the input stream before the connection was interrupted.";
 
-		$data = array(
+		$data = [
 			'read' => $bytesRead
-		);
+		];
 
 		parent::__construct($message, $code);
 

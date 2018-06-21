@@ -9,7 +9,7 @@ use RangeException;
 $math = new Math();
 $c = $math->add(1, 1);
 
-// Output
+// Effect
 $c = 2;
 
 
@@ -17,16 +17,16 @@ $c = 2;
 $math = new Math();
 $c = $math->divide($a, $b);
 
-// Input
+// Cause
 $a = 1;
 $b = 2;
 
-// Output
+// Effect
 $c = 0.5;
 
-// Input
+// Cause
 $a = 1;
 $b = 0;
 
-// Output
+// Effect
 throw new RangeException();

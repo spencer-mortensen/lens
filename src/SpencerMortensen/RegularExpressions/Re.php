@@ -96,7 +96,7 @@ class Re
 
 	private static function getChunks(array $matches)
 	{
-		$chunks = array();
+		$chunks = [];
 
 		foreach ($matches as $match) {
 			if (0 < strlen($match)) {

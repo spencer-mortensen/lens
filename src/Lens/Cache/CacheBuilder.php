@@ -45,6 +45,12 @@ class CacheBuilder
 
 	public function run(array $mockFunctions)
 	{
+		$lens = $this->finder->getLens();
+
+		if ($lens === null) {
+			return;
+		}
+
 		$sourceJob = new CacheJob(
 			$this->executable,
 			$this->finder->getCore(),

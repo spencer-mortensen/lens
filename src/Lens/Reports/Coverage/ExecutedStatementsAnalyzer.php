@@ -44,7 +44,11 @@ class ExecutedStatementsAnalyzer
 
 	private function getCoverageMap(array $input)
 	{
-		$output = [];
+		$output = [
+			'classes' => [],
+			'functions' => [],
+			'traits' => []
+		];
 
 		$this->mapTypeCoverage('classes', $input, $output);
 		$this->mapTypeCoverage('functions', $input, $output);

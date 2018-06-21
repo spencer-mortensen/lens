@@ -123,7 +123,7 @@ class XUnitReport
 
 	private function getCaseXml($caseLine, array $case, &$passed, &$failed)
 	{
-		$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+		$this->caseText->setCase($caseLine, $case['cause'], $case['issues']);
 
 		if ($this->isPassing($case['issues'])) {
 			$passed = 1;

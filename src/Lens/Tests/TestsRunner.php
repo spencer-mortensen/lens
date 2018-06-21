@@ -49,10 +49,10 @@ class TestsRunner
 	/** @var Path */
 	private $core;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $src;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $cache;
 
 	/** @var Path */
@@ -67,7 +67,7 @@ class TestsRunner
 	/** @var array */
 	private $missing;
 
-	/** @var Coverage */
+	/** @var Coverage|null */
 	private $coverage;
 
 	/** @var Processor */
@@ -76,16 +76,25 @@ class TestsRunner
 	/** @var Filesystem */
 	private $filesystem;
 
-	public function __construct($executable, Path $core, Path $src, Path $cache, Path $tests)
+	public function __construct($executable, Path $core, Path $src = null, Path $cache = null, Path $tests)
 	{
 		$this->executable = $executable;
 		$this->core = $core;
 		$this->src = $src;
 		$this->cache = $cache;
 		$this->tests = $tests;
-		$this->coverage = new Coverage($cache);
+		$this->coverage = $this->getCoverageObject($cache);
 		$this->processor = new Processor();
 		$this->filesystem = new Filesystem();
+	}
+
+	private function getCoverageObject(Path $cache = null)
+	{
+		if ($cache === null) {
+			return null;
+		}
+
+		return new Coverage($cache);
 	}
 
 	public function run(array $paths, array $mockClasses, array $mockFunctions)
@@ -146,16 +155,16 @@ class TestsRunner
 				$contextPhp = Code::getContextPhp($namespace, $uses);
 
 				foreach ($test['cases'] as $caseLine => &$case) {
-					$inputPhp = $sanitizer->sanitize('code', $namespace, $uses, $case['input']);
-					$expectedPhp = $sanitizer->sanitize('code', $namespace, $uses, $case['output']);
+					$causePhp = $sanitizer->sanitize('code', $namespace, $uses, $case['cause']);
+					$effectPhp = $sanitizer->sanitize('code', $namespace, $uses, $case['effect']);
 
 					$results = &$this->results[$file][$testLine][$caseLine];
 
 					$this->startTest(
 						$contextPhp,
-						$inputPhp,
+						$causePhp,
 						$actualPhp,
-						$expectedPhp,
+						$effectPhp,
 						$case['script'],
 						$mockClasses,
 						$results['actual']['pre'],
@@ -202,7 +211,7 @@ class TestsRunner
 
 	private function startAllCoverage()
 	{
-		if (!isset($this->src) || !Xdebug::isEnabled()) {
+		if (($this->cache === null) || !Xdebug::isEnabled()) {
 			return;
 		}
 
@@ -275,7 +284,7 @@ class TestsRunner
 
 	private function stopAllCoverage()
 	{
-		if (!is_array($this->missing)) {
+		if ($this->missing === null) {
 			return;
 		}
 
@@ -303,6 +312,10 @@ class TestsRunner
 
 	public function getCoverage()
 	{
+		if ($this->coverage === null) {
+			return null;
+		}
+
 		return $this->coverage->getCoverage();
 	}
 }

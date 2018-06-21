@@ -36,19 +36,19 @@ class ReportsBuilder
 	/** @var Path */
 	private $core;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $project;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $autoload;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $cache;
 
 	/** @var Filesystem */
 	private $filesystem;
 
-	public function __construct(Path $core, Path $project, Path $autoload, Path $cache, Filesystem $filesystem)
+	public function __construct(Path $core, Path $project = null, Path $autoload = null, Path $cache = null, Filesystem $filesystem)
 	{
 		$this->core = $core;
 		$this->project = $project;
@@ -58,7 +58,7 @@ class ReportsBuilder
 	}
 
 
-	public function run(array $options, array $results, array $executableStatements, $isUpdateAvailable)
+	public function run(array $options, array $results, array $executableStatements = null, $isUpdateAvailable)
 	{
 		/*
 		// TODO: move this to the various reports
@@ -73,8 +73,8 @@ class ReportsBuilder
 		// clover
 		$this->getCoverageReport($options['coverage'], $results, $executableStatements);
 		// crap4j
+		$this->getIssuesReport($options['issues'], $results, $stdout);
 		$this->getTapReport($options['tap'], $results, $stdout);
-		$this->getTextReport($options['text'], $results, $stdout);
 		$this->getXunitReport($options['xunit'], $results, $stdout);
 
 		if ($this->isSuccessful($results)) {
@@ -86,9 +86,9 @@ class ReportsBuilder
 		return [$stdout, $stderr, $exitCode];
 	}
 
-	private function getCoverageReport(&$destination, array $results, array $executableStatements)
+	private function getCoverageReport(&$destination, array $results, array $executableStatements = null)
 	{
-		if ($destination === null) {
+		if (($destination === null) || ($executableStatements === null)) {
 			return;
 		}
 
@@ -117,7 +117,7 @@ class ReportsBuilder
 		}
 	}
 
-	private function getTextReport(&$destination, array $results, &$stdout)
+	private function getIssuesReport(&$destination, array $results, &$stdout)
 	{
 		if ($destination === null) {
 			return;
@@ -125,7 +125,7 @@ class ReportsBuilder
 
 		$caseText = new CaseText();
 		$caseText->setAutoload($this->autoload);
-		$report = new TextReport($caseText);
+		$report = new IssuesReport($caseText);
 		$output = $report->getReport($results);
 
 		if ($destination === 'stdout') {

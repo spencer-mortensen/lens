@@ -40,10 +40,10 @@ class WriteIncompleteException extends Exception
 
 		$message = "Wrote {$bytesSent} of {$bytesTotal} bytes to the output stream.";
 
-		$data = array(
+		$data = [
 			'wrote' => $bytesSent,
 			'total' => $bytesTotal
-		);
+		];
 
 		parent::__construct($message, $code);
 

@@ -91,7 +91,7 @@ class LensRunner implements Command
 
 		if (count($options) === 0) {
 			return [
-				'text' => 'stdout',
+				'issues' => 'stdout',
 				'coverage' => 'lens/coverage'
 			];
 		}
@@ -100,7 +100,7 @@ class LensRunner implements Command
 			'clover' => 'clover',
 			'coverage' => 'coverage',
 			'tap' => 'tap',
-			'text' => 'text',
+			'issues' => 'issues',
 			'xunit' => 'xunit'
 		];
 

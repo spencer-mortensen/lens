@@ -44,7 +44,7 @@ abstract class ServerProcess
 
 	public function run()
 	{
-		Exceptions::on(array($this, 'sendError'));
+		Exceptions::on([$this, 'sendError']);
 
 		try {
 			$result = $this->job->start();

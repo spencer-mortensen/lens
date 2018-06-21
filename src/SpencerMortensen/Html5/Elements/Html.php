@@ -33,10 +33,10 @@ class Html extends Element
 	{
 		$name = 'html';
 
-		$children = array(
+		$children = [
 			$head,
 			$body
-		);
+		];
 
 		$hasClosingTag = true;
 

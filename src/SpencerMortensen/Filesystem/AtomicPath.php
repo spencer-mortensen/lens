@@ -66,7 +66,7 @@ class AtomicPath
 	private static function getStringAtoms($delimiter, $isAbsolute, $string)
 	{
 		$input = explode($delimiter, $string);
- 		$output = [];
+		$output = [];
 
 		self::appendAtoms($isAbsolute, $output, $input);
 

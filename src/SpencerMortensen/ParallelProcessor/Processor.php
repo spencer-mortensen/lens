@@ -47,8 +47,8 @@ class Processor
 	public function __construct($timeoutSeconds = null)
 	{
 		$this->id = 0;
-		$this->processes = array();
-		$this->streams = array();
+		$this->processes = [];
+		$this->streams = [];
 
 		$this->setTimeout($timeoutSeconds);
 	}

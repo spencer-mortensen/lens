@@ -36,9 +36,9 @@ use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
 class Test
 {
 	/** @var Path */
-	private $lensCore;
+	private $core;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $cache;
 
 	/** @var Filesystem */
@@ -65,9 +65,9 @@ class Test
 	/** @var null|array */
 	private $coverage;
 
-	public function __construct(Path $lensCore, Path $cache)
+	public function __construct(Path $core, Path $cache = null)
 	{
-		$this->lensCore = $lensCore;
+		$this->core = $core;
 		$this->cache = $cache;
 		// TODO: dependency injection
 		$this->filesystem = new Filesystem();
@@ -97,8 +97,12 @@ class Test
 		$prePhp = Code::combine($contextPhp, $prePhp);
 		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		$autoloader = new Autoloader($this->filesystem, $this->lensCore, $this->cache, $mockClasses);
-		$autoloader->enable();
+		if ($this->cache !== null) {
+			$autoloader = new Autoloader($this->filesystem, $this->core, $this->cache, $mockClasses);
+			$autoloader->enable();
+		}
+
+		Agent::start($contextPhp, $this->script);
 
 		Exceptions::on([$this, 'prePhp']);
 
@@ -112,11 +116,9 @@ class Test
 			return;
 		}
 
-		Agent::start($contextPhp, $this->script);
-
 		Exceptions::on([$this, 'postPhp']);
 
-		if ($isActual) {
+		if ($isActual && isset($autoloader)) {
 			$autoloader->enableLiveMode();
 			$this->startCoverage();
 		}
@@ -201,7 +203,6 @@ class Test
 	{
 		$this->xdebug = new Xdebug(true);
 		$this->xdebug->start();
-
 	}
 
 	private function stopCoverage()

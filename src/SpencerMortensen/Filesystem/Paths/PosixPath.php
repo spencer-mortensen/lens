@@ -25,6 +25,7 @@
 
 namespace Lens_0_0_56\SpencerMortensen\Filesystem\Paths;
 
+use InvalidArgumentException;
 use Lens_0_0_56\SpencerMortensen\Filesystem\AtomicPath;
 
 class PosixPath implements Path
@@ -32,24 +33,71 @@ class PosixPath implements Path
 	/** @var string */
 	private static $delimiter = '/';
 
+	/** @var string|null */
+	private $scheme;
+
 	/** @var AtomicPath */
 	private $path;
 
-	public function __construct(AtomicPath $path)
+	public function __construct($scheme, AtomicPath $path)
 	{
+		$this->scheme = $scheme;
 		$this->path = $path;
 	}
 
 	public static function fromString($input)
 	{
-		$path = AtomicPath::fromString($input, self::$delimiter);
+		self::getSchemePath($input, $scheme, $path);
 
-		return new self($path);
+		return new self($scheme, $path);
+	}
+
+	private static function getSchemePath($input, &$scheme, &$path)
+	{
+		if (!is_string($input)) {
+			throw new InvalidArgumentException();
+		}
+
+		$expression = '^(?:(?<scheme>[a-z]+)://)?(?<path>.*)$';
+
+		if (!self::match($expression, $input, $match)) {
+			throw new InvalidArgumentException();
+		}
+
+		$scheme = $match['scheme'];
+
+		if (strlen($scheme) === 0) {
+			$scheme = null;
+		}
+
+		$path = AtomicPath::fromString($match['path'], self::$delimiter);
+	}
+
+	private static function match($expression, $input, array &$match = null)
+	{
+		$delimiter = "\x03";
+		$flags = 'XDs';
+		$pattern = $delimiter . $expression . $delimiter . $flags;
+
+		return preg_match($pattern, $input, $match) === 1;
 	}
 
 	public function __toString()
 	{
-		return (string)$this->path;
+		$output = '';
+
+		if ($this->scheme !== null) {
+			$output .= "{$this->scheme}://";
+		}
+
+		$output .= (string)$this->path;
+
+		return $output;
+	}
+
+	public function getScheme()
+	{
+		return $this->scheme;
 	}
 
 	public function isAbsolute()
@@ -66,7 +114,7 @@ class PosixPath implements Path
 	{
 		$isAbsolute = $this->path->isAbsolute();
 		$path = new AtomicPath($isAbsolute, $atoms, self::$delimiter);
-		return new self($path);
+		return new self($this->scheme, $path);
 	}
 
 	public function add(...$arguments)
@@ -79,11 +127,12 @@ class PosixPath implements Path
 
 		$path = $this->path->add($objects);
 
-		return new self($path);
+		return new self($this->scheme, $path);
 	}
 
 	private function getPathObject($path)
 	{
+		// TODO: consider the scheme (what if it's a different scheme?):
 		if ($path instanceof self) {
 			$isAbsolute = $path->isAbsolute();
 			$atoms = $path->getAtoms();
@@ -106,6 +155,6 @@ class PosixPath implements Path
 		$absolutePath = $this->getPathObject($input);
 		$relativePath = $this->path->getRelativePath($absolutePath);
 
-		return new self($relativePath);
+		return new self($this->scheme, $relativePath);
 	}
 }

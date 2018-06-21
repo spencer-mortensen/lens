@@ -59,14 +59,14 @@ subjectLabel: RE // Test\s+
 lineNumber: STRING
 code: MANY codeBlock 1
 codeBlock: AND codeUnit optionalComments
-codeUnit: RE (?!(?:// (?:Test|Input|Output))|/\*|$).+?(?=(?:// (?:Test|Input|Output))|/\*|$)
+codeUnit: RE (?!(?:// (?:Test|Cause|Effect))|/\*|$).+?(?=(?:// (?:Test|Cause|Effect))|/\*|$)
 cases: MANY case 1
-case: AND optionalInput output
-optionalInput: MANY input 0 1
-input: AND inputLabel optionalComments code
-inputLabel: RE // Input\s+
-output: AND lineNumber outputLabel optionalComments code
-outputLabel: RE // Output\s+
+case: AND optionalCause effect
+optionalCause: MANY cause 0 1
+cause: AND causeLabel optionalComments code
+causeLabel: RE // Cause\s+
+effect: AND lineNumber effectLabel optionalComments code
+effectLabel: RE // Effect\s+
 EOS;
 
 		$rules = new Rules($this, $grammar);
@@ -204,16 +204,16 @@ EOS;
 
 	public function getCase(array $match)
 	{
-		$input = $match[0];
+		$cause = $match[0];
 		$line = $match[1][0];
-		$output = $match[1][1];
+		$effect = $match[1][1];
 
-		$script = self::extractScript($output);
+		$script = self::extractScript($effect);
 
 		return [
 			$line => [
-				'input' => $input,
-				'output' => $output,
+				'cause' => $cause,
+				'effect' => $effect,
 				'script' => $script,
 				'issues' => null,
 				'coverage' => null
@@ -252,17 +252,17 @@ EOS;
 		return true;
 	}
 
-	public function getOptionalInput(array $matches)
+	public function getOptionalCause(array $matches)
 	{
 		return array_shift($matches);
 	}
 
-	public function getInput(array $matches)
+	public function getCause(array $matches)
 	{
 		return $matches[2];
 	}
 
-	public function getOutput(array $matches)
+	public function getEffect(array $matches)
 	{
 		$line = $matches[0];
 		$code = $matches[3];

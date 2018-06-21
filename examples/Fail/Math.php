@@ -3,5 +3,5 @@
 // Test
 $x = 1 + 1
 
-// Output
+// Effect
 $x = 2;

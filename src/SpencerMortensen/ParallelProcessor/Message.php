@@ -13,9 +13,9 @@ class Message
 
 	public static function serialize($type, $value)
 	{
-		$data = array(
+		$data = [
 			$type => $value
-		);
+		];
 
 		return serialize($data);
 	}

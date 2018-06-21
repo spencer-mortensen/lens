@@ -49,10 +49,10 @@ class ShellClientProcess implements ClientProcess
 
 	public function start()
 	{
-		$descriptor = array(
-			self::STDOUT => array('pipe', 'w'),
-			self::STDERR => array('pipe', 'w')
-		);
+		$descriptor = [
+			self::STDOUT => ['pipe', 'w'],
+			self::STDERR => ['pipe', 'w']
+		];
 
 		$command = $this->job->getCommand();
 		$process = proc_open($command, $descriptor, $pipes);

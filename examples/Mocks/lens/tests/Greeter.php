@@ -6,10 +6,10 @@ namespace Example;
 $greeter = new Greeter();
 $output = $greeter->greet($person);
 
-// Input
+// Cause
 $person = new Person();
 
-// Output
+// Effect
 $person->getName(); // return 'Ann';
 time(); // return 1518302651;
 $output = "Hello Ann, it's Saturday today!";

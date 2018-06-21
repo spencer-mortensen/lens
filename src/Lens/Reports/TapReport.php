@@ -64,7 +64,7 @@ class TapReport
 				$this->caseText->setTest($test['code']);
 
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+					$this->caseText->setCase($caseLine, $case['cause'], $case['issues']);
 
 					$cases[] = $this->getCaseText(++$id, $suiteFile, $caseLine, $case['issues']);
 				}

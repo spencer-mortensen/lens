@@ -27,6 +27,7 @@ namespace Lens_0_0_56\Lens\Reports;
 
 use Lens_0_0_56\Lens\Paragraph;
 use Lens_0_0_56\Lens\Php\Code;
+use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
 
 class CaseText
 {
@@ -49,7 +50,7 @@ class CaseText
 	private $testPhp;
 
 	/** @var string|null */
-	private $inputPhp;
+	private $causePhp;
 
 	/** @var array */
 	private $issues;
@@ -59,18 +60,18 @@ class CaseText
 		$this->maximumLineLength = $maximumLineLength;
 	}
 
-	public function setAutoload($autoload)
+	public function setAutoload(Path $autoload = null)
 	{
 		$this->requirePhp = $this->getRequireAutoloadPhp($autoload);
 	}
 
-	private function getRequireAutoloadPhp($autoload)
+	private function getRequireAutoloadPhp(Path $autoload = null)
 	{
 		if ($autoload === null) {
 			return null;
 		}
 
-		$valuePhp = Code::getValuePhp($autoload);
+		$valuePhp = Code::getValuePhp((string)$autoload);
 		return Code::getRequirePhp($valuePhp);
 	}
 
@@ -91,10 +92,10 @@ class CaseText
 		$this->testPhp = $testPhp;
 	}
 
-	public function setCase($caseLine, $inputPhp, array $issues)
+	public function setCase($caseLine, $causePhp, array $issues)
 	{
 		$this->caseLine = $caseLine;
-		$this->inputPhp = $inputPhp;
+		$this->causePhp = $causePhp;
 		$this->issues = $issues;
 	}
 
@@ -102,9 +103,9 @@ class CaseText
 	{
 		$sections = [
 			$this->getHeaderSectionText(),
-			$this->getInputSectionText(),
+			$this->getCauseSectionText(),
 			$this->getTestSectionText(),
-			$this->getOutputSectionText()
+			$this->getEffectSectionText()
 		];
 
 		$sections = array_filter($sections, 'is_string');
@@ -120,13 +121,13 @@ class CaseText
 		return Paragraph::indent($text, '   ');
 	}
 
-	private function getInputSectionText()
+	private function getCauseSectionText()
 	{
-		if ($this->inputPhp === null) {
+		if ($this->causePhp === null) {
 			return null;
 		}
 
-		$text = $this->getSectionText('// Input', $this->inputPhp);
+		$text = $this->getSectionText('// Cause', $this->causePhp);
 		$text = Paragraph::wrap($text, $this->maximumLineLength - 3);
 		return Paragraph::indent($text, '   ');
 	}
@@ -138,13 +139,13 @@ class CaseText
 		return Paragraph::indent($text, '   ');
 	}
 
-	private function getOutputSectionText()
+	private function getEffectSectionText()
 	{
-		$text = $this->getOutputText($this->issues);
-		return $this->getSectionText('   // Output', $text);
+		$text = $this->getEffectText($this->issues);
+		return $this->getSectionText('   // Effect', $text);
 	}
 
-	private function getOutputText(array $issues)
+	private function getEffectText(array $issues)
 	{
 		$lines = [];
 

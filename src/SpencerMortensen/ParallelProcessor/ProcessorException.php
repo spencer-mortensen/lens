@@ -64,9 +64,9 @@ class ProcessorException extends Exception
 
 	private static function ioError($code, $stream, $contents, $verb, $adjective)
 	{
-		$data = array(
+		$data = [
 			'message' => $contents
-		);
+		];
 
 		$type = gettype($stream);
 

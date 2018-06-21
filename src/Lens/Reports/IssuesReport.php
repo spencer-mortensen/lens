@@ -25,7 +25,7 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
-class TextReport
+class IssuesReport
 {
 	/** @var CaseText */
 	private $caseText;
@@ -56,7 +56,7 @@ class TextReport
 				$this->caseText->setTest($test['code']);
 
 				foreach ($test['cases'] as $caseLine => $case) {
-					$this->caseText->setCase($caseLine, $case['input'], $case['issues']);
+					$this->caseText->setCase($caseLine, $case['cause'], $case['issues']);
 
 					$this->summarizeCase($case['issues']);
 				}

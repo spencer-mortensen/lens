@@ -36,9 +36,9 @@ class TestJob implements Job
 	private $executable;
 
 	/** @var Path */
-	private $lensCore;
+	private $core;
 
-	/** @var Path */
+	/** @var Path|null */
 	private $cache;
 
 	/** @var string */
@@ -71,10 +71,10 @@ class TestJob implements Job
 	/** @var array|null */
 	private $coverage;
 
-	public function __construct($executable, Path $lensCore, Path $cache, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, ServerProcess &$process = null, array &$preState = null, array &$postState = null, array &$coverage = null)
+	public function __construct($executable, Path $core, Path $cache = null, $contextPhp, $prePhp, $postPhp, array $script, array $mockClasses, $isActual, ServerProcess &$process = null, array &$preState = null, array &$postState = null, array &$coverage = null)
 	{
 		$this->executable = $executable;
-		$this->lensCore = $lensCore;
+		$this->core = $core;
 		$this->cache = $cache;
 		$this->contextPhp = $contextPhp;
 		$this->prePhp = $prePhp;
@@ -90,7 +90,7 @@ class TestJob implements Job
 
 	public function getCommand()
 	{
-		$arguments = [(string)$this->lensCore, (string)$this->cache, $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual];
+		$arguments = [self::getString($this->core), self::getString($this->cache), $this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual];
 		$serialized = serialize($arguments);
 		$compressed = gzdeflate($serialized, -1);
 		$encoded = base64_encode($compressed);
@@ -98,9 +98,18 @@ class TestJob implements Job
 		return "{$this->executable} --internal-test={$encoded}";
 	}
 
+	private static function getString(Path $path = null)
+	{
+		if ($path === null) {
+			return null;
+		}
+
+		return (string)$path;
+	}
+
 	public function start()
 	{
-		$test = new Test($this->lensCore, $this->cache);
+		$test = new Test($this->core, $this->cache);
 		$process = $this->process;
 
 		$sendResult = function () use ($test, $process) {

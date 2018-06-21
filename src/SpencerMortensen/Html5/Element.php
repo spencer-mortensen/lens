@@ -54,10 +54,10 @@ abstract class Element
 		}
 
 		if (is_object($contents)) {
-			return array($contents);
+			return [$contents];
 		}
 
-		return array();
+		return [];
 	}
 
 	public function __toString()
