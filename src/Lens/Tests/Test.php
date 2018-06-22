@@ -23,15 +23,15 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Tests;
+namespace Lens_0_0_57\Lens\Tests;
 
-use Lens_0_0_56\Lens\Archivist\Archivist;
-use Lens_0_0_56\Lens\Php\Code;
-use Lens_0_0_56\Lens\Xdebug;
-use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
+use Lens_0_0_57\Lens\Archivist\Archivist;
+use Lens_0_0_57\Lens\Php\Code;
+use Lens_0_0_57\Lens\Xdebug;
+use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
 
 class Test
 {

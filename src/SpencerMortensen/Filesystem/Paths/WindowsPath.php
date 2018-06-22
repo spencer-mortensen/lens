@@ -23,10 +23,10 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\Filesystem\Paths;
+namespace Lens_0_0_57\SpencerMortensen\Filesystem\Paths;
 
 use InvalidArgumentException;
-use Lens_0_0_56\SpencerMortensen\Filesystem\AtomicPath;
+use Lens_0_0_57\SpencerMortensen\Filesystem\AtomicPath;
 
 class WindowsPath implements Path
 {

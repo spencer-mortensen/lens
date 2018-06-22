@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens;
+namespace Lens_0_0_57\Lens;
 
-use Lens_0_0_56\Lens\Archivist\Archives\Archive;
-use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
-use Lens_0_0_56\Lens\Archivist\Archives\ResourceArchive;
+use Lens_0_0_57\Lens\Archivist\Archives\Archive;
+use Lens_0_0_57\Lens\Archivist\Archives\ObjectArchive;
+use Lens_0_0_57\Lens\Archivist\Archives\ResourceArchive;
 
 class Displayer
 {

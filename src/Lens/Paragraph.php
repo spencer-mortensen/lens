@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens;
+namespace Lens_0_0_57\Lens;
 
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
+use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
 
 class Paragraph
 {

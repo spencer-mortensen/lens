@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Commands;
+namespace Lens_0_0_57\Lens\Commands;
 
 interface Command
 {

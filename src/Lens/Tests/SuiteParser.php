@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Tests;
+namespace Lens_0_0_57\Lens\Tests;
 
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
-use Lens_0_0_56\SpencerMortensen\Parser\Rule;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
+use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
+use Lens_0_0_57\SpencerMortensen\Parser\Rule;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Parser;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Rules;
 
 class SuiteParser extends Parser
 {

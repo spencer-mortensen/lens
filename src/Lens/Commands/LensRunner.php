@@ -23,20 +23,20 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Commands;
+namespace Lens_0_0_57\Lens\Commands;
 
-use Lens_0_0_56\Lens\Arguments;
-use Lens_0_0_56\Lens\Environment;
-use Lens_0_0_56\Lens\Finder;
-use Lens_0_0_56\Lens\LensException;
-use Lens_0_0_56\Lens\Reports\ReportsBuilder;
-use Lens_0_0_56\Lens\Settings;
-use Lens_0_0_56\Lens\Cache\CacheBuilder;
-use Lens_0_0_56\Lens\Tests\TestsRunner;
-use Lens_0_0_56\Lens\Url;
-use Lens_0_0_56\SpencerMortensen\Filesystem\File;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
+use Lens_0_0_57\Lens\Arguments;
+use Lens_0_0_57\Lens\Environment;
+use Lens_0_0_57\Lens\Finder;
+use Lens_0_0_57\Lens\LensException;
+use Lens_0_0_57\Lens\Reports\ReportsBuilder;
+use Lens_0_0_57\Lens\Settings;
+use Lens_0_0_57\Lens\Cache\CacheBuilder;
+use Lens_0_0_57\Lens\Tests\TestsRunner;
+use Lens_0_0_57\Lens\Url;
+use Lens_0_0_57\SpencerMortensen\Filesystem\File;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
 
 class LensRunner implements Command
 {

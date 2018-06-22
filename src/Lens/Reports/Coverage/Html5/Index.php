@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Reports\Coverage\Html5;
+namespace Lens_0_0_57\Lens\Reports\Coverage\Html5;
 
-use Lens_0_0_56\SpencerMortensen\Html5\Elements\A;
-use Lens_0_0_56\SpencerMortensen\Html5\Elements\Li;
-use Lens_0_0_56\SpencerMortensen\Html5\Elements\Ul;
-use Lens_0_0_56\SpencerMortensen\Html5\Node;
-use Lens_0_0_56\SpencerMortensen\Html5\Text;
+use Lens_0_0_57\SpencerMortensen\Html5\Elements\A;
+use Lens_0_0_57\SpencerMortensen\Html5\Elements\Li;
+use Lens_0_0_57\SpencerMortensen\Html5\Elements\Ul;
+use Lens_0_0_57\SpencerMortensen\Html5\Node;
+use Lens_0_0_57\SpencerMortensen\Html5\Text;
 
 class Index implements Node
 {

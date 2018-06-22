@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Commands;
+namespace Lens_0_0_57\Lens\Commands;
 
-use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
 
 class ComposerInstall implements Command
 {

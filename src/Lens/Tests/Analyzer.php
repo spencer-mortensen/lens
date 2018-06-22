@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Tests;
+namespace Lens_0_0_57\Lens\Tests;
 
-use Lens_0_0_56\Lens\Archivist\Comparer;
-use Lens_0_0_56\Lens\Archivist\Archives\ObjectArchive;
-use Lens_0_0_56\Lens\Php\Namespacing;
-use Lens_0_0_56\Lens\Formatter;
+use Lens_0_0_57\Lens\Archivist\Comparer;
+use Lens_0_0_57\Lens\Archivist\Archives\ObjectArchive;
+use Lens_0_0_57\Lens\Php\Namespacing;
+use Lens_0_0_57\Lens\Formatter;
 
 class Analyzer
 {

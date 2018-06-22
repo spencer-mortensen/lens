@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Tests;
+namespace Lens_0_0_57\Lens\Tests;
 
 use Error;
 use ErrorException;
 use Exception;
-use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
 
 class Examiner
 {

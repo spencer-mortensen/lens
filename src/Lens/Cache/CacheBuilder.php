@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Cache;
+namespace Lens_0_0_57\Lens\Cache;
 
-use Lens_0_0_56\Lens\Finder;
-use Lens_0_0_56\Lens\Jobs\CacheJob;
-use Lens_0_0_56\Lens\Processor;
+use Lens_0_0_57\Lens\Finder;
+use Lens_0_0_57\Lens\Jobs\CacheJob;
+use Lens_0_0_57\Lens\Processor;
 
 class CacheBuilder
 {

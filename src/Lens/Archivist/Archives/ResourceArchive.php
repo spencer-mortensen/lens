@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Archivist\Archives;
+namespace Lens_0_0_57\Lens\Archivist\Archives;
 
 class ResourceArchive extends Archive
 {

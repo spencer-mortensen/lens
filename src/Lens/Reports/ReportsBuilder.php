@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Reports;
+namespace Lens_0_0_57\Lens\Reports;
 
-use Lens_0_0_56\Lens\LensException;
-use Lens_0_0_56\Lens\Reports\Coverage\CoverageReportBuilder;
-use Lens_0_0_56\SpencerMortensen\Filesystem\File;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
+use Lens_0_0_57\Lens\LensException;
+use Lens_0_0_57\Lens\Reports\Coverage\CoverageReportBuilder;
+use Lens_0_0_57\SpencerMortensen\Filesystem\File;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
 
 class ReportsBuilder
 {

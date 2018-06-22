@@ -23,16 +23,16 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream;
+namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream;
 
 use Exception;
-use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\CloseException;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\StreamException;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\ReadException;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\ReadIncompleteException;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\WriteException;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions\WriteIncompleteException;
+use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\CloseException;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\StreamException;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\ReadException;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\ReadIncompleteException;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\WriteException;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions\WriteIncompleteException;
 use Throwable;
 
 class Stream

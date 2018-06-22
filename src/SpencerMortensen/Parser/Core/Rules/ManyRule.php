@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\Parser\Core\Rules;
+namespace Lens_0_0_57\SpencerMortensen\Parser\Core\Rules;
 
-use Lens_0_0_56\SpencerMortensen\Parser\Rule;
+use Lens_0_0_57\SpencerMortensen\Parser\Rule;
 
 class ManyRule extends Rule
 {

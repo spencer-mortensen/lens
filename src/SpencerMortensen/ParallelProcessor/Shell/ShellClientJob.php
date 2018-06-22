@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell;
+namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell;
 
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ClientJob;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ClientJob;
 
 interface ShellClientJob extends ClientJob
 {

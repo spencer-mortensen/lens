@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Cache;
+namespace Lens_0_0_57\Lens\Cache;
 
-use Lens_0_0_56\SpencerMortensen\Parser\Rule;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Parser;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Rules;
+use Lens_0_0_57\SpencerMortensen\Parser\Rule;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Parser;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Rules;
 
 class FileParser extends Parser
 {

@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\RegularExpressions;
+namespace Lens_0_0_57\SpencerMortensen\RegularExpressions;
 
 class Re
 {

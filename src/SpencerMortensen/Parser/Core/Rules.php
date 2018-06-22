@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\Parser\Core;
+namespace Lens_0_0_57\SpencerMortensen\Parser\Core;
 
 use ErrorException;
-use Lens_0_0_56\SpencerMortensen\Parser\Core\Rules\AndRule;
-use Lens_0_0_56\SpencerMortensen\Parser\Core\Rules\ManyRule;
-use Lens_0_0_56\SpencerMortensen\Parser\Core\Rules\OrRule;
+use Lens_0_0_57\SpencerMortensen\Parser\Core\Rules\AndRule;
+use Lens_0_0_57\SpencerMortensen\Parser\Core\Rules\ManyRule;
+use Lens_0_0_57\SpencerMortensen\Parser\Core\Rules\OrRule;
 
 class Rules
 {

@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Reports\Coverage;
+namespace Lens_0_0_57\Lens\Reports\Coverage;
 
-use Lens_0_0_56\Lens\Reports\Coverage\Html5\CodePage;
-use Lens_0_0_56\Lens\Reports\Coverage\Html5\IndexPage;
+use Lens_0_0_57\Lens\Reports\Coverage\Html5\CodePage;
+use Lens_0_0_57\Lens\Reports\Coverage\Html5\IndexPage;
 
 class CoverageFilesGenerator
 {

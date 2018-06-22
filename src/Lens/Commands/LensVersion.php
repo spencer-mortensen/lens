@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Commands;
+namespace Lens_0_0_57\Lens\Commands;
 
-use Lens_0_0_56\Lens\Arguments;
+use Lens_0_0_57\Lens\Arguments;
 
 class LensVersion implements Command
 {
@@ -33,7 +33,7 @@ class LensVersion implements Command
 	private $arguments;
 
 	/** @var string */
-	const VERSION = '0.0.56';
+	const VERSION = '0.0.57';
 
 	public function __construct(Arguments $arguments)
 	{

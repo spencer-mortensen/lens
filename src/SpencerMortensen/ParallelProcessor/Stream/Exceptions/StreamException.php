@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\ParallelProcessor\Stream\Exceptions;
+namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Exceptions;
 
 use Exception;
 

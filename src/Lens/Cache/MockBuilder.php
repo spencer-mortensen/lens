@@ -23,14 +23,14 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Cache;
+namespace Lens_0_0_57\Lens\Cache;
 
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionParameter;
-use Lens_0_0_56\SpencerMortensen\RegularExpressions\Re;
+use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
 
 class MockBuilder
 {

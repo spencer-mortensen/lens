@@ -23,17 +23,17 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Cache;
+namespace Lens_0_0_57\Lens\Cache;
 
-use Lens_0_0_56\Lens\Citations;
-use Lens_0_0_56\Lens\Coverage;
-use Lens_0_0_56\Lens\SourcePaths;
-use Lens_0_0_56\Lens\Php\Code;
-use Lens_0_0_56\Lens\Sanitizer;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Directory;
-use Lens_0_0_56\SpencerMortensen\Filesystem\File;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Paths\Path;
+use Lens_0_0_57\Lens\Citations;
+use Lens_0_0_57\Lens\Coverage;
+use Lens_0_0_57\Lens\SourcePaths;
+use Lens_0_0_57\Lens\Php\Code;
+use Lens_0_0_57\Lens\Sanitizer;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Directory;
+use Lens_0_0_57\SpencerMortensen\Filesystem\File;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
 use ReflectionClass;
 use ReflectionFunction;
 

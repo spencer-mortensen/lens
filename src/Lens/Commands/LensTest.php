@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Commands;
+namespace Lens_0_0_57\Lens\Commands;
 
-use Lens_0_0_56\Lens\Arguments;
-use Lens_0_0_56\Lens\Jobs\TestJob;
-use Lens_0_0_56\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
+use Lens_0_0_57\Lens\Arguments;
+use Lens_0_0_57\Lens\Jobs\TestJob;
+use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensTest implements Command
 {

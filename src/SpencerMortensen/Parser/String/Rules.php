@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\Parser\String;
+namespace Lens_0_0_57\SpencerMortensen\Parser\String;
 
-use Lens_0_0_56\SpencerMortensen\Parser\Core\Rules as CoreRules;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Rules\ReRule;
-use Lens_0_0_56\SpencerMortensen\Parser\String\Rules\StringRule;
+use Lens_0_0_57\SpencerMortensen\Parser\Core\Rules as CoreRules;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Rules\ReRule;
+use Lens_0_0_57\SpencerMortensen\Parser\String\Rules\StringRule;
 
 class Rules extends CoreRules
 {

@@ -23,9 +23,9 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\Html5;
+namespace Lens_0_0_57\SpencerMortensen\Html5;
 
-use Lens_0_0_56\SpencerMortensen\Html5\Elements\Html;
+use Lens_0_0_57\SpencerMortensen\Html5\Elements\Html;
 
 class Document implements Node
 {

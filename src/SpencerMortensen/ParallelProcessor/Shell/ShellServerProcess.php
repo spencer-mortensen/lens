@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell;
+namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell;
 
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\ServerProcess;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ServerProcess;
 
 class ShellServerProcess extends ServerProcess
 {

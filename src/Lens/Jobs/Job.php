@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_56\Lens\Jobs;
+namespace Lens_0_0_57\Lens\Jobs;
 
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Fork\ForkJob;
-use Lens_0_0_56\SpencerMortensen\ParallelProcessor\Shell\ShellJob;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Fork\ForkJob;
+use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell\ShellJob;
 
 interface Job extends ForkJob, ShellJob
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Lens_0_0_56\SpencerMortensen\ParallelProcessor;
+namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor;
 
 use Exception;
-use Lens_0_0_56\SpencerMortensen\Exceptions\Exceptions;
+use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
 use Throwable;
 
 class Message
