@@ -26,6 +26,7 @@
 namespace Lens_0_0_56\Lens\Reports;
 
 use Lens_0_0_56\Lens\Paragraph;
+use Lens_0_0_56\Lens\Url;
 
 class TapReport
 {
@@ -37,18 +38,25 @@ class TapReport
 		$this->caseText = $caseText;
 	}
 
-	public function getReport(array $project)
+	public function getReport(array $project, $isUpdateAvailable)
 	{
 		$cases = $this->getCases($project);
 
-		$output = [
+		$lines = [
 			$this->getVersion(),
 			$this->getPlan($cases)
 		];
 
-		$output = array_merge($output, $cases);
+		$lines = array_merge($lines, $cases);
 
-		return implode("\n", $output);
+		if ($isUpdateAvailable) {
+			$lines[] = '# ';
+			$lines[] = '# A newer version of Lens is available:';
+			$lines[] = '# ' . Url::LENS_INSTALLATION;
+			$lines[] = '# ';
+		}
+
+		return implode("\n", $lines);
 	}
 
 	private function getCases(array $project)

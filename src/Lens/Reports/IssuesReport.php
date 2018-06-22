@@ -25,6 +25,8 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
+use Lens_0_0_56\Lens\Url;
+
 class IssuesReport
 {
 	/** @var CaseText */
@@ -47,7 +49,7 @@ class IssuesReport
 		$this->failedTest = null;
 	}
 
-	public function getReport(array $project)
+	public function getReport(array $project, $isUpdateAvailable)
 	{
 		foreach ($project['suites'] as $suiteFile => $suite) {
 			$this->caseText->setSuite($suiteFile, $suite['namespace'], $suite['uses']);
@@ -69,6 +71,10 @@ class IssuesReport
 
 		if ($this->failedTest !== null) {
 			$output[] = $this->failedTest;
+		}
+
+		if ($isUpdateAvailable) {
+			$output[] = "A newer version of Lens is available:\n" . Url::LENS_INSTALLATION;
 		}
 
 		return implode("\n\n", $output);

@@ -60,22 +60,15 @@ class ReportsBuilder
 
 	public function run(array $options, array $results, array $executableStatements = null, $isUpdateAvailable)
 	{
-		/*
-		// TODO: move this to the various reports
-		if ($isUpdateAvailable && ($reportType === 'text')) {
-			$stdout .= "\n\nA newer version of Lens is available:\n" . Url::LENS_INSTALLATION;
-		}
-		*/
-
 		$stdout = null;
 		$stderr = null;
 
 		// clover
 		$this->getCoverageReport($options['coverage'], $results, $executableStatements);
 		// crap4j
-		$this->getIssuesReport($options['issues'], $results, $stdout);
-		$this->getTapReport($options['tap'], $results, $stdout);
-		$this->getXunitReport($options['xunit'], $results, $stdout);
+		$this->getIssuesReport($options['issues'], $results, $isUpdateAvailable, $stdout);
+		$this->getTapReport($options['tap'], $results, $isUpdateAvailable, $stdout);
+		$this->getXunitReport($options['xunit'], $results, $isUpdateAvailable, $stdout);
 
 		if ($this->isSuccessful($results)) {
 			$exitCode = 0;
@@ -97,7 +90,7 @@ class ReportsBuilder
 		$builder->build($executableStatements, $results);
 	}
 
-	private function getTapReport(&$destination, array $results, &$stdout)
+	private function getTapReport(&$destination, array $results, $isUpdateAvailable, &$stdout)
 	{
 		if ($destination === null) {
 			return;
@@ -106,7 +99,7 @@ class ReportsBuilder
 		$caseText = new CaseText();
 		$caseText->setAutoload($this->autoload);
 		$report = new TapReport($caseText);
-		$output = $report->getReport($results);
+		$output = $report->getReport($results, $isUpdateAvailable);
 
 		if ($destination === 'stdout') {
 			$stdout = $output;
@@ -117,7 +110,7 @@ class ReportsBuilder
 		}
 	}
 
-	private function getIssuesReport(&$destination, array $results, &$stdout)
+	private function getIssuesReport(&$destination, array $results, $isUpdateAvailable, &$stdout)
 	{
 		if ($destination === null) {
 			return;
@@ -125,8 +118,9 @@ class ReportsBuilder
 
 		$caseText = new CaseText();
 		$caseText->setAutoload($this->autoload);
+
 		$report = new IssuesReport($caseText);
-		$output = $report->getReport($results);
+		$output = $report->getReport($results, $isUpdateAvailable);
 
 		if ($destination === 'stdout') {
 			$stdout = $output;
@@ -137,7 +131,7 @@ class ReportsBuilder
 		}
 	}
 
-	private function getXunitReport(&$destination, array $results, &$stdout)
+	private function getXunitReport(&$destination, array $results, $isUpdateAvailable, &$stdout)
 	{
 		if ($destination === null) {
 			return;
@@ -146,7 +140,7 @@ class ReportsBuilder
 		$caseText = new CaseText();
 		$caseText->setAutoload($this->autoload);
 		$report = new XUnitReport($caseText);
-		$output = $report->getReport($results);
+		$output = $report->getReport($results, $isUpdateAvailable);
 
 		if ($destination === 'stdout') {
 			$stdout = $output;

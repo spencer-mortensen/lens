@@ -78,4 +78,11 @@ class Xml
 	{
 		return htmlspecialchars($attribute, ENT_XML1 | ENT_COMPAT | ENT_DISALLOWED | ENT_QUOTES, 'UTF-8');
 	}
+
+	public static function getCommentXml($text)
+	{
+		$escapedText = self::attributeEncode($text);
+
+		return "<!-- {$escapedText} -->";
+	}
 }

@@ -25,6 +25,8 @@
 
 namespace Lens_0_0_56\Lens\Reports;
 
+use Lens_0_0_56\Lens\Url;
+
 class XUnitReport
 {
 	/** @var CaseText */
@@ -35,12 +37,16 @@ class XUnitReport
 		$this->caseText = $caseText;
 	}
 
-	public function getReport(array $project)
+	public function getReport(array $project, $isUpdateAvailable)
 	{
 		$output = [
 			$this->getXmlTag(),
 			$this->getProjectXml($project)
 		];
+
+		if ($isUpdateAvailable) {
+			$output[] = $this->getUpgradeXml();
+		}
 
 		return implode("\n\n", $output);
 	}
@@ -160,5 +166,10 @@ class XUnitReport
 		$innerXml = Xml::getTextXml($caseText);
 
 		return Xml::getElementXml('failure', [], $innerXml);
+	}
+
+	private function getUpgradeXml()
+	{
+		return Xml::getCommentXml('A newer version of Lens is available: ' . Url::LENS_INSTALLATION);
 	}
 }
