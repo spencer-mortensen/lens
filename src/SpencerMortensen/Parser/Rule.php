@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Parser;
+namespace _Lens\SpencerMortensen\Parser;
 
 abstract class Rule
 {

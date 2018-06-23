@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Commands;
+namespace _Lens\Lens\Commands;
 
-use Lens_0_0_57\Lens\Arguments;
-use Lens_0_0_57\Lens\Jobs\CacheJob;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
+use _Lens\Lens\Arguments;
+use _Lens\Lens\Jobs\CacheJob;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensSource implements Command
 {

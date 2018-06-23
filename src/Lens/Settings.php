@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
-use Lens_0_0_57\Mustangostang\Spyc\Spyc as Yaml;
-use Lens_0_0_57\SpencerMortensen\Filesystem\File;
+use _Lens\Mustangostang\Spyc\Spyc as Yaml;
+use _Lens\SpencerMortensen\Filesystem\File;
 
 class Settings
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Lens_0_0_56\Lens\Php;
+namespace _Lens\Lens\Php;
 
 // Test
 $namespacing = new Namespacing($isFunction, $namespace, $uses);

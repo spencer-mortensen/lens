@@ -23,14 +23,14 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
-use Lens_0_0_57\Lens\Php\CallParser;
-use Lens_0_0_57\Lens\Php\Code;
-use Lens_0_0_57\Lens\Php\Namespacing;
-use Lens_0_0_57\Lens\Php\Semantics;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\Parser\ParserException;
+use _Lens\Lens\Php\CallParser;
+use _Lens\Lens\Php\Code;
+use _Lens\Lens\Php\Namespacing;
+use _Lens\Lens\Php\Semantics;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Parser\ParserException;
 
 class Sanitizer
 {

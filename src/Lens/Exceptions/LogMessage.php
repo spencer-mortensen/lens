@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Exceptions;
+namespace _Lens\Lens\Exceptions;
 
-use Lens_0_0_57\Lens\LensException;
+use _Lens\Lens\LensException;
 
 class LogMessage
 {

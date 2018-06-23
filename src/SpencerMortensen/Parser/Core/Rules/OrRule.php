@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Parser\Core\Rules;
+namespace _Lens\SpencerMortensen\Parser\Core\Rules;
 
-use Lens_0_0_57\SpencerMortensen\Parser\Rule;
+use _Lens\SpencerMortensen\Parser\Rule;
 
 class OrRule extends Rule
 {

@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
-use Lens_0_0_57\Lens\Commands\LensVersion;
-use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Commands\LensVersion;
+use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class Environment
 {

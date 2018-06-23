@@ -23,20 +23,20 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Commands;
+namespace _Lens\Lens\Commands;
 
-use Lens_0_0_57\Lens\Arguments;
-use Lens_0_0_57\Lens\Environment;
-use Lens_0_0_57\Lens\Finder;
-use Lens_0_0_57\Lens\LensException;
-use Lens_0_0_57\Lens\Reports\ReportsBuilder;
-use Lens_0_0_57\Lens\Settings;
-use Lens_0_0_57\Lens\Cache\CacheBuilder;
-use Lens_0_0_57\Lens\Tests\TestsRunner;
-use Lens_0_0_57\Lens\Url;
-use Lens_0_0_57\SpencerMortensen\Filesystem\File;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Arguments;
+use _Lens\Lens\Environment;
+use _Lens\Lens\Finder;
+use _Lens\Lens\LensException;
+use _Lens\Lens\Reports\ReportsBuilder;
+use _Lens\Lens\Settings;
+use _Lens\Lens\Cache\CacheBuilder;
+use _Lens\Lens\Tests\TestsRunner;
+use _Lens\Lens\Url;
+use _Lens\SpencerMortensen\Filesystem\File;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class LensRunner implements Command
 {

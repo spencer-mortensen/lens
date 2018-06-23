@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Archivist\Archives;
+namespace _Lens\Lens\Archivist\Archives;
 
 class ObjectArchive extends Archive
 {

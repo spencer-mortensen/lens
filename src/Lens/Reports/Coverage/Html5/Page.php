@@ -23,20 +23,20 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports\Coverage\Html5;
+namespace _Lens\Lens\Reports\Coverage\Html5;
 
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Article;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Body;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Head;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Header;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Html;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Link;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Meta;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Nav;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Title;
-use Lens_0_0_57\SpencerMortensen\Html5\Document;
-use Lens_0_0_57\SpencerMortensen\Html5\Node;
-use Lens_0_0_57\SpencerMortensen\Html5\Text;
+use _Lens\SpencerMortensen\Html5\Elements\Article;
+use _Lens\SpencerMortensen\Html5\Elements\Body;
+use _Lens\SpencerMortensen\Html5\Elements\Head;
+use _Lens\SpencerMortensen\Html5\Elements\Header;
+use _Lens\SpencerMortensen\Html5\Elements\Html;
+use _Lens\SpencerMortensen\Html5\Elements\Link;
+use _Lens\SpencerMortensen\Html5\Elements\Meta;
+use _Lens\SpencerMortensen\Html5\Elements\Nav;
+use _Lens\SpencerMortensen\Html5\Elements\Title;
+use _Lens\SpencerMortensen\Html5\Document;
+use _Lens\SpencerMortensen\Html5\Node;
+use _Lens\SpencerMortensen\Html5\Text;
 
 class Page implements Node
 {

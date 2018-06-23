@@ -23,7 +23,7 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Autoloader;
+namespace _Lens\SpencerMortensen\Autoloader;
 
 class Autoloader
 {

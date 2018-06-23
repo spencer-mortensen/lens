@@ -1,6 +1,6 @@
 <?php
 
-namespace Lens_0_0_57\Mustangostang\Spyc;
+namespace _Lens\Mustangostang\Spyc;
 
 /**
    * Spyc -- A Simple PHP YAML Class

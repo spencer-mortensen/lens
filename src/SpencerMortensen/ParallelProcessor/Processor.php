@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor;
+namespace _Lens\SpencerMortensen\ParallelProcessor;
 
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Stream;
+use _Lens\SpencerMortensen\ParallelProcessor\Stream\Stream;
 
 class Processor
 {

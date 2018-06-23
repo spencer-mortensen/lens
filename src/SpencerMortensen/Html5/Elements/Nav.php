@@ -23,9 +23,9 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Html5\Elements;
+namespace _Lens\SpencerMortensen\Html5\Elements;
 
-use Lens_0_0_57\SpencerMortensen\Html5\Element;
+use _Lens\SpencerMortensen\Html5\Element;
 
 class Nav extends Element
 {

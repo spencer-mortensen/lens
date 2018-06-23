@@ -2,7 +2,7 @@
 
 namespace Lens;
 
-use Lens_0_0_57\Lens\Tests\Agent;
+use _Lens\Lens\Tests\Agent;
 
 function stream_filter_prepend($stream, $filtername, $read_write = null, $filterparams = null)
 {

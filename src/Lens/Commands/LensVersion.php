@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Commands;
+namespace _Lens\Lens\Commands;
 
-use Lens_0_0_57\Lens\Arguments;
+use _Lens\Lens\Arguments;
 
 class LensVersion implements Command
 {

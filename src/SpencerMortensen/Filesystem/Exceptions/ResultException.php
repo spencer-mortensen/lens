@@ -23,7 +23,7 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Filesystem\Exceptions;
+namespace _Lens\SpencerMortensen\Filesystem\Exceptions;
 
 use ErrorException;
 use ReflectionClass;

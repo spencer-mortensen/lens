@@ -23,12 +23,12 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Filesystem;
+namespace _Lens\SpencerMortensen\Filesystem;
 
 use ErrorException;
 use InvalidArgumentException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Exceptions\ResultException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Exceptions\ResultException;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class File
 {

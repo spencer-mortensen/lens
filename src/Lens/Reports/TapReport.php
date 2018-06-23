@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports;
+namespace _Lens\Lens\Reports;
 
-use Lens_0_0_57\Lens\Paragraph;
-use Lens_0_0_57\Lens\Url;
+use _Lens\Lens\Paragraph;
+use _Lens\Lens\Url;
 
 class TapReport
 {

@@ -23,15 +23,15 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
 use Error;
 use ErrorException;
 use Exception;
-use Lens_0_0_57\Lens\Commands\LensVersion;
-use Lens_0_0_57\SpencerMortensen\Parser\ParserException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\Commands\LensVersion;
+use _Lens\SpencerMortensen\Parser\ParserException;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class LensException extends Exception
 {

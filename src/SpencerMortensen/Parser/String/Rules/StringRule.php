@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Parser\String\Rules;
+namespace _Lens\SpencerMortensen\Parser\String\Rules;
 
-use Lens_0_0_57\SpencerMortensen\Parser\Rule;
+use _Lens\SpencerMortensen\Parser\Rule;
 
 class StringRule extends Rule
 {

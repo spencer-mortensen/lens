@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Parser\String;
+namespace _Lens\SpencerMortensen\Parser\String;
 
-use Lens_0_0_57\SpencerMortensen\Parser\Core\Parser as CoreParser;
-use Lens_0_0_57\SpencerMortensen\Parser\ParserException;
-use Lens_0_0_57\SpencerMortensen\Parser\Rule;
-use Lens_0_0_57\SpencerMortensen\Parser\String\Rules\ReRule;
-use Lens_0_0_57\SpencerMortensen\Parser\String\Rules\StringRule;
+use _Lens\SpencerMortensen\Parser\Core\Parser as CoreParser;
+use _Lens\SpencerMortensen\Parser\ParserException;
+use _Lens\SpencerMortensen\Parser\Rule;
+use _Lens\SpencerMortensen\Parser\String\Rules\ReRule;
+use _Lens\SpencerMortensen\Parser\String\Rules\StringRule;
 
 abstract class Parser extends CoreParser
 {

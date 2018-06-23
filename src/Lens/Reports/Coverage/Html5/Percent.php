@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports\Coverage\Html5;
+namespace _Lens\Lens\Reports\Coverage\Html5;
 
 use InvalidArgumentException;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Span;
-use Lens_0_0_57\SpencerMortensen\Html5\Node;
+use _Lens\SpencerMortensen\Html5\Elements\Span;
+use _Lens\SpencerMortensen\Html5\Node;
 
 class Percent implements Node
 {

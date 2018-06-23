@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
 // TODO: use "Monolog," so our end-users can do odd things with their logs
 class Logger

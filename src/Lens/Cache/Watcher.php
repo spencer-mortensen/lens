@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Cache;
+namespace _Lens\Lens\Cache;
 
-use Lens_0_0_57\Lens\JsonFile;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Directory;
-use Lens_0_0_57\SpencerMortensen\Filesystem\File;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\JsonFile;
+use _Lens\SpencerMortensen\Filesystem\Directory;
+use _Lens\SpencerMortensen\Filesystem\File;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class Watcher
 {

@@ -23,7 +23,7 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Exceptions;
+namespace _Lens\SpencerMortensen\Exceptions;
 
 use ErrorException;
 use InvalidArgumentException;

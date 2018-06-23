@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Tests;
+namespace _Lens\Lens\Tests;
 
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
-use Lens_0_0_57\Lens\SourcePaths;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\SourcePaths;
 
 class Autoloader
 {

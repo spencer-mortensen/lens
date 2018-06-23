@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Archivist;
+namespace _Lens\Lens\Archivist;
 
-use Lens_0_0_57\Lens\Archivist\Archives\Archive;
-use Lens_0_0_57\Lens\Archivist\Archives\ObjectArchive;
-use Lens_0_0_57\Lens\Archivist\Archives\ResourceArchive;
+use _Lens\Lens\Archivist\Archives\Archive;
+use _Lens\Lens\Archivist\Archives\ObjectArchive;
+use _Lens\Lens\Archivist\Archives\ResourceArchive;
 
 class Comparer
 {

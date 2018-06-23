@@ -23,14 +23,14 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports\Coverage\Html5;
+namespace _Lens\Lens\Reports\Coverage\Html5;
 
-use Lens_0_0_57\SpencerMortensen\Html5\Node;
-use Lens_0_0_57\SpencerMortensen\Html5\Text;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Table;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Td;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Th;
-use Lens_0_0_57\SpencerMortensen\Html5\Elements\Tr;
+use _Lens\SpencerMortensen\Html5\Node;
+use _Lens\SpencerMortensen\Html5\Text;
+use _Lens\SpencerMortensen\Html5\Elements\Table;
+use _Lens\SpencerMortensen\Html5\Elements\Td;
+use _Lens\SpencerMortensen\Html5\Elements\Th;
+use _Lens\SpencerMortensen\Html5\Elements\Tr;
 
 class CodeCoverage implements Node
 {

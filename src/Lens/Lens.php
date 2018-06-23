@@ -23,18 +23,18 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
 use Error;
 use Exception;
-use Lens_0_0_57\Lens\Exceptions\TerminalMessage;
-use Lens_0_0_57\Lens\Exceptions\LogMessage;
-use Lens_0_0_57\Lens\Commands\LensSource;
-use Lens_0_0_57\Lens\Commands\LensCoverage;
-use Lens_0_0_57\Lens\Commands\LensRunner;
-use Lens_0_0_57\Lens\Commands\LensTest;
-use Lens_0_0_57\Lens\Commands\LensVersion;
-use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
+use _Lens\Lens\Exceptions\TerminalMessage;
+use _Lens\Lens\Exceptions\LogMessage;
+use _Lens\Lens\Commands\LensSource;
+use _Lens\Lens\Commands\LensCoverage;
+use _Lens\Lens\Commands\LensRunner;
+use _Lens\Lens\Commands\LensTest;
+use _Lens\Lens\Commands\LensVersion;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
 
 class Lens
 {

@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Exceptions;
+namespace _Lens\Lens\Exceptions;
 
-use Lens_0_0_57\Lens\Displayer;
+use _Lens\Lens\Displayer;
 
 class DataFormatter
 {

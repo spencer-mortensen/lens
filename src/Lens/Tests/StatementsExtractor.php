@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Tests;
+namespace _Lens\Lens\Tests;
 
-use Lens_0_0_57\Lens\Xdebug;
-use Lens_0_0_57\SpencerMortensen\Filesystem\File;
+use _Lens\Lens\Xdebug;
+use _Lens\SpencerMortensen\Filesystem\File;
 
 class StatementsExtractor
 {

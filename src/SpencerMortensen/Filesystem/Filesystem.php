@@ -23,13 +23,13 @@
  * @copyright 2018 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Filesystem;
+namespace _Lens\SpencerMortensen\Filesystem;
 
 use ErrorException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Exceptions\ResultException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\PosixPath;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\WindowsPath;
+use _Lens\SpencerMortensen\Filesystem\Exceptions\ResultException;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Paths\PosixPath;
+use _Lens\SpencerMortensen\Filesystem\Paths\WindowsPath;
 
 class Filesystem
 {

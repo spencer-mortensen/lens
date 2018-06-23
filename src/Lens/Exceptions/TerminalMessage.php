@@ -23,14 +23,14 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Exceptions;
+namespace _Lens\Lens\Exceptions;
 
 use Error;
 use Exception;
-use Lens_0_0_57\Lens\Displayer;
-use Lens_0_0_57\Lens\LensException;
-use Lens_0_0_57\Lens\Paragraph;
-use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Displayer;
+use _Lens\Lens\LensException;
+use _Lens\Lens\Paragraph;
+use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class TerminalMessage
 {

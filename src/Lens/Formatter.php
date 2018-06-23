@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
-use Lens_0_0_57\Lens\Archivist\Archives\ObjectArchive;
-use Lens_0_0_57\Lens\Php\Namespacing;
+use _Lens\Lens\Archivist\Archives\ObjectArchive;
+use _Lens\Lens\Php\Namespacing;
 
 class Formatter
 {

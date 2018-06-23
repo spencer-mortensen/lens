@@ -2,7 +2,7 @@
 
 namespace Lens;
 
-use Lens_0_0_57\Lens\Tests\Agent;
+use _Lens\Lens\Tests\Agent;
 
 function stream_get_contents($source, $maxlen = null, $offset = null)
 {

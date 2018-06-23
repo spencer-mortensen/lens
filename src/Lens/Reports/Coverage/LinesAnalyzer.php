@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports\Coverage;
+namespace _Lens\Lens\Reports\Coverage;
 
-use Lens_0_0_57\Lens\Citations;
-use Lens_0_0_57\Lens\SourcePaths;
-use Lens_0_0_57\SpencerMortensen\Filesystem\File;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\Citations;
+use _Lens\Lens\SourcePaths;
+use _Lens\SpencerMortensen\Filesystem\File;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class LinesAnalyzer
 {

@@ -23,9 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\Parser\String;
+namespace _Lens\SpencerMortensen\Parser\String;
 
-use Lens_0_0_57\SpencerMortensen\RegularExpressions\Re;
+use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class Lexer
 {

@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Fork;
+namespace _Lens\SpencerMortensen\ParallelProcessor\Fork;
 
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ClientJob;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ServerJob;
+use _Lens\SpencerMortensen\ParallelProcessor\ClientJob;
+use _Lens\SpencerMortensen\ParallelProcessor\ServerJob;
 
 interface ForkJob extends ClientJob, ServerJob
 {

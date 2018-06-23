@@ -23,23 +23,23 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Tests;
+namespace _Lens\Lens\Tests;
 
-use Lens_0_0_57\Lens\Archivist\Comparer;
-use Lens_0_0_57\Lens\Coverage;
-use Lens_0_0_57\Lens\Jobs\CoverageJob;
-use Lens_0_0_57\Lens\Jobs\TestJob;
-use Lens_0_0_57\Lens\LensException;
-use Lens_0_0_57\Lens\Php\Code;
-use Lens_0_0_57\Lens\Php\Namespacing;
-use Lens_0_0_57\Lens\Php\Semantics;
-use Lens_0_0_57\Lens\Processor;
-use Lens_0_0_57\Lens\Sanitizer;
-use Lens_0_0_57\Lens\SourcePaths;
-use Lens_0_0_57\Lens\Xdebug;
-use Lens_0_0_57\SpencerMortensen\Parser\ParserException;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Filesystem;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\Archivist\Comparer;
+use _Lens\Lens\Coverage;
+use _Lens\Lens\Jobs\CoverageJob;
+use _Lens\Lens\Jobs\TestJob;
+use _Lens\Lens\LensException;
+use _Lens\Lens\Php\Code;
+use _Lens\Lens\Php\Namespacing;
+use _Lens\Lens\Php\Semantics;
+use _Lens\Lens\Processor;
+use _Lens\Lens\Sanitizer;
+use _Lens\Lens\SourcePaths;
+use _Lens\Lens\Xdebug;
+use _Lens\SpencerMortensen\Parser\ParserException;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class TestsRunner
 {

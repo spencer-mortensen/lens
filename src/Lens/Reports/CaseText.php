@@ -23,11 +23,11 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Reports;
+namespace _Lens\Lens\Reports;
 
-use Lens_0_0_57\Lens\Paragraph;
-use Lens_0_0_57\Lens\Php\Code;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\Lens\Paragraph;
+use _Lens\Lens\Php\Code;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class CaseText
 {

@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens\Jobs;
+namespace _Lens\Lens\Jobs;
 
-use Lens_0_0_57\Lens\Tests\Test;
-use Lens_0_0_57\SpencerMortensen\Exceptions\Exceptions;
-use Lens_0_0_57\SpencerMortensen\Filesystem\Paths\Path;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ServerProcess;
+use _Lens\Lens\Tests\Test;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
+use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\ParallelProcessor\ServerProcess;
 
 class TestJob implements Job
 {

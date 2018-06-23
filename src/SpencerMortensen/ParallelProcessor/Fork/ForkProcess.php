@@ -23,13 +23,13 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Fork;
+namespace _Lens\SpencerMortensen\ParallelProcessor\Fork;
 
 use Exception;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ProcessorException;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ClientProcess;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Stream\Stream;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ServerProcess;
+use _Lens\SpencerMortensen\ParallelProcessor\ProcessorException;
+use _Lens\SpencerMortensen\ParallelProcessor\ClientProcess;
+use _Lens\SpencerMortensen\ParallelProcessor\Stream\Stream;
+use _Lens\SpencerMortensen\ParallelProcessor\ServerProcess;
 use Throwable;
 
 class ForkProcess extends ServerProcess implements ClientProcess

@@ -23,12 +23,12 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Fork\ForkProcess;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Processor as ParallelProcessor;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
-use Lens_0_0_57\Lens\Jobs\Job;
+use _Lens\SpencerMortensen\ParallelProcessor\Fork\ForkProcess;
+use _Lens\SpencerMortensen\ParallelProcessor\Processor as ParallelProcessor;
+use _Lens\SpencerMortensen\ParallelProcessor\Shell\ShellClientProcess;
+use _Lens\Lens\Jobs\Job;
 
 class Processor extends ParallelProcessor
 {

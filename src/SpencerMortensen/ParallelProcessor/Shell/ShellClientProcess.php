@@ -23,10 +23,10 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace Lens_0_0_57\SpencerMortensen\ParallelProcessor\Shell;
+namespace _Lens\SpencerMortensen\ParallelProcessor\Shell;
 
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ProcessorException;
-use Lens_0_0_57\SpencerMortensen\ParallelProcessor\ClientProcess;
+use _Lens\SpencerMortensen\ParallelProcessor\ProcessorException;
+use _Lens\SpencerMortensen\ParallelProcessor\ClientProcess;
 
 class ShellClientProcess implements ClientProcess
 {
