@@ -1,0 +1,6 @@
+src: src
+autoload: vendor/autoload.php
+cache: lens/cache
+checkForUpdates: false
+mockClasses: null
+mockFunctions: null
