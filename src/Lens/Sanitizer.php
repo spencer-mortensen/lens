@@ -181,6 +181,7 @@ class Sanitizer
 			return false;
 		}
 
+		// TODO: move this to the "SourcePaths" somehow:
 		$currentPath = $this->filesystem->getPath('.');
 		$function = substr($function, 5);
 		$relativePath = $this->getRelativeFilePath($function);
@@ -205,6 +206,7 @@ class Sanitizer
 			$directory = 'live';
 		}
 
+		// TODO: move this to the "SourcePaths" somehow:
 		$currentPath = $this->filesystem->getPath('.');
 		$relativePath = $this->getRelativeFilePath($function);
 		$pathValue = DIRECTORY_SEPARATOR . (string)$currentPath->add('functions', $directory, $relativePath);

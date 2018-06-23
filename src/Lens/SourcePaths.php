@@ -49,7 +49,7 @@ class SourcePaths
 	public function getCoreClassPath($class)
 	{
 		$relativePath = $this->getRelativeFilePath($class);
-		return $this->core->add('mocks', 'classes', $relativePath);
+		return $this->core->add('classes', 'mock', $relativePath);
 	}
 
 	public function getLiveClassPath($class)

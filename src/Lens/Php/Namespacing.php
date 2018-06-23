@@ -138,11 +138,22 @@ class Namespacing
 
 		if (0 < count($this->uses)) {
 			$slash = strpos($class, '\\');
-			$head = substr($class, 0, $slash);
+
+			if ($slash === false) {
+				$head = $class;
+				$tail = null;
+			} else {
+				$head = substr($class, 0, $slash);
+				$tail = substr($class, $slash + 1);
+			}
 
 			if (isset($this->uses[$head])) {
 				$head = $this->uses[$head];
-				$tail = substr($class, $slash + 1);
+
+				if ($tail === null) {
+					return $head;
+				}
+
 				return "{$head}\\{$tail}";
 			}
 		}
