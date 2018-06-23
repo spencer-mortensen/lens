@@ -2,7 +2,7 @@
 
 namespace Lens;
 
-use Lens_0_0_56\Lens\Evaluator\Agent;
+use Lens_0_0_57\Lens\Tests\Agent;
 
 function rename($old_name, $new_name, $context = null)
 {
