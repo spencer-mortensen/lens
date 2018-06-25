@@ -1,0 +1,97 @@
+In "filesystem": Get the schemes to work in the Windows paths as well
+In "filesystem": convert to "[]" array notation (PHP 5.4+) in the Lens tests directory
+In "filesystem": Move "Paths\Path" to "Path"?
+In "filesystem": Allow the "Directory" to write an array (filled with directories and files)?
+In "filesystem": Path::fromString('./directory', $pathObject); ?? # then remove "$filesystem->getPath(...)"
+In "filesystem": Add "Absolute" and "Relative" interfaces?
+In "filesystem": Allow relative paths when creating a "File" or "Directory" (use the current working directory as the base path)
+In "filesystem": Convert "Atoms" to "Components"
+In "filesystem": Convert Windows "drive" to "prefix" (See: https://doc.rust-lang.org/std/path/enum.Prefix.html)
+
+------
+
+Before: "new Object(); // return null;"
+After: "new Object();"
+
+------
+
+Replace YAML library (so the build process won't need such modifications)
+
+---
+
+QA Testing:
+ * Try all commands on Linux, Mac, and Windows
+ * Try all commands with "fork" and "shell" engines
+ * Try Lens with xdebug both enabled and disabled
+ * Try the simple test
+ * Try all of the web examples from the Lens guide
+
+Website: Re-enable the Google analytics script
+Watch the Packagist download counter.
+
+---
+
+Build: When creating the example zip files, convert tabs to spaces.
+
+---
+
+Absorb the is-xdebug-disabled code from the "Web" class
+Delete the "Web" class
+
+Get code coverage to work with functions (idea: wrap in class, use "eval")
+
+Clear the cache when upgrading
+Clear the cache when the PHP version changes
+Clear the cache when the autoload file changes
+Allow the user to autoload files that are only used during testing
+In "settings.yml", regenerate the cache when "mockClasses" or "mockFunctions" has changed
+
+When running Lens with no tests, display an error message? (Right now: you see only whitespace)
+
+---
+
+In "regular-expressions": clean up everything
+In "parser": Make the parsing fast (or use a third-party parser?)
+
+
+=== Product Backlog ===
+
+Allow an empty "// Output" section at the end of a tests file
+In a tests file, when scripting a constructor, this correct code is pretty confusing: "$options = new Config\Options(); // return null;"
+Support all types of use statements
+Support the "splat" operator in mocks
+Mock class constants and public properties
+Increase the parsing speed, so the initial cache building will finish more quickly
+In the "TextReport" output, display the variable name that contains a resource value (e.g. "feof(resource(stream));" => "feof($a);")
+Use the expected variable names in pass-by-reference function calls (not the variable names from the source-code declaration) (e.g. "exec('zpool status 2> /dev/null', $output, $return_value); // $output = array(); $return_value = 0; return null;")
+Cache test results
+When checking the pass/fail status of a test, make sure that the correct resources were used (i.e. take the resource IDs into account)
+Give user awareness when Lens is being very slow (e.g. when building a cache)
+
+--- Ideas ---
+
+Display better error messages when the script is invalid (e.g. "file_exists('/tmp'); // return true"  <-- missing semicolon)
+Allow any "// Output" variables to be used in a script action?
+Fork the telemetry call (so a slow network, or a slow web server, won't cause Lens to stall)
+
+======
+Mock private methods
+------
+Levels of testing:
+
+ 1. User testing (end-to-end behavior: user contract)
+ 2. Unit testing (public interfaces: developer contract)
+ 3. Private methods (entire codebase)
+======
+
+======
+Start the unit test in a known state (including private properties)
+------
+$person = <Person
+    name: 'David Block'
+    ssn: '...'
+    age: ...
+>
+
+$person->method();
+====== 
