@@ -8,6 +8,6 @@ class Database
 {
 	public function getDrivers()
 	{
-		return PDO::getAvailableDrivers();
+		PDO::getAvailableDrivers();
 	}
 }

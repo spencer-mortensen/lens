@@ -6,13 +6,13 @@ use PDO;
 
 // Test
 $database = new Database();
-$drivers = $database->getDrivers();
+$database->getDrivers();
 
 // Effect
-$drivers = PDO::getAvailableDrivers(); // return [];
+PDO::getAvailableDrivers(); // return [];
 
 // Effect
-$drivers = PDO::getAvailableDrivers(); // return ['mysql'];
+PDO::getAvailableDrivers(); // return ['mysql'];
 
 // Effect
-$drivers = PDO::getAvailableDrivers(); // return ['mysql', 'sqlite'];
+PDO::getAvailableDrivers(); // return ['mysql', 'sqlite'];
