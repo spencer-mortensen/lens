@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-namespace Lens_0_0_57\Lens;
+namespace _Lens\Lens;
 
 require dirname(__DIR__) . '/lens/autoload.php';
 

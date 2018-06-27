@@ -312,8 +312,17 @@ class Semantics
 		'stream_wrapper_unregister' => 'stream_wrapper_unregister',
 
 		// Miscellaneous
+		'error_clear_last' => 'error_clear_last',
+		'error_get_last' => 'error_get_last',
+		'register_shutdown_function' => 'register_shutdown_function',
+		'register_tick_function' => 'register_tick_function',
+		'restore_error_handler' => 'restore_error_handler',
+		'restore_exception_handler' => 'restore_exception_handler',
+		'set_error_handler' => 'set_error_handler',
+		'set_exception_handler' => 'set_exception_handler',
 		'sleep' => 'sleep',
 		'time_nanosleep' => 'time_nanosleep',
+		'unregister_tick_function' => 'unregister_tick_function',
 		'usleep' => 'usleep'
 	];
 

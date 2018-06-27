@@ -107,7 +107,7 @@ class Sanitizer
 		list($type, $position, $value) = $token;
 
 		switch ($type) {
-			default: // ClassParser::TYPE_CLASS
+			default: // CallParser::TYPE_CLASS
 				$this->analyzeClass($namespacing, $position, $value, $edits);
 				break;
 
