@@ -33,7 +33,7 @@ class LensVersion implements Command
 	private $arguments;
 
 	/** @var string */
-	const VERSION = '0.0.58';
+	const VERSION = '0.0.59';
 
 	public function __construct(Arguments $arguments)
 	{
