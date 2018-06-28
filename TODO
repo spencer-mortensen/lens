@@ -13,11 +13,9 @@ In "filesystem": Convert Windows "drive" to "prefix" (See: https://doc.rust-lang
 Before: "new Object(); // return null;"
 After: "new Object();"
 
+In the "exceptions" project, switch over to the Composer autoloader
+
 ------
-
-Replace YAML library (so the build process won't need such modifications)
-
----
 
 QA Testing:
  * Try all commands on Linux, Mac, and Windows
@@ -31,6 +29,8 @@ Watch the Packagist download counter.
 
 ---
 
+Replace YAML library
+Update the "parser" dependency
 Build: When creating the example zip files, convert tabs to spaces.
 
 ---
