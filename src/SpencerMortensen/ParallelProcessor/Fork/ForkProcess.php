@@ -25,12 +25,12 @@
 
 namespace _Lens\SpencerMortensen\ParallelProcessor\Fork;
 
+use Error;
 use Exception;
 use _Lens\SpencerMortensen\ParallelProcessor\ProcessorException;
 use _Lens\SpencerMortensen\ParallelProcessor\ClientProcess;
 use _Lens\SpencerMortensen\ParallelProcessor\Stream\Stream;
 use _Lens\SpencerMortensen\ParallelProcessor\ServerProcess;
-use Throwable;
 
 class ForkProcess extends ServerProcess implements ClientProcess
 {
@@ -80,9 +80,9 @@ class ForkProcess extends ServerProcess implements ClientProcess
 			$this->a->close();
 			$this->b->write($message);
 			$this->b->close();
-		} catch (Throwable $throwable) {
-			exit(1);
 		} catch (Exception $exception) {
+			exit(1);
+		} catch (Error $error) {
 			exit(1);
 		}
 

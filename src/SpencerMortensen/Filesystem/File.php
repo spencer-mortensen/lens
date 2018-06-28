@@ -27,7 +27,8 @@ namespace _Lens\SpencerMortensen\Filesystem;
 
 use ErrorException;
 use InvalidArgumentException;
-use _Lens\SpencerMortensen\Filesystem\Exceptions\ResultException;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
+use _Lens\SpencerMortensen\Exceptions\ResultException;
 use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class File
@@ -53,9 +54,12 @@ class File
 			return null;
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$contents = file_get_contents($path);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$contents = file_get_contents($path);
+		} finally {
+			Exceptions::off();
+		}
 
 		if (!is_string($contents)) {
 			throw new ResultException('file_get_contents', [$path], $contents);
@@ -77,9 +81,12 @@ class File
 			$parent->write();
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$writtenBytes = file_put_contents($path, $value);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$writtenBytes = file_put_contents($path, $value);
+		} finally {
+			Exceptions::off();
+		}
 
 		$totalBytes = strlen($value);
 
@@ -104,9 +111,12 @@ class File
 			throw new ErrorException("There is already a file at the destination path.");
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isMoved = rename($oldPathString, $newPathString);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$isMoved = rename($oldPathString, $newPathString);
+		} finally {
+			Exceptions::off();
+		}
 
 		if ($isMoved !== true) {
 			throw new ResultException('rename', [$oldPathString, $newPathString], $isMoved);
@@ -123,9 +133,12 @@ class File
 			return;
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isDeleted = unlink($path);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$isDeleted = unlink($path);
+		} finally {
+			Exceptions::off();
+		}
 
 		if ($isDeleted !== true) {
 			throw new ResultException('unlink', [$path], $isDeleted);
@@ -136,22 +149,17 @@ class File
 	{
 		$path = (string)$this->path;
 
-		set_error_handler(__CLASS__ . '::onError');
-		$time = filemtime($path);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$time = filemtime($path);
+		} finally {
+			Exceptions::off();
+		}
 
 		if (!is_int($time)) {
 			throw new ResultException('filemtime', [$path], $time);
 		}
 
 		return $time;
-	}
-
-	protected static function onError($level, $message, $file, $line)
-	{
-		$message = trim($message);
-		$code = null;
-
-		throw new ErrorException($message, $code, $level, $file, $line);
 	}
 }

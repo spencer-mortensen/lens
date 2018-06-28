@@ -34,6 +34,7 @@ use _Lens\Lens\Settings;
 use _Lens\Lens\Cache\CacheBuilder;
 use _Lens\Lens\Tests\TestsRunner;
 use _Lens\Lens\Url;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
 use _Lens\SpencerMortensen\RegularExpressions\Re;
@@ -206,11 +207,11 @@ class LensRunner implements Command
 		$url = Url::LENS_CHECK_FOR_UPDATES;
 		$query = http_build_query($data);
 
-		set_error_handler(function () {});
+		Exceptions::on(function () {});
 
 		$latestVersion = file_get_contents("{$url}?{$query}");
 
-		restore_error_handler();
+		Exceptions::off();
 
 		if ($latestVersion === false) {
 			return false;

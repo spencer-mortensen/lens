@@ -26,7 +26,8 @@
 namespace _Lens\SpencerMortensen\Filesystem;
 
 use ErrorException;
-use _Lens\SpencerMortensen\Filesystem\Exceptions\ResultException;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
+use _Lens\SpencerMortensen\Exceptions\ResultException;
 use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 use _Lens\SpencerMortensen\Filesystem\Paths\PosixPath;
 use _Lens\SpencerMortensen\Filesystem\Paths\WindowsPath;
@@ -64,9 +65,12 @@ class Filesystem
 	 */
 	public function getCurrentDirectoryPath()
 	{
-		set_error_handler(__CLASS__ . '::onError');
-		$cwd = getcwd();
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$cwd = getcwd();
+		} finally {
+			Exceptions::off();
+		}
 
 		if (!is_string($cwd)) {
 			throw new ResultException('getcwd', [], $cwd);
@@ -79,41 +83,36 @@ class Filesystem
 	{
 		$pathString = (string)$path;
 
-		set_error_handler(__CLASS__ . '::onError');
-		$exists = file_exists($pathString);
-		restore_error_handler();
-
-		return $exists;
+		try {
+			Exceptions::on();
+			return file_exists($pathString);
+		} finally {
+			Exceptions::off();
+		}
 	}
 
 	public function isDirectory(Path $path)
 	{
 		$pathString = (string)$path;
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isDirectory = is_dir($pathString);
-		restore_error_handler();
-
-		return $isDirectory;
+		try {
+			Exceptions::on();
+			return is_dir($pathString);
+		} finally {
+			Exceptions::off();
+		}
 	}
 
 	public function isFile(Path $path)
 	{
 		$pathString = (string)$path;
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isFile = is_file($pathString);
-		restore_error_handler();
-
-		return $isFile;
-	}
-
-	protected static function onError($level, $message, $file, $line)
-	{
-		$message = trim($message);
-		$code = null;
-
-		throw new ErrorException($message, $code, $level, $file, $line);
+		try {
+			Exceptions::on();
+			return is_file($pathString);
+		} finally {
+			Exceptions::off();
+		}
 	}
 
 	/// FLUFF: ///

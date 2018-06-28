@@ -2,9 +2,9 @@
 
 namespace _Lens\SpencerMortensen\ParallelProcessor;
 
+use Error;
 use Exception;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
-use Throwable;
 
 class Message
 {
@@ -22,19 +22,16 @@ class Message
 
 	public static function deserialize($serialized)
 	{
-		Exceptions::on();
-
 		try {
+			Exceptions::on();
 			$data = unserialize($serialized);
-		} catch (Throwable $throwable) {
-			Exceptions::off();
-			throw ProcessorException::invalidMessage($serialized);
 		} catch (Exception $exception) {
-			Exceptions::off();
 			throw ProcessorException::invalidMessage($serialized);
+		} catch (Error $error) {
+			throw ProcessorException::invalidMessage($serialized);
+		} finally {
+			Exceptions::off();
 		}
-
-		Exceptions::off();
 
 		if (!is_array($data) || (count($data) === 0)) {
 			throw ProcessorException::invalidMessage($serialized);
@@ -46,7 +43,7 @@ class Message
 			return $value;
 		}
 
-		if (($value instanceof Throwable) || ($value instanceof Exception)) {
+		if (($value instanceof Exception) || ($value instanceof Error)) {
 			throw $value;
 		}
 

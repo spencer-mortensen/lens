@@ -51,24 +51,22 @@ class Lens
 	// lens --internal-source=... # generate the source-code cache (private)
 	public function __construct()
 	{
-		Exceptions::on([$this, 'onError']);
+		$this->logger = new Logger('lens');
+		$this->arguments = new Arguments();
 
 		try {
-			$this->logger = new Logger('lens');
-			$this->arguments = new Arguments();
+			Exceptions::on();
+			Exceptions::setHandler([$this, 'onError']);
 
 			if (!$this->run($stdout, $stderr, $exitCode)) {
 				throw LensException::usage();
 			}
-		} catch (Exception $exception) {
-			list($stdout, $stderr, $exitCode) = $this->handleException($exception);
-		} catch (Error $exception) {
-			list($stdout, $stderr, $exitCode) = $this->handleException($exception);
+
+			$this->send($stdout, $stderr, $exitCode);
+		} finally {
+			Exceptions::unsetHandler();
+			Exceptions::off();
 		}
-
-		Exceptions::off();
-
-		$this->send($stdout, $stderr, $exitCode);
 	}
 
 	private function run(&$stdout, &$stderr, &$exitCode)
@@ -128,24 +126,15 @@ class Lens
 	 */
 	public function onError($exception)
 	{
-		list($stdout, $stderr, $exitCode) = $this->handleException($exception);
-
-		$this->send($stdout, $stderr, $exitCode);
-	}
-
-	/**
-	 * @param Exception|Error $exception
-	 * @return array
-	 */
-	private function handleException($exception)
-	{
 		if (!($exception instanceof LensException)) {
 			$exception = LensException::exception($exception);
 		}
 
 		$this->logException($exception);
 
-		return $this->getOutput($exception);
+		list($stdout, $stderr, $exitCode) = $this->getOutput($exception);
+
+		$this->send($stdout, $stderr, $exitCode);
 	}
 
 	private function logException(LensException $exception)

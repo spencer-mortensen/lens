@@ -25,6 +25,8 @@
 
 namespace _Lens\Lens\Jobs;
 
+use Error;
+use Exception;
 use _Lens\Lens\Tests\Test;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Filesystem\Paths\Path;
@@ -122,13 +124,14 @@ class TestJob implements Job
 			$process->sendResult($result);
 		};
 
-		Exceptions::on($sendResult);
+		try {
+			Exceptions::setHandler($sendResult);
 
-		$test->run($this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
-
-		Exceptions::off();
-
-		call_user_func($sendResult);
+			$test->run($this->contextPhp, $this->prePhp, $this->postPhp, $this->script, $this->mockClasses, $this->isActual);
+			call_user_func($sendResult);
+		} finally {
+			Exceptions::unsetHandler();
+		}
 	}
 
 	public function stop($message)

@@ -25,9 +25,9 @@
 
 namespace _Lens\SpencerMortensen\ParallelProcessor;
 
+use Error;
 use Exception;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
-use Throwable;
 
 abstract class ServerProcess
 {
@@ -44,18 +44,19 @@ abstract class ServerProcess
 
 	public function run()
 	{
-		Exceptions::on([$this, 'sendError']);
-
 		try {
+			Exceptions::setHandler([$this, 'sendError']);
+			Exceptions::on();
 			$result = $this->job->start();
 			$this->sendResult($result);
-		} catch (Throwable $throwable) {
-			$this->sendError($throwable);
 		} catch (Exception $exception) {
 			$this->sendError($exception);
+		} catch (Error $error) {
+			$this->sendError($error);
+		} finally {
+			Exceptions::off();
+			Exceptions::unsetHandler();
 		}
-
-		Exceptions::off();
 	}
 
 	public function sendResult($result)

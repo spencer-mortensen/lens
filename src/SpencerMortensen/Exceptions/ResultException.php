@@ -1,29 +1,29 @@
 <?php
 
 /**
- * Copyright (C) 2018 Spencer Mortensen
+ * Copyright (C) 2017 Spencer Mortensen
  *
- * This file is part of Filesystem.
+ * This file is part of Exceptions.
  *
- * Filesystem is free software: you can redistribute it and/or modify
+ * Exceptions is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Filesystem is distributed in the hope that it will be useful,
+ * Exceptions is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with Filesystem. If not, see <http://www.gnu.org/licenses/>.
+ * along with Exceptions. If not, see <http://www.gnu.org/licenses/>.
  *
  * @author Spencer Mortensen <spencer@lens.guide>
  * @license http://www.gnu.org/licenses/lgpl-3.0.html LGPL-3.0
- * @copyright 2018 Spencer Mortensen
+ * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\SpencerMortensen\Filesystem\Exceptions;
+namespace _Lens\SpencerMortensen\Exceptions;
 
 use ErrorException;
 use ReflectionClass;
@@ -56,7 +56,7 @@ class ResultException extends ErrorException
 		$argumentsText = $this->getListText($arguments);
 		$resultText = $this->getValueText($result);
 
-		return "Unexpected result: {$function}({$argumentsText}): {$resultText}";
+		return "Unexpected result: {$function}({$argumentsText}) returned {$resultText}";
 	}
 
 	private function getValueText($argument)

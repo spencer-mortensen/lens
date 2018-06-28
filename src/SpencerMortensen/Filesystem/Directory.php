@@ -26,7 +26,8 @@
 namespace _Lens\SpencerMortensen\Filesystem;
 
 use ErrorException;
-use _Lens\SpencerMortensen\Filesystem\Exceptions\ResultException;
+use _Lens\SpencerMortensen\Exceptions\Exceptions;
+use _Lens\SpencerMortensen\Exceptions\ResultException;
 use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class Directory
@@ -70,21 +71,23 @@ class Directory
 	{
 		$contents = [];
 
-		set_error_handler(__CLASS__ . '::onError');
+		try {
+			Exceptions::on();
 
-		$directory = opendir($directoryPath);
+			$directory = opendir($directoryPath);
 
-		for ($childName = readdir($directory); $childName !== false; $childName = readdir($directory)) {
-			if (($childName === '.') || ($childName === '..')) {
-				continue;
+			for ($childName = readdir($directory); $childName !== false; $childName = readdir($directory)) {
+				if (($childName === '.') || ($childName === '..')) {
+					continue;
+				}
+
+				$contents[] = $childName;
 			}
 
-			$contents[] = $childName;
+			closedir($directory);
+		} finally {
+			Exceptions::off();
 		}
-
-		closedir($directory);
-
-		restore_error_handler();
 
 		return $contents;
 	}
@@ -108,9 +111,12 @@ class Directory
 			return;
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isCreated = mkdir($path, self::$mode, true);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$isCreated = mkdir($path, self::$mode, true);
+		} finally {
+			Exceptions::off();
+		}
 
 		if ($isCreated !== true) {
 			throw new ResultException('mkdir', [$path, self::$mode, true], $isCreated);
@@ -132,9 +138,12 @@ class Directory
 			throw new ErrorException("There is already a file at the destination path.");
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isMoved = rename($oldPathString, $newPathString);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$isMoved = rename($oldPathString, $newPathString);
+		} finally {
+			Exceptions::off();
+		}
 
 		if ($isMoved !== true) {
 			throw new ResultException('rename', [$oldPathString, $newPathString], $isMoved);
@@ -157,9 +166,12 @@ class Directory
 			$child->delete();
 		}
 
-		set_error_handler(__CLASS__ . '::onError');
-		$isDeleted = rmdir($path);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$isDeleted = rmdir($path);
+		} finally {
+			Exceptions::off();
+		}
 
 		if ($isDeleted !== true) {
 			throw new ResultException('rmdir', [$path], $isDeleted);
@@ -170,22 +182,17 @@ class Directory
 	{
 		$path = (string)$this->path;
 
-		set_error_handler(__CLASS__ . '::onError');
-		$time = filemtime($path);
-		restore_error_handler();
+		try {
+			Exceptions::on();
+			$time = filemtime($path);
+		} finally {
+			Exceptions::off();
+		}
 
 		if (!is_int($time)) {
 			throw new ResultException('filemtime', [$path], $time);
 		}
 
 		return $time;
-	}
-
-	protected static function onError($level, $message, $file, $line)
-	{
-		$message = trim($message);
-		$code = null;
-
-		throw new ErrorException($message, $code, $level, $file, $line);
 	}
 }

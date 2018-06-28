@@ -41,6 +41,12 @@ class Examiner
 	/** @var array */
 	private $state;
 
+	/** @var callable */
+	private $errorHandler;
+
+	/** @var callable */
+	private $fatalErrorHandler;
+
 	public function __construct()
 	{
 		self::unsetGlobals();
@@ -54,28 +60,23 @@ class Examiner
 			'exception' => null,
 			'errors' => null
 		];
+
+		$this->errorHandler = [$this, 'onError'];
+		$this->fatalErrorHandler = [$this, 'onFatalError'];
 	}
 
 	public function run($code)
+	{
+		$this->code = $code;
+		$this->evaluateCode();
+	}
+
+	private function evaluateCode()
 	{
 		if (!$this->isUsable) {
 			return;
 		}
 
-		$this->code = $code;
-
-		$onFatalError =  [$this, 'onFatalError'];
-		$onError = [$this, 'onError'];
-
-		Exceptions::on($onFatalError, $onError);
-
-		$this->evaluateCode();
-
-		Exceptions::off();
-	}
-
-	private function evaluateCode()
-	{
 		$this->state['exception'] = null;
 		$this->state['errors'] = [];
 
@@ -83,6 +84,9 @@ class Examiner
 		ob_start();
 
 		try {
+			Exceptions::setHandler($this->fatalErrorHandler);
+			Exceptions::on($this->errorHandler);
+
 			eval($this->code);
 		} catch (Exception $LENS_EXCEPTION) {
 			$this->isUsable = false;
@@ -92,6 +96,9 @@ class Examiner
 			$this->isUsable = false;
 			$this->state['exception'] = $LENS_EXCEPTION;
 			unset($LENS_EXCEPTION);
+		} finally {
+			Exceptions::off();
+			Exceptions::unsetHandler();
 		}
 
 		$this->state['variables'] = get_defined_vars();

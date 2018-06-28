@@ -95,20 +95,21 @@ class Test
 		$this->script = $script;
 
 		$prePhp = Code::combine($contextPhp, $prePhp);
-		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		if ($this->cache !== null) {
-			$autoloader = new Autoloader($this->filesystem, $this->core, $this->cache, $mockClasses);
-			$autoloader->enable();
+		try {
+			Exceptions::setHandler([$this, 'prePhp']);
+
+			Agent::start($contextPhp, $this->script);
+
+			if ($this->cache !== null) {
+				$autoloader = new Autoloader($this->filesystem, $this->core, $this->cache, $mockClasses);
+				$autoloader->enable();
+			}
+
+			$this->examiner->run($prePhp);
+		} finally {
+			Exceptions::unsetHandler();
 		}
-
-		Agent::start($contextPhp, $this->script);
-
-		Exceptions::on([$this, 'prePhp']);
-
-		$this->examiner->run($prePhp);
-
-		Exceptions::off();
 
 		$this->prePhp();
 
@@ -116,16 +117,20 @@ class Test
 			return;
 		}
 
-		Exceptions::on([$this, 'postPhp']);
+		$postPhp = Code::combine($contextPhp, $postPhp);
 
-		if ($isActual && isset($autoloader)) {
-			$autoloader->enableLiveMode();
-			$this->startCoverage();
+		try {
+			Exceptions::setHandler([$this, 'postPhp']);
+
+			if ($isActual && isset($autoloader)) {
+				$autoloader->enableLiveMode();
+				$this->startCoverage();
+			}
+
+			$this->examiner->run($postPhp);
+		} finally {
+			Exceptions::unsetHandler();
 		}
-
-		$this->examiner->run($postPhp);
-
-		Exceptions::off();
 
 		$this->postPhp();
 	}
