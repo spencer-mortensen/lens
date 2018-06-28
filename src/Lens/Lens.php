@@ -54,19 +54,14 @@ class Lens
 		$this->logger = new Logger('lens');
 		$this->arguments = new Arguments();
 
-		try {
-			Exceptions::on();
-			Exceptions::setHandler([$this, 'onError']);
+		Exceptions::setHandler([$this, 'onError']);
+		Exceptions::on();
 
-			if (!$this->run($stdout, $stderr, $exitCode)) {
-				throw LensException::usage();
-			}
-
-			$this->send($stdout, $stderr, $exitCode);
-		} finally {
-			Exceptions::unsetHandler();
-			Exceptions::off();
+		if (!$this->run($stdout, $stderr, $exitCode)) {
+			throw LensException::usage();
 		}
+
+		$this->send($stdout, $stderr, $exitCode);
 	}
 
 	private function run(&$stdout, &$stderr, &$exitCode)

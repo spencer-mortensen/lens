@@ -56,14 +56,14 @@ class LensTest implements Command
 		$arguments = unserialize($decompressed);
 
 		$executable = $this->arguments->getExecutable();
-		list($lensCoreString, $cacheString, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual) = $arguments;
+		list($coreString, $cacheString, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual) = $arguments;
 
 		// TODO: dependency injection?
 		$filesystem = new Filesystem();
-		$lensCore = $filesystem->getPath($lensCoreString);
+		$core = $filesystem->getPath($coreString);
 		$cache = $filesystem->getPath($cacheString);
 
-		$job = new TestJob($executable, $lensCore, $cache, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual, $process, $preState, $postState, $coverage);
+		$job = new TestJob($executable, $core, $cache, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual, $process, $preState, $postState, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();
