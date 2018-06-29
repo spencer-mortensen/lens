@@ -169,7 +169,7 @@ class Sanitizer
 			$this->getCoreMockPath($function, $pathPhp) ||
 			$this->getUserPath($function, $pathPhp);
 
-			$lines[] = Code::getRequireOncePhp($pathPhp);
+			$lines[] = Code::getConditionalRequireOnce($pathPhp);
 		}
 
 		return implode("\n", $lines);

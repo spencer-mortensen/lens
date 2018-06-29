@@ -13,46 +13,55 @@ In "filesystem": Convert Windows "drive" to "prefix" (See: https://doc.rust-lang
 Before: "new Object(); // return null;"
 After: "new Object();"
 
-In the "exceptions" project, switch over to the Composer autoloader
+------
+
+Add clover reports (for "codecov" integration)
 
 ------
 
-QA Testing:
- * Try all commands on Linux, Mac, and Windows
- * Try all commands with "fork" and "shell" engines
- * Try Lens with xdebug both enabled and disabled
- * Try the simple test
- * Try all of the web examples from the Lens guide
+Consider the mock/live decision algorithm (currently very fragile)
 
-Website: Re-enable the Google analytics script
-Watch the Packagist download counter.
-
----
-
-Replace YAML library
-Update the "parser" dependency
-Build: When creating the example zip files, convert tabs to spaces.
-
----
-
-Absorb the is-xdebug-disabled code from the "Web" class
-Delete the "Web" class
-
-Get code coverage to work with functions (idea: wrap in class, use "eval")
+------
 
 Clear the cache when upgrading
 Clear the cache when the PHP version changes
 Clear the cache when the autoload file changes
 Allow the user to autoload files that are only used during testing
-In "settings.yml", regenerate the cache when "mockClasses" or "mockFunctions" has changed
 
+======
+
+QA Testing:
+ * Try all of the web examples from the Lens guide
+ * Try all commands on Linux, Mac, and Windows
+ * Try all commands with "fork" and "shell" engines
+ * Try Lens with xdebug both enabled and disabled
+ * Try the simple test
+ * Try the Composer autoloader
+
+Website: Re-enable the Google analytics script
+Watch the Packagist download counter.
+
+======
+
+Attend sales demo with Ian Gillespie
+Arrange lunch with Matt Richards
+
+Absorb the is-xdebug-disabled code from the "Web" class
+Delete the "Web" class
+
+------
+
+Get code coverage to work with functions (idea: wrap in class, use "eval")
 When running Lens with no tests, display an error message? (Right now: you see only whitespace)
 
 ---
 
+Replace YAML library
+Update the "parser" dependency
+In "html": update the unit tests
 In "regular-expressions": clean up everything
 In "parser": Make the parsing fast (or use a third-party parser?)
-
+Build: When creating the example zip files, convert tabs to spaces.
 
 === Product Backlog ===
 

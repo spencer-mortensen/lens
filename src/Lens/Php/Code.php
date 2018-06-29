@@ -42,9 +42,9 @@ class Code
 		return self::getIncludeStatement('require', $filePhp);
 	}
 
-	public static function getRequireOncePhp($filePhp)
+	public static function getConditionalRequireOnce($filePhp)
 	{
-		return self::getIncludeStatement('require_once', $filePhp);
+		return "if (file_exists({$filePhp})) { require_once {$filePhp}; };";
 	}
 
 	private static function getIncludeStatement($keyword, $filePhp)
@@ -112,6 +112,11 @@ class Code
 	{
 		$sections = func_get_args();
 		$sections = array_filter($sections, 'is_string');
+
+		if (count($sections) === 0) {
+			return null;
+		}
+
 		return implode("\n\n", $sections);
 	}
 }
