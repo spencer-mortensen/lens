@@ -82,6 +82,7 @@ Give user awareness when Lens is being very slow (e.g. when building a cache)
 Display better error messages when the script is invalid (e.g. "file_exists('/tmp'); // return true"  <-- missing semicolon)
 Allow any "// Output" variables to be used in a script action?
 Fork the telemetry call (so a slow network, or a slow web server, won't cause Lens to stall)
+PhpStorm plugin: https://medium.com/@crocodile2u/running-phpunit-tests-in-phpstorm-7d486221e71a
 
 ======
 Mock private methods
