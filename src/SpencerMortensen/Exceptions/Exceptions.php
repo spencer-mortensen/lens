@@ -55,6 +55,10 @@ class Exceptions
 
 	public static function unsetHandler()
 	{
+		if (count(self::$handlers) === 0) {
+			return;
+		}
+
 		array_pop(self::$handlers);
 
 		if ((count(self::$handlers) === 0) && (self::$errorReportingLevel !== null)) {
@@ -87,7 +91,7 @@ class Exceptions
 
 	public static function onException($exception)
 	{
-		if (self::$handlers === null) {
+		if (count(self::$handlers) === 0) {
 			return;
 		}
 
