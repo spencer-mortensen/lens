@@ -30,7 +30,7 @@ use _Lens\Lens\Php\Code;
 use _Lens\Lens\Xdebug;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class Test
@@ -280,7 +280,7 @@ class Test
 	private function getRelativePath($file)
 	{
 		$relativePath = $this->cache->getRelativePath(substr($file, 0, -4));
-		$atoms = $relativePath->getAtoms();
-		return implode('\\', $atoms);
+		$components = $relativePath->getComponents();
+		return implode('\\', $components);
 	}
 }

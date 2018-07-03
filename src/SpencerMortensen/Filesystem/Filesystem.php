@@ -25,40 +25,11 @@
 
 namespace _Lens\SpencerMortensen\Filesystem;
 
-use ErrorException;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Exceptions\ResultException;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
-use _Lens\SpencerMortensen\Filesystem\Paths\PosixPath;
-use _Lens\SpencerMortensen\Filesystem\Paths\WindowsPath;
 
 class Filesystem
 {
-	/** @var bool */
-	private $usePosix;
-
-	public function __construct($usePosix = null)
-	{
-		if (!is_bool($usePosix)) {
-			$usePosix = (DIRECTORY_SEPARATOR !== '\\');
-		}
-
-		$this->usePosix = $usePosix;
-	}
-
-	/**
-	 * @param $string
-	 * @return Path
-	 */
-	public function getPath($string)
-	{
-		if ($this->usePosix) {
-			return PosixPath::fromString($string);
-		}
-
-		return WindowsPath::fromString($string);
-	}
-
 	/**
 	 * @return Path
 	 * @throws ResultException
@@ -76,7 +47,7 @@ class Filesystem
 			throw new ResultException('getcwd', [], $cwd);
 		}
 
-		return $this->getPath($cwd);
+		return Path::fromString($cwd);
 	}
 
 	public function exists(Path $path)
@@ -113,28 +84,5 @@ class Filesystem
 		} finally {
 			Exceptions::off();
 		}
-	}
-
-	/// FLUFF: ///
-
-	public function getDirectory($string)
-	{
-		$path = $this->getPath($string);
-
-		return new Directory($path);
-	}
-
-	public function getFile($string)
-	{
-		$path = $this->getPath($string);
-
-		return new File($path);
-	}
-
-	public function getCurrentDirectory()
-	{
-		$path = $this->getCurrentDirectoryPath();
-
-		return new Directory($path);
 	}
 }

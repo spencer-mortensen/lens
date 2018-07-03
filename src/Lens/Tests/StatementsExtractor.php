@@ -101,8 +101,9 @@ class StatementsExtractor
 			return false;
 		}
 
+		// TODO: handle "public function add(...$arguments)"
 		// TODO: handle "use Flier;" statements (these are always executed)
-		// TODO: handle "abstract" and "final" classes:
+		// TODO: handle "abstract" and "final" classes (e.g. "abstract class Path")
 		if (substr($code, 0, 6) === 'class ') {
 			return false;
 		}

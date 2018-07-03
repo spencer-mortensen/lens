@@ -27,7 +27,7 @@ namespace _Lens\Lens\Commands;
 
 use _Lens\Lens\Arguments;
 use _Lens\Lens\Jobs\CacheJob;
-use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensSource implements Command
@@ -58,12 +58,11 @@ class LensSource implements Command
 		$executable = $this->arguments->getExecutable();
 		list($coreString, $projectString, $srcString, $autoloadString, $cacheString, $mockFunctions) = $arguments;
 
-		$filesystem = new Filesystem();
-		$core = $filesystem->getPath($coreString);
-		$project = $filesystem->getPath($projectString);
-		$src = $filesystem->getPath($srcString);
-		$autoload = $filesystem->getPath($autoloadString);
-		$cache = $filesystem->getPath($cacheString);
+		$core = Path::fromString($coreString);
+		$project = Path::fromString($projectString);
+		$src = Path::fromString($srcString);
+		$autoload = Path::fromString($autoloadString);
+		$cache = Path::fromString($cacheString);
 
 		$job = new CacheJob($executable, $core, $project, $src, $autoload, $cache, $mockFunctions);
 		$process = new ShellServerProcess($job);

@@ -28,21 +28,21 @@ namespace _Lens\SpencerMortensen\Filesystem;
 use Exception;
 use InvalidArgumentException;
 
-class AtomicPath
+class CorePath
 {
 	/** @var boolean */
 	private $isAbsolute;
 
 	/** @var array */
-	private $atoms;
+	private $components;
 
 	/** @var string */
 	private $delimiter;
 
-	public function __construct($isAbsolute, array $atoms, $delimiter)
+	public function __construct($isAbsolute, array $components, $delimiter)
 	{
 		$this->isAbsolute = $isAbsolute;
-		$this->atoms = $atoms;
+		$this->components = $components;
 		$this->delimiter = $delimiter;
 	}
 
@@ -53,9 +53,9 @@ class AtomicPath
 		}
 
 		$isAbsolute = self::isStringAbsolute($delimiter, $path);
-		$atoms = self::getStringAtoms($delimiter, $isAbsolute, $path);
+		$components = self::getStringComponents($delimiter, $isAbsolute, $path);
 
-		return new self($isAbsolute, $atoms, $delimiter);
+		return new self($isAbsolute, $components, $delimiter);
 	}
 
 	private static function isStringAbsolute($delimiter, $string)
@@ -63,17 +63,17 @@ class AtomicPath
 		return $delimiter === substr($string, 0, 1);
 	}
 
-	private static function getStringAtoms($delimiter, $isAbsolute, $string)
+	private static function getStringComponents($delimiter, $isAbsolute, $string)
 	{
 		$input = explode($delimiter, $string);
 		$output = [];
 
-		self::appendAtoms($isAbsolute, $output, $input);
+		self::appendComponents($isAbsolute, $output, $input);
 
 		return $output;
 	}
 
-	private static function appendAtoms($isAbsolute, array &$output, array $input)
+	private static function appendComponents($isAbsolute, array &$output, array $input)
 	{
 		foreach ($input as $atom) {
 			if ((strlen($atom) === 0) || ($atom === '.')) {
@@ -100,14 +100,14 @@ class AtomicPath
 	public function __toString()
 	{
 		if ($this->isAbsolute) {
-			return $this->delimiter . implode($this->delimiter, $this->atoms);
+			return $this->delimiter . implode($this->delimiter, $this->components);
 		}
 
-		if (count($this->atoms) === 0) {
+		if (count($this->components) === 0) {
 			return '.';
 		}
 
-		return implode($this->delimiter, $this->atoms);
+		return implode($this->delimiter, $this->components);
 	}
 
 	public function isAbsolute()
@@ -115,54 +115,53 @@ class AtomicPath
 		return $this->isAbsolute;
 	}
 
-	public function getAtoms()
+	public function getComponents()
 	{
-		return $this->atoms;
+		return $this->components;
 	}
 
 	/**
-	 * @param AtomicPath[] $arguments
-	 * @return AtomicPath
+	 * @param CorePath[] $arguments
+	 * @return CorePath
 	 */
 	public function add(array $arguments)
 	{
 		$delimiter = $this->delimiter;
 		$isAbsolute = $this->isAbsolute;
-		$atoms = $this->atoms;
+		$components = $this->components;
 
 		foreach ($arguments as $argument) {
-			$argumentAtoms = $argument->getAtoms();
+			$argumentComponents = $argument->getComponents();
 
-			// TODO: add unit tests for this:
 			if ($argument->isAbsolute()) {
 				$isAbsolute = true;
-				$atoms = $argumentAtoms;
+				$components = $argumentComponents;
 			} else {
-				self::appendAtoms($isAbsolute, $atoms, $argumentAtoms);
+				self::appendComponents($isAbsolute, $components, $argumentComponents);
 			}
 		}
 
-		return new self($isAbsolute, $atoms, $delimiter);
+		return new self($isAbsolute, $components, $delimiter);
 	}
 
-	public function contains(AtomicPath $path)
+	public function contains(CorePath $path)
 	{
 		if (!$this->isAbsolute()) {
 			throw new Exception();
 		}
 
-		return $path->isAbsolute() && $this->isChildPath($this->atoms, $path->getAtoms());
+		return $path->isAbsolute() && $this->isChildPath($this->components, $path->getComponents());
 	}
 
-	private function isChildPath(array $aAtoms, array $bAtoms)
+	private function isChildPath(array $aComponents, array $bComponents)
 	{
-		$aCount = count($aAtoms);
-		$bCount = count($bAtoms);
+		$aCount = count($aComponents);
+		$bCount = count($bComponents);
 
-		return ($aCount < $bCount) && ($aAtoms === array_slice($bAtoms, 0, $aCount));
+		return ($aCount < $bCount) && ($aComponents === array_slice($bComponents, 0, $aCount));
 	}
 
-	public function getRelativePath(AtomicPath $path)
+	public function getRelativePath(CorePath $path)
 	{
 		if (!$this->isAbsolute()) {
 			throw new Exception();
@@ -175,19 +174,19 @@ class AtomicPath
 		$delimiter = $this->delimiter;
 		$isAbsolute = false;
 
-		$pathAtoms = $path->getAtoms();
-		$atoms = $this->getRelativeAtoms($this->atoms, $pathAtoms);
+		$pathComponents = $path->getComponents();
+		$components = $this->getRelativeComponents($this->components, $pathComponents);
 
-		return new self($isAbsolute, $atoms, $delimiter);
+		return new self($isAbsolute, $components, $delimiter);
 	}
 
-	private function getRelativeAtoms(array $aAtoms, array $bAtoms)
+	private function getRelativeComponents(array $aComponents, array $bComponents)
 	{
-		$aCount = count($aAtoms);
-		$bCount = count($bAtoms);
+		$aCount = count($aComponents);
+		$bCount = count($bComponents);
 
-		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aAtoms[$i] === $bAtoms[$i]); ++$i);
+		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aComponents[$i] === $bComponents[$i]); ++$i);
 
-		return array_merge(array_fill(0, $aCount - $i, '..'), array_slice($bAtoms, $i));
+		return array_merge(array_fill(0, $aCount - $i, '..'), array_slice($bComponents, $i));
 	}
 }

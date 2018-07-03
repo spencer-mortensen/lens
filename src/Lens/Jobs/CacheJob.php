@@ -26,7 +26,7 @@
 namespace _Lens\Lens\Jobs;
 
 use _Lens\Lens\Cache\Cache;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class CacheJob implements Job
 {

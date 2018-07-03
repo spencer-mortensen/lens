@@ -29,7 +29,7 @@ use _Lens\Lens\JsonFile;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class Watcher
 {
@@ -47,8 +47,6 @@ class Watcher
 
 	public function __construct(Filesystem $filesystem, Path $cachePath, Path $projectPath)
 	{
-		$this->filesystem = $filesystem;
-
 		$cacheFile = new JsonFile($cachePath);
 		$cacheData = $cacheFile->read();
 
@@ -80,12 +78,12 @@ class Watcher
 	private function getCachedDirectoryModifiedTimes(Path $directoryPath)
 	{
 		$path = $this->projectPath->getRelativePath($directoryPath);
-		$atoms = $path->getAtoms();
+		$components = $path->getComponents();
 
 		$cache = &$this->cacheData;
 
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
+		foreach ($components as $component) {
+			$cache = &$cache[$component];
 		}
 
 		if (!is_array($cache)) {
@@ -127,12 +125,12 @@ class Watcher
 	private function setCachedDirectoryModifiedTimes(Path $directoryPath, array $times)
 	{
 		$path = $this->projectPath->getRelativePath($directoryPath);
-		$atoms = $path->getAtoms();
+		$components = $path->getComponents();
 
 		$cache = &$this->cacheData;
 
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
+		foreach ($components as $component) {
+			$cache = &$cache[$component];
 		}
 
 		$cache = $times;
@@ -184,12 +182,12 @@ class Watcher
 	private function getCachedFileModifiedTime(Path $filePath)
 	{
 		$path = $this->projectPath->getRelativePath($filePath);
-		$atoms = $path->getAtoms();
+		$components = $path->getComponents();
 
 		$cache = &$this->cacheData;
 
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
+		foreach ($components as $component) {
+			$cache = &$cache[$component];
 		}
 
 		return $cache;
@@ -198,12 +196,12 @@ class Watcher
 	private function setCachedFileModifiedTime(Path $filePath, $time)
 	{
 		$path = $this->projectPath->getRelativePath($filePath);
-		$atoms = $path->getAtoms();
+		$components = $path->getComponents();
 
 		$cache = &$this->cacheData;
 
-		foreach ($atoms as $atom) {
-			$cache = &$cache[$atom];
+		foreach ($components as $component) {
+			$cache = &$cache[$component];
 		}
 
 		$cache = $time;

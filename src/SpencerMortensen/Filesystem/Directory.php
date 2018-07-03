@@ -28,7 +28,6 @@ namespace _Lens\SpencerMortensen\Filesystem;
 use ErrorException;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Exceptions\ResultException;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
 
 class Directory
 {
@@ -103,23 +102,53 @@ class Directory
 		return new File($childPath);
 	}
 
-	public function write()
+	public function write(array $contents = null)
 	{
-		$path = (string)$this->path;
+		if ($contents === null) {
+			$this->createDirectory($this->path);
+		} else {
+			$this->writeDirectory($this->path, $contents);
+		}
+	}
 
-		if (is_dir($path)) {
+	private function writeDirectory(Path $path, array $contents)
+	{
+		$this->createDirectory($path);
+
+		foreach ($contents as $childName => $childContents) {
+			$childPath = $path->add($childName);
+
+			if (is_array($childContents)) {
+				$this->writeDirectory($childPath, $childContents);
+			} else {
+				$this->writeFile($childPath, $childContents);
+			}
+		}
+	}
+
+	private function writeFile(Path $path, $contents)
+	{
+		$file = new File($path);
+		$file->write($contents);
+	}
+
+	public function createDirectory(Path $path)
+	{
+		$pathString = (string)$path;
+
+		if (is_dir($pathString)) {
 			return;
 		}
 
 		try {
 			Exceptions::on();
-			$isCreated = mkdir($path, self::$mode, true);
+			$isCreated = mkdir($pathString, self::$mode, true);
 		} finally {
 			Exceptions::off();
 		}
 
 		if ($isCreated !== true) {
-			throw new ResultException('mkdir', [$path, self::$mode, true], $isCreated);
+			throw new ResultException('mkdir', [$pathString, self::$mode, true], $isCreated);
 		}
 	}
 

@@ -28,7 +28,7 @@ namespace _Lens\Lens\Reports\Coverage;
 use _Lens\Lens\Citations;
 use _Lens\Lens\SourcePaths;
 use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class LinesAnalyzer
 {

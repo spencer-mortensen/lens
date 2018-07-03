@@ -27,8 +27,7 @@ namespace _Lens\Lens\Reports\Coverage;
 
 use _Lens\Lens\Citations;
 use _Lens\Lens\SourcePaths;
-use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class CoverageDataBuilder
 {
@@ -38,19 +37,15 @@ class CoverageDataBuilder
 	/** @var Path */
 	private $cache;
 
-	/** @var Filesystem */
-	private $filesystem;
-
-	public function __construct(Path $core, Path $cache, Filesystem $filesystem)
+	public function __construct(Path $core, Path $cache)
 	{
 		$this->core = $core;
 		$this->cache = $cache;
-		$this->filesystem = $filesystem;
 	}
 
 	public function build(array $executableStatements, array $results)
 	{
-		$sourcePaths = new SourcePaths($this->filesystem, $this->core, $this->cache);
+		$sourcePaths = new SourcePaths($this->core, $this->cache);
 		$citations = new Citations($this->cache);
 		$linesAnalyzer = new LinesAnalyzer($sourcePaths, $citations);
 		$executedStatementsAnalyzer = new ExecutedStatementsAnalyzer();

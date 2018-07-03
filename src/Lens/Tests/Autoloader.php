@@ -26,7 +26,7 @@
 namespace _Lens\Lens\Tests;
 
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\Lens\SourcePaths;
 
 class Autoloader
@@ -58,7 +58,7 @@ class Autoloader
 		$this->core = $core;
 		$this->cache = $cache;
 		$this->mockClasses = $mockClasses;
-		$this->sourcePaths = new SourcePaths($filesystem, $core, $cache);
+		$this->sourcePaths = new SourcePaths($core, $cache);
 		$this->depth = 0;
 		$this->mockDepth = null;
 	}

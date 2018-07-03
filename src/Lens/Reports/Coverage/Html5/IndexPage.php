@@ -32,18 +32,18 @@ class IndexPage implements Node
 	/** @var Node */
 	private $page;
 
-	public function __construct(array $directoryAtoms, array $baseAtoms, array $pageAtoms, array $links)
+	public function __construct(array $directoryComponents, array $baseComponents, array $pageComponents, array $links)
 	{
-		$title = $this->getTitle($directoryAtoms);
+		$title = $this->getTitle($directoryComponents);
 
-		$menu = new Breadcrumbs($baseAtoms, $pageAtoms);
+		$menu = new Breadcrumbs($baseComponents, $pageComponents);
 		$index = new Index($links);
-		$this->page = new Page($directoryAtoms, $title, $menu, $index);
+		$this->page = new Page($directoryComponents, $title, $menu, $index);
 	}
 
-	private function getTitle(array $pageAtoms)
+	private function getTitle(array $pageComponents)
 	{
-		return end($pageAtoms);
+		return end($pageComponents);
 	}
 
 	public function __toString()

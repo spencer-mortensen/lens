@@ -38,75 +38,75 @@ class CoverageFilesGenerator
 		$this->files = [];
 	}
 
-	public function generate(array $baseAtoms, array $contents)
+	public function generate(array $baseComponents, array $contents)
 	{
-		$pageAtoms = [];
+		$pageComponents = [];
 
-		$this->getName($baseAtoms, $pageAtoms, $contents, $tested, $testable);
+		$this->getName($baseComponents, $pageComponents, $contents, $tested, $testable);
 
 		return $this->files;
 	}
 
-	public function getName(array $baseAtoms, array $pageAtoms, array $pageContents, &$tested, &$testable)
+	public function getName(array $baseComponents, array $pageComponents, array $pageContents, &$tested, &$testable)
 	{
 		$tested = 0;
 		$testable = 0;
 		$links = [];
 
-		$isVisible = count($baseAtoms) <= count($pageAtoms);
+		$isVisible = count($baseComponents) <= count($pageComponents);
 
 		foreach ($pageContents as $childName => $childContents) {
-			$childAtoms = $pageAtoms;
-			$childAtoms[] = $childName;
+			$childComponents = $pageComponents;
+			$childComponents[] = $childName;
 
 			if (isset($childContents['.name'])) {
-				$this->getName($baseAtoms, $childAtoms, $childContents['.name'], $childTested, $childTestable);
+				$this->getName($baseComponents, $childComponents, $childContents['.name'], $childTested, $childTestable);
 
 				$tested += $childTested;
 				$testable += $childTestable;
 
-				$childDirectoryAtoms = $this->getIndexDirectoryAtoms($baseAtoms, $childAtoms);
-				$childFileAtoms = $this->getFileAtoms($childDirectoryAtoms);
-				$childUrl = implode('/', array_slice($childFileAtoms, -2));
+				$childDirectoryComponents = $this->getIndexDirectoryComponents($baseComponents, $childComponents);
+				$childFileComponents = $this->getFileComponents($childDirectoryComponents);
+				$childUrl = implode('/', array_slice($childFileComponents, -2));
 				$links[] = [$childName, 'name', $childUrl, $childTested, $childTestable];
 			}
 
 			if ($isVisible) {
-				$this->savePage('class', $baseAtoms, $childAtoms, $childContents, $tested, $testable, $links);
-				$this->savePage('function', $baseAtoms, $childAtoms, $childContents, $tested, $testable, $links);
-				$this->savePage('trait', $baseAtoms, $childAtoms, $childContents, $tested, $testable, $links);
+				$this->savePage('class', $baseComponents, $childComponents, $childContents, $tested, $testable, $links);
+				$this->savePage('function', $baseComponents, $childComponents, $childContents, $tested, $testable, $links);
+				$this->savePage('trait', $baseComponents, $childComponents, $childContents, $tested, $testable, $links);
 			}
 		}
 
 		if ($isVisible) {
-			$this->saveIndex($baseAtoms, $pageAtoms, $links);
+			$this->saveIndex($baseComponents, $pageComponents, $links);
 		}
 	}
 
-	private function saveIndex(array $baseAtoms, array $pageAtoms, array $links)
+	private function saveIndex(array $baseComponents, array $pageComponents, array $links)
 	{
-		$directoryAtoms = $this->getIndexDirectoryAtoms($baseAtoms, $pageAtoms);
-		$fileAtoms = $this->getFileAtoms($directoryAtoms);
+		$directoryComponents = $this->getIndexDirectoryComponents($baseComponents, $pageComponents);
+		$fileComponents = $this->getFileComponents($directoryComponents);
 
-		$page = new IndexPage($directoryAtoms, $baseAtoms, $pageAtoms, $links);
+		$page = new IndexPage($directoryComponents, $baseComponents, $pageComponents, $links);
 
-		$this->write($fileAtoms, (string)$page);
+		$this->write($fileComponents, (string)$page);
 	}
 
-	private function getFileAtoms(array $directoryAtoms)
+	private function getFileComponents(array $directoryComponents)
 	{
-		$fileAtoms = $directoryAtoms;
-		$fileAtoms[] = 'index.html';
+		$fileComponents = $directoryComponents;
+		$fileComponents[] = 'index.html';
 
-		return $fileAtoms;
+		return $fileComponents;
 	}
 
-	private function getIndexDirectoryAtoms(array $baseAtoms, array $pageAtoms)
+	private function getIndexDirectoryComponents(array $baseComponents, array $pageComponents)
 	{
-		return array_slice($pageAtoms, count($baseAtoms));
+		return array_slice($pageComponents, count($baseComponents));
 	}
 
-	private function savePage($type, array $baseAtoms, array $pageAtoms, array $data, &$tested, &$testable, array &$links)
+	private function savePage($type, array $baseComponents, array $pageComponents, array $data, &$tested, &$testable, array &$links)
 	{
 		$key = '.' . $type;
 
@@ -117,12 +117,12 @@ class CoverageFilesGenerator
 		$code = $data[$key]['code'];
 		$coverage = $data[$key]['coverage'];
 
-		$directoryAtoms = $this->getPageDirectoryAtoms($type, $baseAtoms, $pageAtoms);
-		$fileAtoms = $this->getFileAtoms($directoryAtoms);
+		$directoryComponents = $this->getPageDirectoryComponents($type, $baseComponents, $pageComponents);
+		$fileComponents = $this->getFileComponents($directoryComponents);
 
 		// Write the HTML
-		$page = new CodePage($type, $directoryAtoms, $baseAtoms, $pageAtoms, $code, $coverage);
-		$this->write($fileAtoms, (string)$page);
+		$page = new CodePage($type, $directoryComponents, $baseComponents, $pageComponents, $code, $coverage);
+		$this->write($fileComponents, (string)$page);
 
 		// Update the coverage metrics
 		$pageTested = count(array_filter($coverage));
@@ -132,25 +132,25 @@ class CoverageFilesGenerator
 		$testable += $pageTestable;
 
 		// Generate links
-		$name = end($pageAtoms);
-		$url = implode('/', array_slice($fileAtoms, -2));
+		$name = end($pageComponents);
+		$url = implode('/', array_slice($fileComponents, -2));
 		// TODO: create Element objects?
 		$links[] = [$name, $type, $url, $pageTested, $pageTestable];
 	}
 
-	private function getPageDirectoryAtoms($type, array $baseAtoms, array $pageAtoms)
+	private function getPageDirectoryComponents($type, array $baseComponents, array $pageComponents)
 	{
-		$iLast = count($pageAtoms) - 1;
-		$pageAtoms[$iLast] = $type . '-' . $pageAtoms[$iLast];
-		return array_slice($pageAtoms, count($baseAtoms));
+		$iLast = count($pageComponents) - 1;
+		$pageComponents[$iLast] = $type . '-' . $pageComponents[$iLast];
+		return array_slice($pageComponents, count($baseComponents));
 	}
 
-	private function write(array $atoms, $data)
+	private function write(array $components, $data)
 	{
 		$position = &$this->files;
 
-		foreach ($atoms as $atom) {
-			$position = &$position[$atom];
+		foreach ($components as $component) {
+			$position = &$position[$component];
 		}
 
 		$position = $data;

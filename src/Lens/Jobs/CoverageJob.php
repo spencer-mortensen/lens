@@ -29,7 +29,7 @@ use _Lens\Lens\Tests\Autoloader;
 use _Lens\Lens\Tests\StatementsExtractor;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class CoverageJob implements Job
 {

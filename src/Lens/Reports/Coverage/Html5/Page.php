@@ -43,11 +43,11 @@ class Page implements Node
 	/** @var Document */
 	private $document;
 
-	public function __construct(array $directoryAtoms, $title, Node $navigation, Node $article)
+	public function __construct(array $directoryComponents, $title, Node $navigation, Node $article)
 	{
-		$styleUrl = $this->getRelativeUrl($directoryAtoms, ['.theme', 'style.css']);
+		$styleUrl = $this->getRelativeUrl($directoryComponents, ['.theme', 'style.css']);
 		$fontsUrl = 'https://fonts.googleapis.com/css?family=Lora|Inconsolata';
-		$faviconUrl = $this->getRelativeUrl($directoryAtoms, ['favicon.ico']);
+		$faviconUrl = $this->getRelativeUrl($directoryComponents, ['favicon.ico']);
 
 		$this->document = new Document(
 			new Html(['lang' => 'en'],
@@ -66,16 +66,16 @@ class Page implements Node
 		);
 	}
 
-	private function getRelativeUrl(array $aAtoms, array $bAtoms)
+	private function getRelativeUrl(array $aComponents, array $bComponents)
 	{
-		$aCount = count($aAtoms);
-		$bCount = count($bAtoms);
+		$aCount = count($aComponents);
+		$bCount = count($bComponents);
 
-		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aAtoms[$i] === $bAtoms[$i]); ++$i);
+		for ($i = 0, $n = min($aCount, $bCount); ($i < $n) && ($aComponents[$i] === $bComponents[$i]); ++$i);
 
-		$cAtoms = array_merge(array_fill(0, $aCount - $i, '..'), array_slice($bAtoms, $i));
+		$cComponents = array_merge(array_fill(0, $aCount - $i, '..'), array_slice($bComponents, $i));
 
-		return implode('/', $cAtoms);
+		return implode('/', $cComponents);
 	}
 
 	public function __toString()

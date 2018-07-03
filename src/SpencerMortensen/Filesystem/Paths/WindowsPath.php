@@ -26,55 +26,63 @@
 namespace _Lens\SpencerMortensen\Filesystem\Paths;
 
 use InvalidArgumentException;
-use _Lens\SpencerMortensen\Filesystem\AtomicPath;
+use _Lens\SpencerMortensen\Filesystem\CorePath;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
-class WindowsPath implements Path
+class WindowsPath extends Path
 {
 	/** @var string */
 	private static $delimiter = '\\';
 
 	/** @var string|null */
-	private $drive;
+	private $scheme;
 
-	/** @var AtomicPath */
+	/** @var string|null */
+	private $prefix;
+
+	/** @var CorePath */
 	private $path;
 
-	public function __construct($drive, AtomicPath $path)
+	public function __construct($scheme, $prefix, CorePath $path)
 	{
-		$this->drive = $drive;
+		$this->scheme = $scheme;
+		$this->prefix = $prefix;
 		$this->path = $path;
 	}
 
 	public static function fromString($input)
 	{
-		if (!self::getDrivePath($input, $drive, $path)) {
+		if (!self::parse($input, $scheme, $prefix, $path)) {
 			throw new InvalidArgumentException();
 		}
 
-		$path = AtomicPath::fromString($path, self::$delimiter);
-
-		return new self($drive, $path);
+		return new self($scheme, $prefix, $path);
 	}
 
-	private static function getDrivePath($input, &$drive, &$path)
+	/**
+	 * @link https://doc.rust-lang.org/std/path/enum.Prefix.html
+	 * @param mixed $input
+	 * @param string|null $scheme
+	 * @param string|null $prefix
+	 * @param CorePath $corePath
+	 * @return bool
+	 */
+	private static function parse($input, &$scheme, &$prefix, &$corePath)
 	{
 		if (!is_string($input)) {
 			return false;
 		}
 
-		$expression = '^(?:(?<drive>[a-zA-Z]):)?(?<path>.*)$';
+		$expression = '^(?:(?<scheme>[a-z]+)://)?(?:(?<prefix>[a-zA-Z]):)?(?<path>.*)$';
 
-		if (!self::match($expression, $input, $match)) {
-			return false;
-		}
+		self::match($expression, $input, $match);
 
-		$drive = $match['drive'];
-
-		if (strlen($drive) === 0) {
-			$drive = null;
-		}
+		$scheme = self::getNonEmptyString($match['scheme']);
+		$prefix = self::getNonEmptyString($match['prefix']);
 
 		$path = str_replace('/', self::$delimiter, $match['path']);
+		$corePath = CorePath::fromString($path, self::$delimiter);
+
 		return true;
 	}
 
@@ -87,20 +95,38 @@ class WindowsPath implements Path
 		return preg_match($pattern, $input, $match) === 1;
 	}
 
+	private static function getNonEmptyString($string)
+	{
+		if (strlen($string) === 0) {
+			return null;
+		}
+
+		return $string;
+	}
+
 	public function __toString()
 	{
 		$path = (string)$this->path;
 
-		if ($this->drive !== null) {
-			$path = "{$this->drive}:{$path}";
+		if ($this->prefix !== null) {
+			$path = "{$this->prefix}:{$path}";
+		}
+
+		if ($this->scheme !== null) {
+			$path = "{$this->scheme}://{$path}";
 		}
 
 		return $path;
 	}
 
-	public function getDrive()
+	public function getScheme()
 	{
-		return $this->drive;
+		return $this->scheme;
+	}
+
+	public function getPrefix()
+	{
+		return $this->prefix;
 	}
 
 	public function isAbsolute()
@@ -108,47 +134,45 @@ class WindowsPath implements Path
 		return $this->path->isAbsolute();
 	}
 
-	public function getAtoms()
+	public function getComponents()
 	{
-		return $this->path->getAtoms();
+		return $this->path->getComponents();
 	}
 
-	public function setAtoms(array $atoms)
+	public function setComponents(array $components)
 	{
 		$isAbsolute = $this->path->isAbsolute();
-		$path = new AtomicPath($isAbsolute, $atoms, self::$delimiter);
-		return new self($this->drive, $path);
+		$path = new CorePath($isAbsolute, $components, self::$delimiter);
+		return new self($this->scheme, $this->prefix, $path);
 	}
 
 	public function add(...$arguments)
 	{
-		$drive = $this->drive;
-
 		$objects = [];
 
 		foreach ($arguments as $argument) {
-			// TODO: check the drive components
+			// TODO: check the prefix
 			$objects[] = $this->getPathObject($argument);
 		}
 
 		$path = $this->path->add($objects);
 
-		return new self($drive, $path);
+		return new self($this->scheme, $this->prefix, $path);
 	}
 
 	private function getPathObject($path)
 	{
 		if ($path instanceof self) {
 			$isAbsolute = $path->isAbsolute();
-			$atoms = $path->getAtoms();
+			$components = $path->getComponents();
 
-			return new AtomicPath($isAbsolute, $atoms, self::$delimiter);
+			return new CorePath($isAbsolute, $components, self::$delimiter);
 		}
 
-		return AtomicPath::fromString($path, self::$delimiter);
+		return CorePath::fromString($path, self::$delimiter);
 	}
 
-	// TODO: check the drive
+	// TODO: check the prefix
 	public function contains($path)
 	{
 		$object = $this->getPathObject($path);
@@ -158,11 +182,9 @@ class WindowsPath implements Path
 
 	public function getRelativePath($input)
 	{
-		$drive = $this->drive;
-
 		$absolutePath = $this->getPathObject($input);
 		$relativePath = $this->path->getRelativePath($absolutePath);
 
-		return new self($drive, $relativePath);
+		return new self($this->scheme, $this->prefix, $relativePath);
 	}
 }

@@ -26,9 +26,10 @@
 namespace _Lens\SpencerMortensen\Filesystem\Paths;
 
 use InvalidArgumentException;
-use _Lens\SpencerMortensen\Filesystem\AtomicPath;
+use _Lens\SpencerMortensen\Filesystem\CorePath;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
-class PosixPath implements Path
+class PosixPath extends Path
 {
 	/** @var string */
 	private static $delimiter = '/';
@@ -36,10 +37,10 @@ class PosixPath implements Path
 	/** @var string|null */
 	private $scheme;
 
-	/** @var AtomicPath */
+	/** @var CorePath */
 	private $path;
 
-	public function __construct($scheme, AtomicPath $path)
+	public function __construct($scheme, CorePath $path)
 	{
 		$this->scheme = $scheme;
 		$this->path = $path;
@@ -47,30 +48,27 @@ class PosixPath implements Path
 
 	public static function fromString($input)
 	{
-		self::getSchemePath($input, $scheme, $path);
+		if (!self::parse($input, $scheme, $path)) {
+			throw new InvalidArgumentException();
+		}
 
 		return new self($scheme, $path);
 	}
 
-	private static function getSchemePath($input, &$scheme, &$path)
+	private static function parse($input, &$scheme, &$path)
 	{
 		if (!is_string($input)) {
-			throw new InvalidArgumentException();
+			return false;
 		}
 
 		$expression = '^(?:(?<scheme>[a-z]+)://)?(?<path>.*)$';
 
-		if (!self::match($expression, $input, $match)) {
-			throw new InvalidArgumentException();
-		}
+		self::match($expression, $input, $match);
 
-		$scheme = $match['scheme'];
+		$scheme = self::getNonEmptyString($match['scheme']);
+		$path = CorePath::fromString($match['path'], self::$delimiter);
 
-		if (strlen($scheme) === 0) {
-			$scheme = null;
-		}
-
-		$path = AtomicPath::fromString($match['path'], self::$delimiter);
+		return true;
 	}
 
 	private static function match($expression, $input, array &$match = null)
@@ -80,6 +78,15 @@ class PosixPath implements Path
 		$pattern = $delimiter . $expression . $delimiter . $flags;
 
 		return preg_match($pattern, $input, $match) === 1;
+	}
+
+	private static function getNonEmptyString($string)
+	{
+		if (strlen($string) === 0) {
+			return null;
+		}
+
+		return $string;
 	}
 
 	public function __toString()
@@ -105,15 +112,15 @@ class PosixPath implements Path
 		return $this->path->isAbsolute();
 	}
 
-	public function getAtoms()
+	public function getComponents()
 	{
-		return $this->path->getAtoms();
+		return $this->path->getComponents();
 	}
 
-	public function setAtoms(array $atoms)
+	public function setComponents(array $components)
 	{
 		$isAbsolute = $this->path->isAbsolute();
-		$path = new AtomicPath($isAbsolute, $atoms, self::$delimiter);
+		$path = new CorePath($isAbsolute, $components, self::$delimiter);
 		return new self($this->scheme, $path);
 	}
 
@@ -135,12 +142,12 @@ class PosixPath implements Path
 		// TODO: consider the scheme (what if it's a different scheme?):
 		if ($path instanceof self) {
 			$isAbsolute = $path->isAbsolute();
-			$atoms = $path->getAtoms();
+			$components = $path->getComponents();
 
-			return new AtomicPath($isAbsolute, $atoms, self::$delimiter);
+			return new CorePath($isAbsolute, $components, self::$delimiter);
 		}
 
-		return AtomicPath::fromString($path, self::$delimiter);
+		return CorePath::fromString($path, self::$delimiter);
 	}
 
 	public function contains($path)

@@ -25,11 +25,9 @@
 
 namespace _Lens\Lens\Jobs;
 
-use Error;
-use Exception;
 use _Lens\Lens\Tests\Test;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\SpencerMortensen\ParallelProcessor\ServerProcess;
 
 class TestJob implements Job

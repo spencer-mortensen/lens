@@ -29,14 +29,11 @@ use _Lens\Lens\Php\CallParser;
 use _Lens\Lens\Php\Code;
 use _Lens\Lens\Php\Namespacing;
 use _Lens\Lens\Php\Semantics;
-use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\SpencerMortensen\Parser\ParserException;
 
 class Sanitizer
 {
-	/** @var Filesystem */
-	private $filesystem;
-
 	/** @var CallParser */
 	private $parser;
 
@@ -49,7 +46,6 @@ class Sanitizer
 	public function __construct($isFunction, array $mockFunctions)
 	{
 		// TODO: dependency injection
-		$this->filesystem = new Filesystem();
 		$this->parser = new CallParser();
 		$this->isFunction = $isFunction;
 		$this->mockFunctions = $mockFunctions;
@@ -182,7 +178,7 @@ class Sanitizer
 		}
 
 		// TODO: move this to the "SourcePaths" somehow:
-		$currentPath = $this->filesystem->getPath('.');
+		$currentPath = Path::fromString('.');
 		$function = substr($function, 5);
 		$relativePath = $this->getRelativeFilePath($function);
 		$pathValue = DIRECTORY_SEPARATOR . (string)$currentPath->add('functions', 'mock', $relativePath);
@@ -193,9 +189,9 @@ class Sanitizer
 
 	private function getRelativeFilePath($function)
 	{
-		$path = $this->filesystem->getPath('.');
-		$atoms = explode('\\', "{$function}.php");
-		return $path->setAtoms($atoms);
+		$path = Path::fromString('.');
+		$components = explode('\\', "{$function}.php");
+		return $path->setComponents($components);
 	}
 
 	private function getUserPath($function, &$pathPhp)
@@ -207,7 +203,7 @@ class Sanitizer
 		}
 
 		// TODO: move this to the "SourcePaths" somehow:
-		$currentPath = $this->filesystem->getPath('.');
+		$currentPath = Path::fromString('.');
 		$relativePath = $this->getRelativeFilePath($function);
 		$pathValue = DIRECTORY_SEPARATOR . (string)$currentPath->add('functions', $directory, $relativePath);
 		$pathPhp = 'LENS_CACHE_DIRECTORY . ' . Code::getValuePhp($pathValue);

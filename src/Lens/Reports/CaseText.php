@@ -27,7 +27,7 @@ namespace _Lens\Lens\Reports;
 
 use _Lens\Lens\Paragraph;
 use _Lens\Lens\Php\Code;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class CaseText
 {

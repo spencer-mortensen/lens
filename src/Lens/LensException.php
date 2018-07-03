@@ -31,7 +31,7 @@ use Exception;
 use _Lens\Lens\Commands\LensVersion;
 use _Lens\SpencerMortensen\Parser\ParserException;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class LensException extends Exception
 {
@@ -208,9 +208,9 @@ class LensException extends Exception
 	private static function getComposerInstallCommand(Path $absoluteProjectPath)
 	{
 		$relativeProjectPath = self::getRelativePath($absoluteProjectPath);
-		$relativeProjectAtoms = $relativeProjectPath->getAtoms();
+		$relativeProjectComponents = $relativeProjectPath->getComponents();
 
-		if (count($relativeProjectAtoms) === 0) {
+		if (count($relativeProjectComponents) === 0) {
 			return 'composer install';
 		}
 

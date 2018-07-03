@@ -28,7 +28,7 @@ namespace _Lens\Lens;
 use _Lens\Lens\Commands\ComposerInstall;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class Finder
 {
@@ -122,7 +122,7 @@ class Finder
 
 	private function findCore()
 	{
-		$this->core = $this->filesystem->getPath(__DIR__ . '/../../files');
+		$this->core = Path::fromString(__DIR__ . '/../../files');
 	}
 
 	private function findLensTests(array &$paths)
@@ -149,25 +149,25 @@ class Finder
 
 	private function getUmbrella(array $paths)
 	{
-		$atomsArray = $this->getAtomsArray($paths);
-		$umbrellaAtoms = $this->getUmbrellaAtoms($atomsArray);
+		$componentsArray = $this->getComponentsArray($paths);
+		$umbrellaComponents = $this->getUmbrellaComponents($componentsArray);
 
 		$firstPath = $paths[0];
-		return $firstPath->setAtoms($umbrellaAtoms);
+		return $firstPath->setComponents($umbrellaComponents);
 	}
 
-	private function getAtomsArray(array $paths)
+	private function getComponentsArray(array $paths)
 	{
 		$array = [];
 
 		foreach ($paths as $path) {
-			$array[] = $path->getAtoms();
+			$array[] = $path->getComponents();
 		}
 
 		return $array;
 	}
 
-	private function getUmbrellaAtoms(array $paths)
+	private function getUmbrellaComponents(array $paths)
 	{
 		$n = count($paths);
 
@@ -180,15 +180,15 @@ class Finder
 		$umbrella = [];
 
 		for ($i = 0; $i < $m; ++$i) {
-			$atom = $paths[0][$i];
+			$component = $paths[0][$i];
 
 			for ($j = 1; $j < $n; ++$j) {
-				if ($paths[$j][$i] !== $atom) {
+				if ($paths[$j][$i] !== $component) {
 					return $umbrella;
 				}
 			}
 
-			$umbrella[$i] = $atom;
+			$umbrella[$i] = $component;
 		}
 
 		return $umbrella;
@@ -196,18 +196,18 @@ class Finder
 
 	private function getAncestor(Path $path)
 	{
-		$atoms = $path->getAtoms();
+		$components = $path->getComponents();
 
-		for ($i = count($atoms) - 1; 0 < $i; --$i) {
-			if (($atoms[$i - 1] !== self::LENS) || ($atoms[$i] !== self::TESTS)) {
+		for ($i = count($components) - 1; 0 < $i; --$i) {
+			if (($components[$i - 1] !== self::LENS) || ($components[$i] !== self::TESTS)) {
 				continue;
 			}
 
-			$atoms = array_slice($atoms, 0, $i);
-			$this->lens = $path->setAtoms($atoms);
+			$components = array_slice($components, 0, $i);
+			$this->lens = $path->setComponents($components);
 
-			$atoms[] = self::TESTS;
-			$this->tests = $path->setAtoms($atoms);
+			$components[] = self::TESTS;
+			$this->tests = $path->setComponents($components);
 
 			return true;
 		}
@@ -217,12 +217,12 @@ class Finder
 
 	private function getDirectory(Path $path)
 	{
-		$atoms = $path->getAtoms();
-		$atom = end($atoms);
+		$components = $path->getComponents();
+		$component = end($components);
 
-		if (is_string($atom) && (substr($atom, -4) === '.php')) {
-			array_pop($atoms);
-			return $path->setAtoms($atoms);
+		if (is_string($component) && (substr($component, -4) === '.php')) {
+			array_pop($components);
+			return $path->setComponents($components);
 		}
 
 		return $path;
@@ -239,25 +239,25 @@ class Finder
 
 	private function getDescendant(Path $path)
 	{
-		$atoms = $path->getAtoms();
-		$atoms[] = self::LENS;
-		$atoms[] = self::TESTS;
+		$components = $path->getComponents();
+		$components[] = self::LENS;
+		$components[] = self::TESTS;
 
-		$i = count($atoms) - 3;
+		$i = count($components) - 3;
 
 		do {
-			$childPath = $path->setAtoms($atoms);
+			$childPath = $path->setComponents($components);
 
 			if ($this->filesystem->isDirectory($childPath)) {
 				$this->tests = $childPath;
 
-				array_pop($atoms);
-				$this->lens = $path->setAtoms($atoms);
+				array_pop($components);
+				$this->lens = $path->setComponents($components);
 
 				return true;
 			}
 
-			array_splice($atoms, $i, 1);
+			array_splice($components, $i, 1);
 		} while (0 <= $i--);
 
 		return false;

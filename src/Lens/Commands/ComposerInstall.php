@@ -25,7 +25,7 @@
 
 namespace _Lens\Lens\Commands;
 
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class ComposerInstall implements Command
 {

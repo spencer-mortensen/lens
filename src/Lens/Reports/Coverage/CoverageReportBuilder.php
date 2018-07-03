@@ -25,9 +25,10 @@
 
 namespace _Lens\Lens\Reports\Coverage;
 
+use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class CoverageReportBuilder
 {
@@ -50,13 +51,13 @@ class CoverageReportBuilder
 
 	public function build(array $executableStatements, array $results)
 	{
-		$baseAtoms = ['Example'];
+		$baseComponents = ['Example'];
 
-		$dataBuilder = new CoverageDataBuilder($this->core, $this->cache, $this->filesystem);
+		$dataBuilder = new CoverageDataBuilder($this->core, $this->cache);
 		$data = $dataBuilder->build($executableStatements, $results);
 
 		$fileGenerator = new CoverageFilesGenerator($this->core);
-		$files = $fileGenerator->generate($baseAtoms, $data);
+		$files = $fileGenerator->generate($baseComponents, $data);
 
 		// TODO: where does this go?
 		$path = $this->core->add('style', '.theme', 'style.css');
@@ -68,8 +69,8 @@ class CoverageReportBuilder
 		$files['favicon.ico'] = $file->read();
 		//
 
-		$writer = new Writer();
-		$writer->write($this->coverage, $files);
+		$directory = new Directory($this->coverage);
+		$directory->write($files);
 	}
 }
 

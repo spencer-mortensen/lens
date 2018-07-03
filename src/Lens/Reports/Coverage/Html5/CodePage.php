@@ -32,18 +32,18 @@ class CodePage implements Node
 	/** @var Node */
 	private $page;
 
-	public function __construct($type, array $directoryAtoms, array $baseAtoms, array $pageAtoms, array $code, array $coverage)
+	public function __construct($type, array $directoryComponents, array $baseComponents, array $pageComponents, array $code, array $coverage)
 	{
-		$title = $this->getTitle($type, $pageAtoms);
+		$title = $this->getTitle($type, $pageComponents);
 
-		$breadcrumbs = new Breadcrumbs($baseAtoms, $pageAtoms);
+		$breadcrumbs = new Breadcrumbs($baseComponents, $pageComponents);
 		$content = new CodeCoverage($code, $coverage);
-		$this->page = new Page($directoryAtoms, $title, $breadcrumbs, $content);
+		$this->page = new Page($directoryComponents, $title, $breadcrumbs, $content);
 	}
 
-	private function getTitle($type, array $pageAtoms)
+	private function getTitle($type, array $pageComponents)
 	{
-		$name = end($pageAtoms);
+		$name = end($pageComponents);
 
 		return "{$type} {$name}";
 	}

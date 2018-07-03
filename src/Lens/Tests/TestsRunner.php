@@ -39,7 +39,7 @@ use _Lens\Lens\SourcePaths;
 use _Lens\Lens\Xdebug;
 use _Lens\SpencerMortensen\Parser\ParserException;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class TestsRunner
 {
@@ -133,7 +133,7 @@ class TestsRunner
 			try {
 				$suites[(string)$relativePath] = $parser->parse($contents);
 			} catch (ParserException $exception) {
-				throw LensException::invalidTestsFileSyntax($this->filesystem->getPath($absolutePath), $contents, $exception);
+				throw LensException::invalidTestsFileSyntax(Path::fromString($absolutePath), $contents, $exception);
 			}
 		}
 
@@ -189,8 +189,7 @@ class TestsRunner
 			return false;
 		}
 
-		$filesystem = new Filesystem();
-		$sourcePaths = new SourcePaths($filesystem, $this->core, $this->cache);
+		$sourcePaths = new SourcePaths($this->core, $this->cache);
 
 		$absolutePath = $sourcePaths->getLiveFunctionPath($function);
 		return $this->filesystem->isFile($absolutePath);
@@ -215,7 +214,7 @@ class TestsRunner
 			return;
 		}
 
-		$sourcePaths = new SourcePaths($this->filesystem, $this->core, $this->cache);
+		$sourcePaths = new SourcePaths($this->core, $this->cache);
 
 		$this->missing = [
 			'classes' => [],

@@ -26,7 +26,7 @@
 namespace _Lens\Lens;
 
 use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class JsonFile extends File
 {

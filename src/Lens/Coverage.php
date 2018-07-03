@@ -25,7 +25,7 @@
 
 namespace _Lens\Lens;
 
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class Coverage
 {

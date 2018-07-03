@@ -30,7 +30,6 @@ use Exception;
 use _Lens\Lens\Displayer;
 use _Lens\Lens\LensException;
 use _Lens\Lens\Paragraph;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
 
 class TerminalMessage
 {

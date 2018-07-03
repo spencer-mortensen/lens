@@ -29,7 +29,7 @@ use _Lens\Lens\LensException;
 use _Lens\Lens\Reports\Coverage\CoverageReportBuilder;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class ReportsBuilder
 {

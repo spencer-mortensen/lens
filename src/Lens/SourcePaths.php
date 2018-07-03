@@ -25,23 +25,18 @@
 
 namespace _Lens\Lens;
 
-use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 
 class SourcePaths
 {
-	/** @var Filesystem */
-	private $filesystem;
-
 	/** @var Path */
 	private $core;
 
 	/** @var Path */
 	private $cache;
 
-	public function __construct(Filesystem $filesystem, Path $core, Path $cache)
+	public function __construct(Path $core, Path $cache)
 	{
-		$this->filesystem = $filesystem;
 		$this->core = $core;
 		$this->cache = $cache;
 	}
@@ -96,8 +91,8 @@ class SourcePaths
 
 	private function getRelativeFilePath($namespacePath)
 	{
-		$path = $this->filesystem->getPath('.');
-		$atoms = explode('\\', "{$namespacePath}.php");
-		return $path->setAtoms($atoms);
+		$path = Path::fromString('.');
+		$components = explode('\\', "{$namespacePath}.php");
+		return $path->setComponents($components);
 	}
 }

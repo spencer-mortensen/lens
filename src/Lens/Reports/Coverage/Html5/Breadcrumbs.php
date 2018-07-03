@@ -34,31 +34,31 @@ use _Lens\SpencerMortensen\Html5\Text;
 class Breadcrumbs implements Node
 {
 	/** @var array */
-	private $baseAtoms;
+	private $baseComponents;
 
 	/** @var array */
-	private $pageAtoms;
+	private $pageComponents;
 
-	public function __construct(array $baseAtoms, array $pageAtoms)
+	public function __construct(array $baseComponents, array $pageComponents)
 	{
-		$this->baseAtoms = $baseAtoms;
-		$this->pageAtoms = $pageAtoms;
+		$this->baseComponents = $baseComponents;
+		$this->pageComponents = $pageComponents;
 	}
 
 	public function __toString()
 	{
-		$ul = $this->getMenuLinks($this->baseAtoms, $this->pageAtoms);
+		$ul = $this->getMenuLinks($this->baseComponents, $this->pageComponents);
 		return (string)$ul;
 	}
 
-	private function getMenuLinks(array $baseAtoms, array $pageAtoms)
+	private function getMenuLinks(array $baseComponents, array $pageComponents)
 	{
 		$children = [];
 
-		$mutualPrefixLength = count($baseAtoms);
+		$mutualPrefixLength = count($baseComponents);
 
-		for ($i = 1, $n = count($pageAtoms); $i <= $n; ++$i) {
-			$name = $pageAtoms[$i - 1];
+		for ($i = 1, $n = count($pageComponents); $i <= $n; ++$i) {
+			$name = $pageComponents[$i - 1];
 			$link = $this->getLink($name, $mutualPrefixLength - $i, $n - $i);
 
 			$children[] = new Li(null, $link);

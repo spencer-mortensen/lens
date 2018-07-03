@@ -33,7 +33,7 @@ use _Lens\Lens\Sanitizer;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
-use _Lens\SpencerMortensen\Filesystem\Paths\Path;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use ReflectionClass;
 use ReflectionFunction;
 
@@ -58,9 +58,6 @@ class Cache
 
 	/** @var Path */
 	private $autoload;
-
-	/** @var Filesystem */
-	private $filesystem;
 
 	/** @var Watcher */
 	private $watcher;
@@ -91,20 +88,20 @@ class Cache
 		$this->project = $project;
 		$this->src = $src;
 		$this->autoload = $autoload;
-		$this->filesystem = new Filesystem();
 		$this->watcher = $this->getWatcher($cache);
 		$this->citations = new Citations($cache);
 		$this->coverage = new Coverage($cache);
 		$this->parser = new FileParser();
 		$this->sanitizer = new Sanitizer('function_exists', $mockFunctions);
-		$this->sourcePaths = new SourcePaths($this->filesystem, $core, $cache);
+		$this->sourcePaths = new SourcePaths($core, $cache);
 	}
 
 	private function getWatcher(Path $cache)
 	{
+		$filesystem = new Filesystem();
 		// TODO: absorb this into the "Watcher"?
 		$path = $cache->add('timestamps.json');
-		return new Watcher($this->filesystem, $path, $this->project);
+		return new Watcher($filesystem, $path, $this->project);
 	}
 
 	public function build()
@@ -131,13 +128,14 @@ class Cache
 		}
 
 		while ($declarations->get($filePathString, $classes, $functions, $interfaces, $traits)) {
-			$file = $this->filesystem->getFile($filePathString);
+			$filePath = Path::fromString($filePathString);
+			$file = new File($filePath);
 
 			if ($filePathString !== (string)$this->autoload) {
-				$parentPath = $file->getPath()->add('..');
-				$parentDirectory = new Directory($parentPath);
+				$parentPath = $filePath->add('..');
+				$parent = new Directory($parentPath);
 
-				$this->scanDirectory($parentDirectory);
+				$this->scanDirectory($parent);
 			}
 
 			$this->addFile($file, $classes, $functions, $interfaces, $traits);

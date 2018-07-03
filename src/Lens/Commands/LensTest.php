@@ -27,7 +27,7 @@ namespace _Lens\Lens\Commands;
 
 use _Lens\Lens\Arguments;
 use _Lens\Lens\Jobs\TestJob;
-use _Lens\SpencerMortensen\Filesystem\Filesystem;
+use _Lens\SpencerMortensen\Filesystem\Path;
 use _Lens\SpencerMortensen\ParallelProcessor\Shell\ShellServerProcess;
 
 class LensTest implements Command
@@ -58,10 +58,8 @@ class LensTest implements Command
 		$executable = $this->arguments->getExecutable();
 		list($coreString, $cacheString, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual) = $arguments;
 
-		// TODO: dependency injection?
-		$filesystem = new Filesystem();
-		$core = $filesystem->getPath($coreString);
-		$cache = $filesystem->getPath($cacheString);
+		$core = Path::fromString($coreString);
+		$cache = Path::fromString($cacheString);
 
 		$job = new TestJob($executable, $core, $cache, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual, $process, $preState, $postState, $coverage);
 		$process = new ShellServerProcess($job);
