@@ -58,16 +58,25 @@ class LensSource implements Command
 		$executable = $this->arguments->getExecutable();
 		list($coreString, $projectString, $srcString, $autoloadString, $cacheString, $mockFunctions) = $arguments;
 
-		$core = Path::fromString($coreString);
-		$project = Path::fromString($projectString);
-		$src = Path::fromString($srcString);
-		$autoload = Path::fromString($autoloadString);
-		$cache = Path::fromString($cacheString);
+		$core = $this->getPath($coreString);
+		$project = $this->getPath($projectString);
+		$src = $this->getPath($srcString);
+		$autoload = $this->getPath($autoloadString);
+		$cache = $this->getPath($cacheString);
 
 		$job = new CacheJob($executable, $core, $project, $src, $autoload, $cache, $mockFunctions);
 		$process = new ShellServerProcess($job);
 
 		$process->run();
 		return true;
+	}
+
+	private function getPath($input)
+	{
+		if (!is_string($input)) {
+			return null;
+		}
+
+		return Path::fromString($input);
 	}
 }

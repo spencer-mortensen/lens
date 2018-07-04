@@ -17,6 +17,8 @@ Allow the user to autoload files that are only used during testing
 
 Add clover reports (for "codecov" integration)
 
+Lens: display backtrace along with exception (so we can debug more easily)
+
 ======
 
 QA Testing:

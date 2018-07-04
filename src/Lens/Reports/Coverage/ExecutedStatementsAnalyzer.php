@@ -64,8 +64,12 @@ class ExecutedStatementsAnalyzer
 		}
 	}
 
-	private function mapLineFalse(array $lines)
+	private function mapLineFalse(array $lines = null)
 	{
+		if ($lines === null) {
+			return null;
+		}
+
 		$output = [];
 
 		foreach ($lines as $line) {

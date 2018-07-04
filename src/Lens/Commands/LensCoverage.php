@@ -58,14 +58,23 @@ class LensCoverage implements Command
 		$executable = $this->arguments->getExecutable();
 		list($lensCoreString, $cacheString, $fileString) = $arguments;
 
-		$lensCore = Path::fromString($lensCoreString);
-		$cache = Path::fromString($cacheString);
-		$file = Path::fromString($fileString);
+		$lensCore = $this->getPath($lensCoreString);
+		$cache = $this->getPath($cacheString);
+		$file = $this->getPath($fileString);
 
 		$job = new CoverageJob($executable, $lensCore, $cache, $file, $lineNumbers);
 		$process = new ShellServerProcess($job);
 
 		$process->run();
 		return true;
+	}
+
+	private function getPath($input)
+	{
+		if (!is_string($input)) {
+			return null;
+		}
+
+		return Path::fromString($input);
 	}
 }

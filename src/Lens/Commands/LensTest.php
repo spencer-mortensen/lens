@@ -58,13 +58,22 @@ class LensTest implements Command
 		$executable = $this->arguments->getExecutable();
 		list($coreString, $cacheString, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual) = $arguments;
 
-		$core = Path::fromString($coreString);
-		$cache = Path::fromString($cacheString);
+		$core = $this->getPath($coreString);
+		$cache = $this->getPath($cacheString);
 
 		$job = new TestJob($executable, $core, $cache, $contextPhp, $prePhp, $postPhp, $script, $mockClasses, $isActual, $process, $preState, $postState, $coverage);
 		$process = new ShellServerProcess($job);
 
 		$process->run();
 		return true;
+	}
+
+	private function getPath($input)
+	{
+		if (!is_string($input)) {
+			return null;
+		}
+
+		return Path::fromString($input);
 	}
 }
