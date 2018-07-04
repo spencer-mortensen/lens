@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+
+## [0.0.62] - 2018-07-04
+
+- Lens can now run without xdebug, though code coverage will be disabled
+
+
 ## [0.0.61] - 2018-07-02
 
 ### Changed
