@@ -26,6 +26,7 @@
 namespace _Lens\Lens\Tests;
 
 use _Lens\Lens\Archivist\Archivist;
+use _Lens\Lens\Archivist\Archives\ObjectArchive;
 use _Lens\Lens\Php\Code;
 use _Lens\Lens\Xdebug;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
@@ -137,7 +138,9 @@ class Test
 
 	public function prePhp()
 	{
-		$this->preState = $this->getState();
+		$calls = [];
+
+		$this->preState = $this->getState($calls);
 	}
 
 	public function postPhp()
@@ -148,17 +151,75 @@ class Test
 		$this->postState = self::getCleanPostState($this->preState, $this->getState($calls));
 	}
 
-	private function getState($calls = null)
+	private function getState(array $calls)
 	{
 		$state = $this->examiner->getState();
+		unset($state['constants']['LENS_CORE_DIRECTORY'], $state['constants']['LENS_CACHE_DIRECTORY']);
+		$state['calls'] = self::cleanCalls($calls);
 
-		if (is_array($state)) {
-			$state['calls'] = $calls;
+		$archive = $this->archivist->archive($state);
+		$archive = self::clean($archive);
 
-			unset($state['constants']['LENS_CORE_DIRECTORY'], $state['constants']['LENS_CACHE_DIRECTORY']);
+		return $archive;
+	}
+
+	private static function cleanCalls(array $calls)
+	{
+		foreach ($calls as &$call) {
+			$class = &$call[0];
+			$function = &$call[1];
+
+			$class = self::removeMockNamespace($class);
+			$function = self::removeMockNamespace($function);
 		}
 
-		return $this->archivist->archive($state);
+		return $calls;
+	}
+
+	private static function removeMockNamespace($namespace)
+	{
+		if (is_string($namespace) && (strncmp($namespace, 'Lens\\', 5) === 0)) {
+			return substr($namespace, 5);
+		}
+
+		return $namespace;
+	}
+
+	private static function clean($input)
+	{
+		if (is_array($input)) {
+			return self::cleanArray($input);
+		}
+
+		if ($input instanceof ObjectArchive) {
+			return self::cleanObject($input);
+		}
+
+		return $input;
+	}
+
+	private static function cleanArray(array $input)
+	{
+		$output = [];
+
+		foreach ($input as $key => $value) {
+			$output[$key] = self::clean($value);
+		}
+
+		return $output;
+	}
+
+	private static function cleanObject(ObjectArchive $object)
+	{
+		$class = $object->getClass();
+		$class = self::removeMockNamespace($class);
+		$object->setClass($class);
+
+		$properties = $object->getProperties();
+		$properties = self::cleanArray($properties);
+		$object->setProperties($properties);
+
+		return $object;
 	}
 
 	private static function getCleanPostState(array $pre, array $post = null)
@@ -170,7 +231,6 @@ class Test
 		self::removeDuplicateKeys($pre['variables'], $post['variables']);
 		self::removeDuplicateKeys($pre['globals'], $post['globals']);
 		self::removeDuplicateKeys($pre['constants'], $post['constants']);
-		self::removeMockNamespaces($post['calls']);
 
 		return $post;
 	}
@@ -182,26 +242,6 @@ class Test
 				unset($b[$key]);
 			}
 		}
-	}
-
-	private static function removeMockNamespaces(array &$calls)
-	{
-		foreach ($calls as &$call) {
-			$object = &$call[0];
-			$function = &$call[1];
-
-			$object = self::removeLensMockNamespace($object);
-			$function = self::removeLensMockNamespace($function);
-		}
-	}
-
-	private static function removeLensMockNamespace($namespace)
-	{
-		if (is_string($namespace) && (strncmp($namespace, 'Lens\\', 5) === 0)) {
-			return substr($namespace, 5);
-		}
-
-		return $namespace;
 	}
 
 	private function startCoverage()

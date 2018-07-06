@@ -72,6 +72,6 @@ abstract class Agent
 
 	public static function stop()
 	{
-		return self::$calls;
+		return (array)self::$calls;
 	}
 }

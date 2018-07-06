@@ -45,13 +45,13 @@ class Settings
 	public function __construct(File $file)
 	{
 		$yaml = new Yaml();
+		$contents = $file->read();
 
-		$content = $file->read();
-
-		if ($content === null) {
+		if ($contents === null) {
 			$input = [];
 		} else {
-			$input = $yaml->load($content);
+			$contents = Paragraph::standardizeNewlines($contents);
+			$input = $yaml->load($contents);
 		}
 
 		$values = $this->getValues($input);

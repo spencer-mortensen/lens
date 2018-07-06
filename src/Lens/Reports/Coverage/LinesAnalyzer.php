@@ -26,6 +26,7 @@
 namespace _Lens\Lens\Reports\Coverage;
 
 use _Lens\Lens\Citations;
+use _Lens\Lens\Paragraph;
 use _Lens\Lens\SourcePaths;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Path;
@@ -97,17 +98,8 @@ class LinesAnalyzer
 	{
 		$file = new File($path);
 		$contents = $file->read();
-		return $this->getStringLines($contents);
-	}
+		$contents = Paragraph::standardizeNewlines($contents);
 
-	// TODO: this is duplicated elsewhere
-	private function getStringLines($text)
-	{
-		$expression = '\\r?\\n';
-
-		$delimiter = "\x03";
-		$pattern = "{$delimiter}{$expression}{$delimiter}XDs";
-
-		return preg_split($pattern, $text);
+		return explode("\n", $contents);
 	}
 }

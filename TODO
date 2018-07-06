@@ -1,23 +1,27 @@
+Lens: fix the issue where an extra mock statement can cause a test to unexpectedly pass
+
+------
+
+Cache: clear when upgrading Lens
+Cache: clear when switching between the phar and Composer executables
+
+------
 
 Before: "new Object(); // return null;"
 After: "new Object();"
 
+------
+
 Consider the mock/live decision algorithm (currently very fragile)
+
+# Support PDO queries:
+$pdo = new PDO('...'); // return null;
+$pdo->query('SELECT * FROM `server` where serverId = 1234 LIMIT 1'); // return new PDOStatement();
 
 ------
 
 Code coverage: update the progress bars
 Code coverage: infer the base namespace directory
-
-------
-
-Allow the user to autoload files that are only used during testing
-
-------
-
-Add clover reports (for "codecov" integration)
-
-Lens: display backtrace along with exception (so we can debug more easily)
 
 ======
 
@@ -34,12 +38,23 @@ Watch the Packagist download counter.
 
 ======
 
+PhpStorm: offers the "cache" and "live" versions of the class (but they are never useful)
+PhpStorm: shows incorrect syntax highlighting
+PhpStorm: in the "settings.yml" file, in the mock lists, PhpStorm doesn't update these namespaces when you refactor code
+Lens: allow the user to autoload files that are only used during testing
+Tests file: "use Example\{A, B};" <-- this syntax was expected to work, but didn't
+Guide: explain where dependencies should be created for dependency injection (Bryan tried to instantiate a mock in the "// Test" section)
+Guide: demonstrate the PDO / PDOStatement scenario
+Lens: add clover reports (for "codecov" integration)
+Lens: display backtrace along with exception (so we can debug more easily)
+
+------
+
 Attend sales demo with Ian Gillespie
 Arrange lunch with Matt Richards
 
 ------
 
-Cache: clear when upgrading Lens
 Cache: clear when the PHP version changes
 Cache: clear when the autoloader is updated
 Cache: clear when the autoload file itself is modified

@@ -39,4 +39,12 @@ class Paragraph
 		$replacement = Re::quote($padding) . '$1';
 		return Re::replace('([^\\v]+)', $replacement, $input);
 	}
+
+	public static function standardizeNewlines($input)
+	{
+		$input = str_replace("\r\n", "\n", $input);
+		$input = str_replace("\r", "\n", $input);
+
+		return $input;
+	}
 }

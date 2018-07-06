@@ -25,6 +25,7 @@
 
 namespace _Lens\Lens\Tests;
 
+use _Lens\Lens\Paragraph;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
@@ -91,7 +92,10 @@ class Browser
 		$path = $file->getPath();
 
 		if ($this->isTestsFile($path)) {
-			$files[(string)$path] = $file->read();
+			$contents = $file->read();
+			$contents = Paragraph::standardizeNewlines($contents);
+
+			$files[(string)$path] = $contents;
 		}
 	}
 

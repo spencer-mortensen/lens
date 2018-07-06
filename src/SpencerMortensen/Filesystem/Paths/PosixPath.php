@@ -48,27 +48,34 @@ class PosixPath extends Path
 
 	public static function fromString($input)
 	{
-		if (!self::parse($input, $scheme, $path)) {
-			throw new InvalidArgumentException();
-		}
+		$input = self::getStringValue($input);
+
+		self::parse($input, $scheme, $path);
 
 		return new self($scheme, $path);
 	}
 
-	private static function parse($input, &$scheme, &$path)
+	private static function getStringValue($input)
 	{
-		if (!is_string($input)) {
-			return false;
+		if (is_string($input)) {
+			return $input;
 		}
 
+		if (is_int($input)) {
+			return (string)$input;
+		}
+
+		throw new InvalidArgumentException();
+	}
+
+	private static function parse($input, &$scheme, &$path)
+	{
 		$expression = '^(?:(?<scheme>[a-z]+)://)?(?<path>.*)$';
 
 		self::match($expression, $input, $match);
 
 		$scheme = self::getNonEmptyString($match['scheme']);
 		$path = CorePath::fromString($match['path'], self::$delimiter);
-
-		return true;
 	}
 
 	private static function match($expression, $input, array &$match = null)
@@ -146,6 +153,8 @@ class PosixPath extends Path
 
 			return new CorePath($isAbsolute, $components, self::$delimiter);
 		}
+
+		$path = self::getStringValue($path);
 
 		return CorePath::fromString($path, self::$delimiter);
 	}

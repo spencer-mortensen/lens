@@ -25,6 +25,7 @@
 
 namespace _Lens\Lens\Tests;
 
+use _Lens\Lens\Paragraph;
 use _Lens\Lens\Xdebug;
 use _Lens\SpencerMortensen\Filesystem\File;
 
@@ -50,21 +51,13 @@ class StatementsExtractor
 			return null;
 		}
 
+		$contents = Paragraph::standardizeNewlines($contents);
+		$lines = explode("\n", $contents);
+
 		$path = (string)$file->getPath();
-		$lines = $this->getLines($contents);
 		$coverage = $this->getCoverage($path);
 
 		return $this->getStatementLineNumbers($coverage[$path], $lines);
-	}
-
-	private function getLines($text)
-	{
-		$expression = '\\r?\\n';
-
-		$delimiter = "\x03";
-		$pattern = "{$delimiter}{$expression}{$delimiter}XDs";
-
-		return preg_split($pattern, $text);
 	}
 
 	private function getCoverage($path)

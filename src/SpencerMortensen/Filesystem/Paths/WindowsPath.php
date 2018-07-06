@@ -52,11 +52,24 @@ class WindowsPath extends Path
 
 	public static function fromString($input)
 	{
-		if (!self::parse($input, $scheme, $prefix, $path)) {
-			throw new InvalidArgumentException();
-		}
+		$input = self::getStringValue($input);
+
+		self::parse($input, $scheme, $prefix, $path);
 
 		return new self($scheme, $prefix, $path);
+	}
+
+	private static function getStringValue($input)
+	{
+		if (is_string($input)) {
+			return $input;
+		}
+
+		if (is_int($input)) {
+			return (string)$input;
+		}
+
+		throw new InvalidArgumentException();
 	}
 
 	/**
@@ -65,14 +78,9 @@ class WindowsPath extends Path
 	 * @param string|null $scheme
 	 * @param string|null $prefix
 	 * @param CorePath $corePath
-	 * @return bool
 	 */
 	private static function parse($input, &$scheme, &$prefix, &$corePath)
 	{
-		if (!is_string($input)) {
-			return false;
-		}
-
 		$expression = '^(?:(?<scheme>[a-z]+)://)?(?:(?<prefix>[a-zA-Z]):)?(?<path>.*)$';
 
 		self::match($expression, $input, $match);
@@ -82,8 +90,6 @@ class WindowsPath extends Path
 
 		$path = str_replace('/', self::$delimiter, $match['path']);
 		$corePath = CorePath::fromString($path, self::$delimiter);
-
-		return true;
 	}
 
 	private static function match($expression, $input, array &$match = null)
@@ -168,6 +174,8 @@ class WindowsPath extends Path
 
 			return new CorePath($isAbsolute, $components, self::$delimiter);
 		}
+
+		$path = self::getStringValue($path);
 
 		return CorePath::fromString($path, self::$delimiter);
 	}

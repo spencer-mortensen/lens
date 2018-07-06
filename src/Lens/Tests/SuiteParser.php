@@ -208,7 +208,9 @@ EOS;
 		$line = $match[1][0];
 		$effect = $match[1][1];
 
-		$script = self::extractScript($effect);
+		$script = [];
+		self::extractScript($cause, $script);
+		self::extractScript($effect, $script);
 
 		return [
 			$line => [
@@ -221,11 +223,13 @@ EOS;
 		];
 	}
 
-	private static function extractScript(&$php)
+	private static function extractScript(&$php, array &$script)
 	{
-		$script = [];
+		if ($php === null) {
+			return;
+		}
 
-		$lines = Re::split('\\r?\\n', $php);
+		$lines = explode("\n", $php);
 
 		foreach ($lines as &$line) {
 			if (self::extractFromCall($line, $action)) {
@@ -234,8 +238,6 @@ EOS;
 		}
 
 		$php = implode("\n", $lines);
-
-		return $script;
 	}
 
 	private static function extractFromCall(&$php, &$action)

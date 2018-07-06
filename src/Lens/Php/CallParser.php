@@ -61,7 +61,7 @@ singleLineComment: RE (?://|#).*?(?:\n|$)
 string: OR singleQuotedString doubleQuotedString docString
 singleQuotedString: RE '(?:\\\\|\\\'|[^'])*'
 doubleQuotedString: RE "(?:\\\\|\\\"|[^"])*"
-docString: RE <<<(['"]?)(\w+)\1\r?\n.*?\n\2;?(?:\r?\n|$)
+docString: RE <<<(['"]?)(\w+)\1\n.*?\n\2;?(?:\n|$)
 group: AND openingBrace functionBody closingBrace
 character: RE [^}]
 closingBrace: STRING }

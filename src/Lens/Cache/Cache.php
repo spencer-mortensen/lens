@@ -28,6 +28,7 @@ namespace _Lens\Lens\Cache;
 use _Lens\Lens\Citations;
 use _Lens\Lens\Coverage;
 use _Lens\Lens\SourcePaths;
+use _Lens\Lens\Paragraph;
 use _Lens\Lens\Php\Code;
 use _Lens\Lens\Sanitizer;
 use _Lens\SpencerMortensen\Filesystem\Directory;
@@ -272,6 +273,7 @@ class Cache
 		}
 
 		$filePhp = $file->read();
+		$filePhp = Paragraph::standardizeNewlines($filePhp);
 
 		list($namespace, $uses) = $this->parser->parse($filePhp);
 
@@ -321,13 +323,6 @@ class Cache
 		return isset($this->modifiedFiles[$filePathString]);
 	}
 
-	private static function getPattern($expression, $flags = '')
-	{
-		$delimiter = "\x03";
-
-		return $delimiter . $expression . $delimiter . $flags . 'XDs';
-	}
-
 	private function addLiveClass($class, $namespace, array $uses, $filePhp)
 	{
 		$path = $this->sourcePaths->getLiveClassPath($class);
@@ -346,8 +341,7 @@ class Cache
 	 */
 	private function getDefinitionPhp($reflection, $filePhp)
 	{
-		$pattern = self::getPattern('\\r?\\n');
-		$lines = preg_split($pattern, $filePhp);
+		$lines = explode("\n", $filePhp);
 
 		$begin = $reflection->getStartLine() - 1;
 		$length = $reflection->getEndLine() - $begin;
@@ -380,6 +374,10 @@ class Cache
 		// TODO: absorb this into the "MockBuilder"
 		$reflection = new ReflectionClass($class);
 		$namespace = $reflection->getNamespaceName();
+
+		if (strlen($namespace) === 0) {
+			$namespace = null;
+		}
 
 		$uses = [
 			'Agent' => $this->getAgentNamespace()
