@@ -56,6 +56,8 @@ class LensRunner implements Command
 		$options = $this->getValidOptions();
 		$paths = $this->getValidTestPaths($filesystem);
 
+		$executable = $this->arguments->getExecutable();
+
 		$finder = new Finder($filesystem);
 		$finder->find($paths);
 
@@ -65,7 +67,6 @@ class LensRunner implements Command
 		$cache = $finder->getCache();
 		$tests = $finder->getTests();
 		$autoload = $finder->getAutoload();
-		$executable = $this->arguments->getExecutable();
 
 		$settings = $this->getSettings($finder);
 		$mockClasses = $this->getMockClasses($settings);

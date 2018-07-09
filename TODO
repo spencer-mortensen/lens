@@ -1,4 +1,6 @@
+Lens: update the Composer autoloader (currently version-specific); add instructions to the Guide
 Lens: fix the issue where an extra mock statement can cause a test to unexpectedly pass
+Lens: scanning algorithm also executes examples
 
 ------
 
@@ -22,6 +24,7 @@ $pdo->query('SELECT * FROM `server` where serverId = 1234 LIMIT 1'); // return n
 
 Code coverage: update the progress bars
 Code coverage: infer the base namespace directory
+Move binary files out of GitHub
 
 ======
 
