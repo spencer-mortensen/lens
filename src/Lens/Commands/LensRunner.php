@@ -32,7 +32,8 @@ use _Lens\Lens\LensException;
 use _Lens\Lens\Reports\ReportsBuilder;
 use _Lens\Lens\Settings;
 use _Lens\Lens\Cache\CacheBuilder;
-use _Lens\Lens\Tests\TestsRunner;
+use _Lens\Lens\Tests\GetSuites;
+use _Lens\Lens\Tests\GetResults;
 use _Lens\Lens\Url;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 use _Lens\SpencerMortensen\Filesystem\File;
@@ -75,11 +76,14 @@ class LensRunner implements Command
 		$sourceBuilder = new CacheBuilder($executable, $finder);
 		$sourceBuilder->run($mockFunctions);
 
-		$testsRunner = new TestsRunner($executable, $core, $src, $cache, $tests);
-		$testsRunner->run($paths, $mockClasses, $mockFunctions);
+		$getSuites = new GetSuites($tests);
+		$suites = $getSuites->getSuites($paths);
 
-		$results = $testsRunner->getResults();
-		$executableStatements = $testsRunner->getCoverage();
+		$getResults = new GetResults($executable, $core, $cache);
+		$results = $getResults->getResults($suites, $mockClasses, $mockFunctions);
+
+		exit;
+
 		$isUpdateAvailable = $this->isUpdateAvailable($settings);
 
 		$reportsBuilder = new ReportsBuilder($core, $project, $autoload, $cache, $filesystem);

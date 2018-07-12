@@ -34,34 +34,34 @@ use _Lens\SpencerMortensen\Parser\ParserException;
 
 class Sanitizer
 {
+	/** @var Namespacing */
+	private $namespacing;
+
 	/** @var CallParser */
 	private $parser;
-
-	/** @var callable */
-	private $isFunction;
 
 	/** @var array */
 	private $mockFunctions;
 
-	public function __construct($isFunction, array $mockFunctions)
+	public function __construct(Namespacing $namespacing, array $mockFunctions)
 	{
-		// TODO: dependency injection
+		$this->namespacing = $namespacing;
+		// TODO: dependency injection:
 		$this->parser = new CallParser();
-		$this->isFunction = $isFunction;
 		$this->mockFunctions = $mockFunctions;
 	}
 
 	public function sanitize($type, $namespace, array $uses, $definitionPhp)
 	{
+		$this->namespacing->setContext($namespace, $uses);
+
 		$tokens = $this->getTokens($type, $definitionPhp);
 
 		$functions = [];
 		$edits = [];
 
-		$namespacing = new Namespacing($this->isFunction, $namespace, $uses);
-
 		foreach ($tokens as $token) {
-			$this->analyzeToken($namespacing, $token, $functions, $edits);
+			$this->analyzeToken($token, $functions, $edits);
 		}
 
 		$requirePhp = $this->getRequirePhp($functions);
@@ -98,28 +98,28 @@ class Sanitizer
 		}
 	}
 
-	private function analyzeToken(Namespacing $namespacing, array $token, array &$functions, array &$edits)
+	private function analyzeToken(array $token, array &$functions, array &$edits)
 	{
 		list($type, $position, $value) = $token;
 
 		switch ($type) {
 			default: // CallParser::TYPE_CLASS
-				$this->analyzeClass($namespacing, $position, $value, $edits);
+				$this->analyzeClass($position, $value, $edits);
 				break;
 
 			case CallParser::TYPE_FUNCTION:
-				$this->analyzeFunction($namespacing, $position, $value, $functions, $edits);
+				$this->analyzeFunction($position, $value, $functions, $edits);
 				break;
 		}
 	}
 
-	private function analyzeClass(Namespacing $namespacing, $position, $relativeClass, array &$edits)
+	private function analyzeClass($position, $relativeClass, array &$edits)
 	{
 		if (Semantics::isClassIdentifier($relativeClass)) {
 			return;
 		}
 
-		$absoluteClass = $namespacing->getAbsoluteClass($relativeClass);
+		$absoluteClass = $this->namespacing->getAbsoluteClass($relativeClass);
 
 		if (Semantics::isUnsafeClass($absoluteClass)) {
 			$absoluteClass = "Lens\\{$absoluteClass}";
@@ -127,9 +127,9 @@ class Sanitizer
 		}
 	}
 
-	private function analyzeFunction(Namespacing $namespacing, $position, $relativeFunction, array &$functions, array &$edits)
+	private function analyzeFunction($position, $relativeFunction, array &$functions, array &$edits)
 	{
-		$absoluteFunction = $namespacing->getAbsoluteFunction($relativeFunction);
+		$absoluteFunction = $this->namespacing->getAbsoluteFunction($relativeFunction);
 
 		if (Semantics::isUnsafeFunction($absoluteFunction)) {
 			$absoluteFunction = "Lens\\{$absoluteFunction}";

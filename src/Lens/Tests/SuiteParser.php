@@ -25,7 +25,6 @@
 
 namespace _Lens\Lens\Tests;
 
-use _Lens\SpencerMortensen\RegularExpressions\Re;
 use _Lens\SpencerMortensen\Parser\Rule;
 use _Lens\SpencerMortensen\Parser\String\Parser;
 use _Lens\SpencerMortensen\Parser\String\Rules;
@@ -157,11 +156,11 @@ EOS;
 	public function getTest(array $matches)
 	{
 		list($subject, $cases) = $matches;
-		list($line, $code) = $subject;
+		list($line, $test) = $subject;
 
 		return [
 			$line => [
-				'code' => $code,
+				'test' => $test,
 				'cases' => $cases
 			]
 		];
@@ -208,50 +207,12 @@ EOS;
 		$line = $match[1][0];
 		$effect = $match[1][1];
 
-		$script = [];
-		self::extractScript($cause, $script);
-		self::extractScript($effect, $script);
-
 		return [
 			$line => [
 				'cause' => $cause,
-				'effect' => $effect,
-				'script' => $script,
-				'issues' => null,
-				'coverage' => null
+				'effect' => $effect
 			]
 		];
-	}
-
-	private static function extractScript(&$php, array &$script)
-	{
-		if ($php === null) {
-			return;
-		}
-
-		$lines = explode("\n", $php);
-
-		foreach ($lines as &$line) {
-			if (self::extractFromCall($line, $action)) {
-				$script[] = $action;
-			}
-		}
-
-		$php = implode("\n", $lines);
-	}
-
-	private static function extractFromCall(&$php, &$action)
-	{
-		$expression = '^(?<php>.*?[a-zA-Z_0-9]+\\s*\\(.*?\\);)\\s*//\\s*(?<action>.*)$';
-
-		if (!Re::match($expression, $php, $match)) {
-			return false;
-		}
-
-		$php = $match['php'];
-		$action = $match['action'];
-
-		return true;
 	}
 
 	public function getOptionalCause(array $matches)

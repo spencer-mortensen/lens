@@ -1,48 +1,76 @@
-=== tests.json ===
+=== tests ===
 
-"project":
+$project:
 	"name": ...
-	"suites": {
+	"suites":
 		$file: $suite,
 		...
-	}
 
 $suite:
 	"namespace": ...
 	"uses": [...]
-	"tests": {
+	"tests":
 		$line: $test,
 		...
-	}
 
 $test:
-	"code": ...,
-	"cases": {
+	"test": ...,
+	"cases":
 		$line: $case,
 		...
-	}
 
 $case:
 	"cause": ...
 	"effect": ...
-	"script": [...]
-	"issues": [$issue, ...]
-	"coverage": $coverage
 
-$issue:
-	"-": "$c = '.nn';"
-	"+": "$c = '.';"
+
+=== results ===
+
+$results:
+	$file:
+		$testLine:
+			$caseLine:
+				"actual":
+					"pre": $state
+					"post": $state
+				"expected":
+					"pre": $state
+					"post": $state
+				"coverage: $coverage
 
 $coverage:
-	"classes": {
-		$class: [$lineNumber, ...],
+	"classes":
+		$class: [$lineNumber, ...]
 		...
-	},
-	"functions": {
-		$function: [$lineNumber, ...],
+	"functions":
+		$function: [$lineNumber, ...]
 		...
-	},
-	"traits": {
-		$trait: [$lineNumber, ...],
+	"traits":
+		$trait: [$lineNumber, ...]
 		...
-	}
+
+
+=== summary ===
+
+$summary:
+	$file:
+		$testLine:
+			$caseLine:
+				"pass": true|false
+				"issues": [$issue, ...]
+				"coverage": $coverage
+
+$issue:
+	"-": "$c = '...';"
+	"+": "$c = '...';"
+
+$coverage:
+	"classes":
+		$class: [$lineNumber, ...]
+		...
+	"functions":
+		$function: [$lineNumber, ...]
+		...
+	"traits":
+		$trait: [$lineNumber, ...]
+		...

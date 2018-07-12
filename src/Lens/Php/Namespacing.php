@@ -30,15 +30,19 @@ class Namespacing
 	/** @var callable|null */
 	private $isFunctionCallable;
 
-	/** @var string */
+	/** @var string|null */
 	private $namespace;
 
 	/** @var array */
 	private $uses;
 
-	public function __construct($isFunctionCallable, $namespace, array $uses)
+	public function __construct($isFunctionCallable)
 	{
 		$this->isFunctionCallable = $isFunctionCallable;
+	}
+
+	public function setContext($namespace, array $uses)
+	{
 		$this->namespace = $namespace;
 		$this->uses = $uses;
 	}

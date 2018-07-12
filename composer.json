@@ -1,12 +1,12 @@
 {
     "name": "lens/lens",
     "type": "library",
-    "description": "Lens is a unit-testing framework for PHP with readable tests that catch everything.",
+    "description": "Lens: the unit-testing framework for PHP that needs no assertions.",
     "keywords": [
         "unit",
-        "test",
         "testing",
-        "PHP",
+        "test",
+        "php",
         "lens",
         "phpunit"
     ],
@@ -28,7 +28,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "Lens_0_0_56\\": "src"
+            "_Lens\\": "src"
         }
     }
 }

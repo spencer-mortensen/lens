@@ -22,6 +22,10 @@ $pdo->query('SELECT * FROM `server` where serverId = 1234 LIMIT 1'); // return n
 
 ------
 
+Tests file: allow a missing "// Effect" section
+
+------
+
 Code coverage: update the progress bars
 Code coverage: infer the base namespace directory
 Move binary files out of GitHub

@@ -30,6 +30,7 @@ use _Lens\Lens\Coverage;
 use _Lens\Lens\SourcePaths;
 use _Lens\Lens\Paragraph;
 use _Lens\Lens\Php\Code;
+use _Lens\Lens\Php\Namespacing;
 use _Lens\Lens\Sanitizer;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
@@ -86,6 +87,8 @@ class Cache
 
 	public function __construct(Path $core, Path $project, Path $src, Path $autoload, Path $cache, array $mockFunctions)
 	{
+		$namespacing = new Namespacing('function_exists');
+
 		$this->project = $project;
 		$this->src = $src;
 		$this->autoload = $autoload;
@@ -93,7 +96,7 @@ class Cache
 		$this->citations = new Citations($cache);
 		$this->coverage = new Coverage($cache);
 		$this->parser = new FileParser();
-		$this->sanitizer = new Sanitizer('function_exists', $mockFunctions);
+		$this->sanitizer = new Sanitizer($namespacing, $mockFunctions);
 		$this->sourcePaths = new SourcePaths($core, $cache);
 	}
 

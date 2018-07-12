@@ -25,35 +25,46 @@
 
 namespace _Lens\Lens\Tests;
 
+use _Lens\Lens\LensException;
 use _Lens\Lens\Paragraph;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
 use _Lens\SpencerMortensen\Filesystem\Path;
+use _Lens\SpencerMortensen\Parser\ParserException;
 
-class Browser
+class GetSuites
 {
+	/** @var Path */
+	private $tests;
+
 	/** @var Filesystem */
 	private $filesystem;
 
-	/** @var Path[] */
-	private $files;
+	/** @var SuiteParser */
+	private $parser;
 
-	public function __construct(Filesystem $filesystem)
+	public function __construct(Path $tests)
 	{
-		$this->filesystem = $filesystem;
-		$this->files = [];
+		$this->tests = $tests;
+		$this->filesystem = new Filesystem();
+		$this->parser = new SuiteParser();
 	}
 
-	public function browse(array $paths)
+	public function getSuites(array $paths)
 	{
-		$output = [];
+		$suites = [];
 
+		// TODO: get suites from cache (watching for changes to the original tests files)
 		$children = $this->getChildren($paths);
 
-		$this->readChildren($children, $output);
+		$this->readChildren($children, $suites);
 
-		return $output;
+		// TODO: let the user provide the project name in the configuration file:
+		return [
+			'name' => 'Lens',
+			'suites' => $suites
+		];
 	}
 
 	private function getChildren(array $paths)
@@ -89,13 +100,19 @@ class Browser
 
 	private function readFile(File $file, array &$files)
 	{
-		$path = $file->getPath();
+		$absolutePath = $file->getPath();
 
-		if ($this->isTestsFile($path)) {
+		if ($this->isTestsFile($absolutePath)) {
+			$relativePath = $this->tests->getRelativePath($absolutePath);
+
 			$contents = $file->read();
 			$contents = Paragraph::standardizeNewlines($contents);
 
-			$files[(string)$path] = $contents;
+			try {
+				$files[(string)$relativePath] = $this->parser->parse($contents);
+			} catch (ParserException $exception) {
+				throw LensException::invalidTestsFileSyntax($absolutePath, $contents, $exception);
+			}
 		}
 	}
 
