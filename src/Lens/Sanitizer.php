@@ -53,6 +53,7 @@ class Sanitizer
 
 	public function sanitize($type, $namespace, array $uses, $definitionPhp)
 	{
+		// TODO: the $uses format has changed (we now resolve "functions" and "classes" separately):
 		$this->namespacing->setContext($namespace, $uses);
 
 		$tokens = $this->getTokens($type, $definitionPhp);

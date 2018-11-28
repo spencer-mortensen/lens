@@ -23,33 +23,47 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Exceptions;
 
-use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Path;
+use Exception;
 
-class JsonFile extends File
+class ParsingException extends Exception
 {
-	public function __construct(Path $path)
+	/** @var array */
+	private $coordinates;
+
+	/** @var string|null */
+	private $expected;
+
+	/** @var string|null */
+	private $actual;
+
+	/**
+	 * @param array $coordinates
+	 * @param string|null $expected
+	 * @param string|null $actual
+	 */
+	public function __construct(array $coordinates, $expected, $actual)
 	{
-		parent::__construct($path);
+		$this->coordinates = $coordinates;
+		$this->expected = $expected;
+		$this->actual = $actual;
+
+		parent::__construct();
 	}
 
-	public function read()
+	public function getCoordinates()
 	{
-		$contents = parent::read();
-
-		if ($contents === null) {
-			return null;
-		}
-
-		return json_decode($contents, true);
+		return $this->coordinates;
 	}
 
-	public function write($value)
+	public function getExpected()
 	{
-		$contents = json_encode($value, JSON_PRETTY_PRINT) . PHP_EOL;
+		return $this->expected;
+	}
 
-		parent::write($contents);
+	public function getActual()
+	{
+		return $this->actual;
 	}
 }

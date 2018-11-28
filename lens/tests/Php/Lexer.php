@@ -170,373 +170,421 @@ $nodes = [new Node($php, ['string', 'value'])];
 */
 
 // Cause
+$php = '// Comment';
+
+// Effect
+$nodes = [new Node('// Comment', ['comment'])];
+
+// Cause
+$php = "// Comment\n";
+
+// Effect
+$nodes = [new Node('// Comment', ['comment']), new Node("\n", ['whitespace'])];
+
+// Cause
+$php = '# Comment';
+
+// Effect
+$nodes = [new Node('# Comment', ['comment'])];
+
+// Cause
+$php = "# Comment\n";
+
+// Effect
+$nodes = [new Node('# Comment', ['comment']), new Node("\n", ['whitespace'])];
+
+// Cause
+$php = '/* Comment */';
+
+// Effect
+$nodes = [new Node('/* Comment */', ['comment'])];
+
+// Cause
+$php = "/*\n * Comment\n */";
+
+// Effect
+$nodes = [new Node("/*\n * Comment\n */", ['comment'])];
+
+// Cause
+$php = "/* Comment */\n";
+
+// Effect
+$nodes = [new Node('/* Comment */', ['comment']), new Node("\n", ['whitespace'])];
+
+// Cause
+$php = '/* a *//* b */';
+
+// Effect
+$nodes = [new Node('/* a */', ['comment']), new Node('/* b */', ['comment'])];
+
+// Cause
 $php = '<?php';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '===';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '!==';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<=>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '**=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<<=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '>>=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '->';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '||';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '&&';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '??';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '==';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '!=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '>=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '=>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '++';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '--';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '.=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '+=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '*=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '/=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '%=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '^=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '|=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '%=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '^=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '|=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '&=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '**';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<<';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '>>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<?';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '?>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '$';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = ';';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '(';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = ')';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '[';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = ']';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '{';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '}';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '\\';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '=';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = ',';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '.';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '+';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '-';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '*';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '/';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '%';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '^';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '|';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '&';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '<';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '>';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '!';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '?';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = ':';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '~';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];
 
 // Cause
 $php = '@';
 
 // Effect
-$nodes = [new Node($php, [$php])];
+$nodes = [new Node($php, ['symbol'])];

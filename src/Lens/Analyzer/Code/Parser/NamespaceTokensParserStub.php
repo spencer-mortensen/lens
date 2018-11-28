@@ -23,33 +23,40 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Analyzer\Code\Parser;
 
-use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Path;
+use _Lens\Lens\Php\Lexer;
 
-class JsonFile extends File
+class NamespaceTokensParserStub
 {
-	public function __construct(Path $path)
+	public $rules = <<<'EOS'
+expression: any notNamespace 1+
+notNamespace: get !NAMESPACE
+EOS;
+
+	public $startRule = 'expression';
+
+	public function expression(array $tokens)
 	{
-		parent::__construct($path);
+		return $tokens;
 	}
 
-	public function read()
+	public function notNamespace(array $token)
 	{
-		$contents = parent::read();
+		return $token;
+	}
 
-		if ($contents === null) {
-			return null;
+	public function __invoke(NotTokenInput $input)
+	{
+	}
+
+	public function __get($type)
+	{
+		if (substr($type, 0, 1) === '!') {
+			$type = substr($type, 1);
+			return "-Lexer::{$type}_";
 		}
 
-		return json_decode($contents, true);
-	}
-
-	public function write($value)
-	{
-		$contents = json_encode($value, JSON_PRETTY_PRINT) . PHP_EOL;
-
-		parent::write($contents);
+		return "Lexer::{$type}_";
 	}
 }

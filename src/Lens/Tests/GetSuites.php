@@ -25,13 +25,14 @@
 
 namespace _Lens\Lens\Tests;
 
+use _Lens\Lens\Exceptions\ParsingException;
 use _Lens\Lens\LensException;
 use _Lens\Lens\Paragraph;
+use _Lens\Lens\Tests\Parse\Parser;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
 use _Lens\SpencerMortensen\Filesystem\Path;
-use _Lens\SpencerMortensen\Parser\ParserException;
 
 class GetSuites
 {
@@ -41,14 +42,14 @@ class GetSuites
 	/** @var Filesystem */
 	private $filesystem;
 
-	/** @var SuiteParser */
+	/** @var Parser */
 	private $parser;
 
 	public function __construct(Path $tests)
 	{
 		$this->tests = $tests;
 		$this->filesystem = new Filesystem();
-		$this->parser = new SuiteParser();
+		$this->parser = new Parser();
 	}
 
 	public function getSuites(array $paths)
@@ -105,13 +106,13 @@ class GetSuites
 		if ($this->isTestsFile($absolutePath)) {
 			$relativePath = $this->tests->getRelativePath($absolutePath);
 
-			$contents = $file->read();
-			$contents = Paragraph::standardizeNewlines($contents);
+			$php = $file->read();
+			$php = Paragraph::standardizeNewlines($php);
 
 			try {
-				$files[(string)$relativePath] = $this->parser->parse($contents);
-			} catch (ParserException $exception) {
-				throw LensException::invalidTestsFileSyntax($absolutePath, $contents, $exception);
+				$files[(string)$relativePath] = $this->parser->parse($php);
+			} catch (ParsingException $exception) {
+				throw LensException::invalidTestsFileSyntax($absolutePath, $exception);
 			}
 		}
 	}

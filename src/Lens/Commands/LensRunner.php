@@ -73,8 +73,11 @@ class LensRunner implements Command
 		$mockClasses = $this->getMockClasses($settings);
 		$mockFunctions = $this->getMockFunctions($settings);
 
+		exit;
 		$sourceBuilder = new CacheBuilder($executable, $finder);
 		$sourceBuilder->run($mockFunctions);
+
+		exit;
 
 		$getSuites = new GetSuites($tests);
 		$suites = $getSuites->getSuites($paths);

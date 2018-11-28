@@ -23,33 +23,60 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Analyzer\Code\Parser;
 
-use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Path;
+use _Lens\SpencerMortensen\Parser\Input\Input;
 
-class JsonFile extends File
+class NotTokenInput implements Input
 {
-	public function __construct(Path $path)
+	/** @var array */
+	private $tokens;
+
+	/** @var int */
+	private $position;
+
+	public function __construct(array $tokens)
 	{
-		parent::__construct($path);
+		$this->tokens = $tokens;
+		$this->position = 0;
 	}
 
-	public function read()
+	public function read($targetType, &$output = null)
 	{
-		$contents = parent::read();
-
-		if ($contents === null) {
-			return null;
+		if (!isset($this->tokens[$this->position])) {
+			return false;
 		}
 
-		return json_decode($contents, true);
+		$token = $this->tokens[$this->position];
+		$type = key($token);
+
+		if ($type < 0) {
+			$isMatch = ($type !== $targetType);
+		} else {
+			$isMatch = ($type === $targetType);
+		}
+
+		if (!$isMatch) {
+			return false;
+		}
+
+		$output = $token;
+		++$this->position;
+		return true;
 	}
 
-	public function write($value)
+	public function getTokens()
 	{
-		$contents = json_encode($value, JSON_PRETTY_PRINT) . PHP_EOL;
+		return $this->tokens;
+	}
 
-		parent::write($contents);
+	public function getPosition()
+	{
+		return $this->position;
+	}
+
+	public function setPosition($position)
+	{
+		$this->position = $position;
 	}
 }

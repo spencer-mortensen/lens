@@ -29,7 +29,7 @@ use Error;
 use ErrorException;
 use Exception;
 use _Lens\Lens\Commands\LensVersion;
-use _Lens\SpencerMortensen\Parser\ParserException;
+use _Lens\Lens\Exceptions\ParsingException;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
 use _Lens\SpencerMortensen\Filesystem\Path;
 
@@ -37,6 +37,9 @@ class LensException extends Exception
 {
 	/** @var string */
 	private static $lensExecutable = 'lens';
+
+	/** @var int */
+	private static $maximumLineLength = 96;
 
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
@@ -148,8 +151,6 @@ class LensException extends Exception
 
 		$help = [
 			"Do you have a \"lens\" directory? If not, you should check out this short guide to get started:\n" . Url::LENS_GUIDE,
-			"Is your lens directory called \"lens\"? You should use that name exactly, without any spelling or capitalization differences.",
-			"Is your \"lens\" directory located right inside your project directory?",
 			"Are you working outside your project directory right now? You can run your tests from anywhere by explicitly providing the path to your tests. Here's an example:\n" . self::$lensExecutable . " ~/MyProject/lens/tests"
 		];
 
@@ -329,13 +330,13 @@ class LensException extends Exception
 		}
 	}
 
-	public static function invalidTestsFileSyntax(Path $path, $contents, ParserException $exception)
+	public static function invalidTestsFileSyntax(Path $path, ParsingException $exception)
 	{
 		$code = self::CODE_INVALID_TESTS_FILE_SYNTAX;
 
 		$severity = self::SEVERITY_ERROR;
 
-		$message = self::getTestsFileInvalidSyntaxMessage($path, $contents, $exception);
+		$message = self::getTestsFileInvalidSyntaxMessage($path, $exception);
 
 		// TODO: add $data array with "expected" and "actual"
 
@@ -346,36 +347,23 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help);
 	}
 
-	private static function getTestsFileInvalidSyntaxMessage(Path $absolutePath, $contents, ParserException $exception)
+	private static function getTestsFileInvalidSyntaxMessage(Path $absolutePath, ParsingException $exception)
 	{
-		$position = $exception->getState();
-		$expectation = $exception->getRule();
-
 		$displayer = new Displayer();
+
 		$relativePath = self::getRelativePath($absolutePath);
 		$pathText = $displayer->display((string)$relativePath);
 
-		$message = "Syntax error in {$pathText}: ";
+		$expected = $exception->getExpected();
+		$expectedText = self::getExpectedText($displayer, $expected);
 
-		list($line, $character) = self::getCoordinates($contents, $position);
+		$actual = $exception->getActual();
+		$actualText = self::getActualText($displayer, $actual);
 
-		$tail = self::getTail($contents, $position);
-		$tailText = $displayer->display($tail);
+		$coordinates = $exception->getCoordinates();
+		$coordinatesText = self::getCoordinatesText($coordinates);
 
-		if ($expectation === null) {
-			$message .= "unexpected text ({$tailText}) at the end of the file.";
-		} else {
-			$expectationText = self::getExpectationText($expectation);
-			$message .= "expected {$expectationText}";
-
-			if (0 < strlen($tail)) {
-				$message .= ", but read {$tailText}";
-			}
-
-			$message .= " at line {$line} character {$character}.";
-		}
-
-		return $message;
+		return "Syntax error in {$pathText}: {$expectedText}{$actualText}{$coordinatesText}.";
 	}
 
 	private static function getRelativePath(Path $absolutePath)
@@ -386,49 +374,39 @@ class LensException extends Exception
 		return $currentDirectoryPath->getRelativePath($absolutePath);
 	}
 
-	private static function getCoordinates($input, $position)
+	private static function getExpectedText(Displayer $displayer, $expected)
 	{
-		$lines = explode("\n", substr($input, 0, $position));
-		$x = count($lines);
-
-		$lastLine = array_pop($lines);
-		$y = strlen($lastLine) + 1;
-
-		return [$x, $y];
-	}
-
-	public static function getTail($input, $position)
-	{
-		$tail = substr($input, $position);
-		$end = strpos($tail, "\n");
-
-		if ($end === 0) {
-			$end = 1;
-		} elseif (!is_integer($end)) {
-			$end = 96;
+		if ($expected === null) {
+			$expectedValue = 'nothing';
+		} else {
+			$expectedValue = $displayer->display($expected);
 		}
 
-		return substr($tail, 0, $end);
+		return "expected {$expectedValue}";
 	}
 
-	private static function getExpectationText($expectation)
+	private static function getActualText(Displayer $displayer, $actual)
 	{
-		switch ($expectation) {
-			case 'phpTagLine':
-				return "an opening PHP tag (\"<?php\\n\")";
-
-			case 'codeUnit':
-				return "PHP statements";
-
-			case 'subjectLabel':
-				return "a test label (\"// Test\\n\")";
-
-			case 'effectLabel':
-				return "an effect label (\"// Effect\\n\")";
-
-			default:
-				throw new ErrorException("Undefined expectation ({$expectation})", null, E_USER_ERROR, __FILE__, __LINE__);
+		if ($actual === null) {
+			return '';
 		}
+
+		$actualValue = $displayer->display($actual);
+		return " but read {$actualValue}";
+	}
+
+	public static function getCoordinatesText(array $coordinates)
+	{
+		list($x, $y) = $coordinates;
+
+		$lineText = (string)($y + 1);
+		$columnText = (string)($x + 1);
+
+		if ($x === 0) {
+			return " on line {$lineText}";
+		}
+
+		return " at line {$lineText} column {$columnText}";
 	}
 
 	public static function invalidReport($reportType)

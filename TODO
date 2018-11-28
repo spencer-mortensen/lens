@@ -22,7 +22,7 @@ $pdo->query('SELECT * FROM `server` where serverId = 1234 LIMIT 1'); // return n
 
 ------
 
-Tests file: allow a missing "// Effect" section
+Lens: in "// Effects", support "global $x, $y;"
 
 ------
 

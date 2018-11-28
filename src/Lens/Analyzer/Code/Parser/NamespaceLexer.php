@@ -23,33 +23,50 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Analyzer\Code\Parser;
 
-use _Lens\SpencerMortensen\Filesystem\File;
-use _Lens\SpencerMortensen\Filesystem\Path;
+use _Lens\Lens\Php\Lexer as PhpLexer;
 
-class JsonFile extends File
+class NamespaceLexer
 {
-	public function __construct(Path $path)
+	public function lex(array $tokens)
 	{
-		parent::__construct($path);
-	}
+		$output = [];
+		$iBegin = 0;
 
-	public function read()
-	{
-		$contents = parent::read();
+		foreach ($tokens as $iEnd => $token) {
+			if (!$this->isNamespacetoken($token)) {
+				continue;
+			}
 
-		if ($contents === null) {
-			return null;
+			$priorTokens = array_slice($tokens, $iBegin, $iEnd - $iBegin);
+			$this->addNamespaceToken($priorTokens, $iBegin, $output);
+
+			$iBegin = $iEnd;
 		}
 
-		return json_decode($contents, true);
+		$priorTokens = array_slice($tokens, $iBegin);
+		$this->addNamespaceToken($priorTokens, $iBegin, $output);
+
+		return $output;
 	}
 
-	public function write($value)
+	private function isNamespaceToken(array $token)
 	{
-		$contents = json_encode($value, JSON_PRETTY_PRINT) . PHP_EOL;
+		$type = key($token);
 
-		parent::write($contents);
+		return $type === PhpLexer::NAMESPACE_;
+	}
+
+	private function addNamespaceToken(array $tokens, $iBegin, array &$output)
+	{
+		if (count($tokens) === 0) {
+			return;
+		}
+
+		$output[] = [
+			'position' => $iBegin,
+			'tokens' => $tokens
+		];
 	}
 }

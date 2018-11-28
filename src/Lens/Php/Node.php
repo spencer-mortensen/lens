@@ -59,4 +59,27 @@ class Node
 	{
 		return isset($this->tags[$tag]);
 	}
+
+	public function getValue()
+	{
+		return $this->value;
+	}
+
+	public function setValue($value)
+	{
+		$this->value = $value;
+	}
+
+	public function __toString()
+	{
+		if (is_array($this->value)) {
+			$valueText = '[' . implode(', ', array_map('strval', $this->value)) . ']';
+		} else {
+			$valueText = json_encode($this->value);
+		}
+
+		$tagsText = implode(', ', array_map('json_encode', array_keys($this->tags)));
+
+		return "{$valueText} as {$tagsText}";
+	}
 }

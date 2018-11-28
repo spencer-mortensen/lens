@@ -28,7 +28,7 @@ namespace _Lens\Lens;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Path;
 
-class JsonFile extends File
+class DataFile extends File
 {
 	public function __construct(Path $path)
 	{
@@ -43,12 +43,12 @@ class JsonFile extends File
 			return null;
 		}
 
-		return json_decode($contents, true);
+		return unserialize($contents, true);
 	}
 
 	public function write($value)
 	{
-		$contents = json_encode($value, JSON_PRETTY_PRINT) . PHP_EOL;
+		$contents = serialize($value);
 
 		parent::write($contents);
 	}

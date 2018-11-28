@@ -230,6 +230,7 @@ class GetResults
 
 		foreach ($this->results as $file => $resultsSuite) {
 			$testsSuite = $this->project['suites'][$file];
+			// TODO: the $uses format has changed (we now resolve "functions" and "classes" separately):
 			$this->namespacing->setContext($testsSuite['namespace'], $testsSuite['uses']);
 
 			$comparer = new Comparer();

@@ -33,9 +33,6 @@ use _Lens\Lens\Paragraph;
 
 class TerminalMessage
 {
-	/** @var integer */
-	private static $maximumLineLength = 96;
-
 	/** @var LensException */
 	private $exception;
 

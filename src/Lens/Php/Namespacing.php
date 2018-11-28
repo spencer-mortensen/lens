@@ -36,7 +36,7 @@ class Namespacing
 	/** @var array */
 	private $uses;
 
-	public function __construct($isFunctionCallable)
+	public function __construct($isFunctionCallable = null)
 	{
 		$this->isFunctionCallable = $isFunctionCallable;
 	}
@@ -83,7 +83,8 @@ class Namespacing
 
 	public function getRelativeClass($class)
 	{
-		foreach ($this->uses as $aliasName => $aliasPath) {
+		// TODO: handle interfaces and traits, too:
+		foreach ($this->uses['classes'] as $aliasName => $aliasPath) {
 			if ($this->isChildNamespace($class, $aliasPath)) {
 				return substr_replace($class, $aliasName, 0, strlen($aliasPath));
 			}
@@ -114,6 +115,7 @@ class Namespacing
 	public function getAbsoluteFunction($function)
 	{
 		if (is_integer(strpos($function, '\\'))) {
+			// TODO: change this, so that it uses the "function" aliases:
 			return $this->getAbsoluteClass($function);
 		}
 
@@ -140,7 +142,7 @@ class Namespacing
 			return substr($class, 1);
 		}
 
-		if (0 < count($this->uses)) {
+		if (0 < count($this->uses['classes'])) {
 			$slash = strpos($class, '\\');
 
 			if ($slash === false) {
@@ -151,8 +153,8 @@ class Namespacing
 				$tail = substr($class, $slash + 1);
 			}
 
-			if (isset($this->uses[$head])) {
-				$head = $this->uses[$head];
+			if (isset($this->uses['classes'][$head])) {
+				$head = $this->uses['classes'][$head];
 
 				if ($tail === null) {
 					return $head;
