@@ -25,127 +25,261 @@
 
 namespace _Lens\Lens\Analyzer\Code;
 
-use _Lens\Lens\Analyzer\Code\Parser\Parser;
+use _Lens\Lens\Analyzer\Code\Sanitizer\LiveGenerator;
+use _Lens\Lens\Analyzer\Code\Sanitizer\MockClassGenerator;
+use _Lens\Lens\Analyzer\Code\Sanitizer\MockFunctionGenerator;
 use _Lens\Lens\Analyzer\Watcher;
 use _Lens\Lens\JsonFile;
-use _Lens\Lens\Php\Namespacing;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Path;
 
 class Cacher
 {
-	/** @var Parser */
-	private $parser;
-
-	/** @var Namespacing */
-	private $namespacing;
+	/** @var Path */
+	private $srcPath;
 
 	/** @var Path */
-	private $functionsPath;
+	private $indexPath;
 
 	/** @var Path */
-	private $classesPath;
+	private $codePath;
 
-	/** @var Path */
-	private $interfacesPath;
+	/** @var Processor */
+	private $processor;
 
-	/** @var Path */
-	private $traitsPath;
+	/** @var LiveGenerator */
+	private $liveGenerator;
+
+	/** @var MockClassGenerator */
+	private $mockClassGenerator;
+
+	/** @var MockFunctionGenerator */
+	private $mockFunctionGenerator;
 
 	public function cache(Path $projectPath, Path $srcPath, Path $cachePath)
 	{
-		$srcRelativePath = $projectPath->getRelativePath($srcPath);
-		$watcherPath = $cachePath->add('sources', $srcRelativePath);
 		$codePath = $cachePath->add('code');
+		$indexPath = $codePath->add('index');
+		$watcherPath = $indexPath->add('modified.json');
+		$liveRelativePath = $projectPath->getRelativePath($srcPath);
 
-		$this->functionsPath = $codePath->add('functions', 'live');
-		$this->classesPath = $codePath->add('classes', 'live');
-		$this->interfacesPath = $codePath->add('interfaces');
-		$this->traitsPath = $codePath->add('traits', 'live');
+		$this->srcPath = $srcPath;
+		$this->indexPath = $indexPath->add($liveRelativePath);
+		$this->codePath = $codePath;
 
-		$changes = $this->getChanges($srcPath, $watcherPath);
+		// TODO: instantiate these objects only when necessary:
+		$this->processor = new Processor();
+		$this->liveGenerator = new LiveGenerator();
+		$this->mockClassGenerator = new MockClassGenerator();
+		$this->mockFunctionGenerator = new MockFunctionGenerator();
 
-		$this->updateDirectory($srcPath, $watcherPath, $codePath, $changes);
+		//////
+
+		$changes = $this->getChanges($watcherPath);
+
+		$trail = [];
+		$this->updateDirectory($trail, $changes);
 	}
 
-	private function getChanges(Path $srcPath, Path $watcherPath)
+	private function getChanges(Path $watcherPath)
 	{
-		$srcDirectory = new Directory($srcPath);
-		$watcherFilePath = $watcherPath->add('modified.json');
-		$watcherFile = new JsonFile($watcherFilePath);
-
 		$watcher = new Watcher();
+		$srcDirectory = new Directory($this->srcPath);
+		$watcherFile = new JsonFile($watcherPath);
+
 		return $watcher->watch($srcDirectory, $watcherFile);
 	}
 
-	private function updateDirectory(Path $live, Path $cached, Path $code, array $changes)
+	private function updateDirectory(array $trail, array $changes)
 	{
 		foreach ($changes as $name => $type) {
-			$liveChild = $live->add($name);
+			$childTrail = $trail;
+			$childTrail[] = $name;
 
 			if (is_array($type)) {
-				$this->updateDirectory($liveChild, $cached, $code, $type);
+				$this->updateDirectory($childTrail, $type);
 			} else {
-				$this->updateFile($liveChild, $cached, $code, $type);
+				$this->updateFile($childTrail, $type);
 			}
 		}
 	}
 
-	private function updateFile(Path $live, Path $cached, Path $code, $type)
+	private function updateFile(array $trail, $type)
 	{
-		if ($this->parser === null) {
-			$this->parser = new Parser();
-		}
+		array_pop($trail);
 
-		if ($this->namespacing === null) {
-			$this->namespacing = new Namespacing();
-		}
+		switch ($type) {
+			case Watcher::TYPE_REMOVED:
+				$this->remove($trail);
+				break;
 
-		$file = new File($live);
+			case Watcher::TYPE_MODIFIED:
+				$this->remove($trail);
+				$this->add($trail);
+				break;
+
+			case Watcher::TYPE_ADDED;
+				$this->add($trail);
+				break;
+		}
+	}
+
+	private function remove(array $trail)
+	{
+		echo "removing: ", json_encode($trail), "\n";
+	}
+
+	private function add(array $trail)
+	{
+		$definitions = $this->readDefinitions($trail);
+
+		$this->writeIndex($trail, $definitions);
+		$this->writeCode($definitions);
+	}
+
+	private function readDefinitions(array $trail)
+	{
+		// TODO: extend the "add" method to accept arrays:
+		$path = call_user_func_array([$this->srcPath, 'add'], $trail);
+		$file = new File($path);
 		$php = $file->read();
-		$sections = $this->parser->parse($php);
 
-		foreach ($sections as $section) {
-			$this->writeSectionCode($section);
+		return $this->processor->parse($php);
+	}
+
+	private function writeIndex(array $trail, array $definitions)
+	{
+		$contents = $this->getIndexContents($definitions);
+
+		// TODO: replace the final ".php" with ".json"
+		// TODO: extend the "add" method to accept arrays:
+		$path = call_user_func_array([$this->indexPath, 'add'], $trail);
+		$file = new JsonFile($path);
+		$file->write($contents);
+	}
+
+	private function getIndexContents(array $definitions)
+	{
+		$functions = [];
+		$classes = [];
+
+		foreach ($definitions as $name => $definition) {
+			$type = $definition['type'];
+
+			if ($type === 'function') {
+				$functions[] = $name;
+			} else {
+				$classes[] = $name;
+			}
+		}
+
+		return [
+			'functions' => $functions,
+			'classes' => $classes
+		];
+	}
+
+	private function writeCode(array $definitions)
+	{
+		$codePathString = (string)$this->codePath;
+
+		foreach ($definitions as $name => $definition) {
+			$relativePathString = strtr($name, '\\', '/');
+
+			$dataPath = "{$codePathString}/data/{$relativePathString}.json";
+			$this->writeData($dataPath, $definition);
+
+			// $userBase = "{$codePathString}/user/{$relativePathString}";
+			// $this->writeUserCode($userBase, $definition);
+
+			$liveBase = "{$codePathString}/live/{$relativePathString}";
+			$this->writeLiveCode($liveBase, $definition);
+
+			$mockBase = "{$codePathString}/mock/{$relativePathString}";
+			$this->writeMockCode($mockBase, $definition);
 		}
 	}
 
-	private function writeSectionCode(array $section)
+	private function writeData($pathString, array $definition)
 	{
-		$namespace = $section['namespace'];
-		$uses = $section['uses'];
-		$definitions = $section['definitions'];
-
-		$this->namespacing->setContext($namespace, $uses);
-
-		foreach ($definitions['functions'] as $name => $php) {
-			$fullName = $this->namespacing->getAbsoluteFunction($name);
-			$this->writeSourceFile($this->functionsPath, $fullName, $php);
-		}
-
-		foreach ($definitions['classes'] as $name => $php) {
-			$fullName = $this->namespacing->getAbsoluteClass($name);
-			$this->writeSourceFile($this->classesPath, $fullName, $php);
-		}
-
-		foreach ($definitions['interfaces'] as $name => $php) {
-			$fullName = $this->namespacing->getAbsoluteClass($name);
-			$this->writeSourceFile($this->interfacesPath, $fullName, $php);
-		}
-
-		foreach ($definitions['traits'] as $name => $php) {
-			$fullName = $this->namespacing->getAbsoluteClass($name);
-			$this->writeSourceFile($this->traitsPath, $fullName, $php);
-		}
+		$path = Path::fromString($pathString);
+		$file = new JsonFile($path);
+		$file->write($definition);
 	}
 
-	private function writeSourceFile(Path $basePath, $fullName, $php)
+	private function writeUserCode($pathString, array $definition)
 	{
-		$relativeFilePath = implode('/', explode('\\', $fullName)) . '.php';
-		$filePath = $basePath->add($relativeFilePath);
+		$file = $this->getCodeFile($pathString, $definition);
+		$contents = $this->getUserCodeContents($definition);
 
-		$file = new File($filePath);
-		$file->write("<?php\n\n{$php}\n");
+		$file->write($contents);
+	}
+
+	private function getCodeFile($pathString, array $definition)
+	{
+		if ($definition['type'] === 'function') {
+			$pathString .= '.function';
+		}
+
+		$pathString .= '.php';
+
+		$path = Path::fromString($pathString);
+		return new File($path);
+	}
+
+	private function getUserCodeContents(array $definition)
+	{
+		$namespace = $definition['namespace'];
+		$classAliases = $this->getUserAliases($namespace, $definition['classes']);
+		$functionAliases = $this->getUserAliases($namespace, $definition['functions']);
+
+		$contextPhp = self::getContextPhp($namespace, $classAliases, $functionAliases);
+		$definitionPhp = $definition['definition'];
+
+		$php = self::combine($contextPhp, $definitionPhp);
+		return self::getFilePhp($php);
+	}
+
+	private function getUserAliases($namespace, array $aliases)
+	{
+		if ($namespace !== null) {
+			return $aliases;
+		}
+
+		$safe = [];
+
+		foreach ($aliases as $alias => $name) {
+			if ($alias === $name) {
+				continue;
+			}
+
+			$safe[$alias] = $name;
+		}
+
+		return $safe;
+	}
+
+	private function writeLiveCode($pathString, array $definition)
+	{
+		$file = $this->getCodeFile($pathString, $definition);
+		$contents = $this->liveGenerator->generate($definition['context'], $definition['tokens']);
+
+		$file->write($contents);
+	}
+
+	private function writeMockCode($pathString, array $definition)
+	{
+		$file = $this->getCodeFile($pathString, $definition);
+
+		if ($definition['type'] === 'function') {
+			$contents = $this->mockFunctionGenerator->generate($definition['context']['namespace'], $definition['tokens']);
+		} elseif ($definition['type'] === 'class') {
+			$contents = $this->mockClassGenerator->generate($definition['context']['namespace'], $definition['tokens']);
+		} else {
+			$contents = 'TODO';
+		}
+
+		$file->write($contents);
 	}
 }

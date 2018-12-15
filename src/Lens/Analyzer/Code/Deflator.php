@@ -23,46 +23,43 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens\Cache;
+namespace _Lens\Lens\Analyzer\Code;
 
-use _Lens\Lens\Finder;
-use _Lens\Lens\Jobs\CacheJob;
-use _Lens\Lens\Processor;
+use _Lens\Lens\Php\Lexer;
 
-class CacheBuilder
+class Deflator
 {
-	/** @var string */
-	private $executable;
+	private static $metaTokens = [
+		Lexer::COMMENT_ => Lexer::COMMENT_,
+		Lexer::PHP_BEGIN_ => Lexer::PHP_BEGIN_,
+		Lexer::PHP_END_ => Lexer::PHP_END_,
+		Lexer::WHITESPACE_ => Lexer::WHITESPACE_,
+	];
 
-	/** @var Finder */
-	private $finder;
-
-	public function __construct($executable, Finder $finder)
+	public function deflate(array $inflatedTokens, array &$deflatedTokens = null, array &$map = null)
 	{
-		$this->executable = $executable;
-		$this->finder = $finder;
-	}
+		$deflatedTokens = [];
+		$map = [];
 
-	public function run(array $mockFunctions)
-	{
-		$lens = $this->finder->getLens();
+		$iDeflated = 0;
 
-		if ($lens === null) {
-			return;
+		foreach ($inflatedTokens as $iInflated => $token) {
+			if ($this->isMetaToken($token)) {
+				continue;
+			}
+
+			$deflatedTokens[$iDeflated] = $token;
+			$map[$iDeflated] = $iInflated;
+			++$iDeflated;
 		}
 
-		$sourceJob = new CacheJob(
-			$this->executable,
-			$this->finder->getCore(),
-			$this->finder->getProject(),
-			$this->finder->getSrc(),
-			$this->finder->getAutoload(),
-			$this->finder->getCache(),
-			$mockFunctions
-		);
+		return [$deflatedTokens, $map];
+	}
 
-		$processor = new Processor();
-		$processor->run($sourceJob);
-		$processor->finish();
+	private function isMetaToken(array $node)
+	{
+		$type = key($node);
+
+		return isset(self::$metaTokens[$type]);
 	}
 }

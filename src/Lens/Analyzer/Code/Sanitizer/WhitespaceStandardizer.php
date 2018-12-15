@@ -23,35 +23,54 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens\Analyzer\Code\Parser;
+namespace _Lens\Lens\Analyzer\Code\Sanitizer;
 
+use _Lens\Lens\Paragraph;
 use _Lens\Lens\Php\Lexer as PhpLexer;
+use _Lens\SpencerMortensen\RegularExpressions\Re;
 
-class NamespaceLexer
+class WhitespaceStandardizer
 {
-	public function lex(array $tokens)
+	public function standardize(array $tokens)
 	{
 		$output = [];
-		$iBegin = 0;
 
-		foreach ($tokens as $iEnd => $token) {
-			if (!$this->isNamespacetoken($token)) {
-				continue;
+		$depth = 0;
+
+		foreach ($tokens as $i => $token) {
+			$type = key($token);
+
+			switch ($type) {
+				case PhpLexer::WHITESPACE_:
+					$value = &$token[$type];
+					$value = Paragraph::standardizeNewlines($value);
+
+					if (is_int(strpos($value, "\n"))) {
+						$value = Re::replace('[^\\n]', '', $value) . $this->getPadding($tokens, $i, $depth);
+					}
+					break;
+
+				case PhpLexer::BRACE_LEFT_:
+					++$depth;
+					break;
+
+				case PhpLexer::BRACE_RIGHT_:
+					--$depth;
+					break;
 			}
 
-			$output[$iBegin] = $iEnd - 1;
-			$iBegin = $iEnd;
+			$output[] = $token;
 		}
-
-		$output[$iBegin] = count($tokens) - 1;
 
 		return $output;
 	}
 
-	private function isNamespaceToken(array $token)
+	private function getPadding(array $tokens, $i, $depth)
 	{
-		$type = key($token);
+		if (isset($tokens[$i + 1]) && (key($tokens[$i + 1]) === PhpLexer::BRACE_RIGHT_)) {
+			--$depth;
+		}
 
-		return $type === PhpLexer::NAMESPACE_;
+		return str_repeat("\t", $depth);
 	}
 }

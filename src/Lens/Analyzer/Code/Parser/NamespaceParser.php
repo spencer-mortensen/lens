@@ -36,10 +36,8 @@ class NamespaceParser
 	/** @var UseTokensParser */
 	private $useParser;
 
-	private $namespace;
-
 	/** @var array */
-	private $uses;
+	private $context;
 
 	/** @var array */
 	private $definitions;
@@ -53,9 +51,8 @@ class NamespaceParser
 	{
 		$this->input = new TokenInput($tokens);
 
-		$this->namespace = null;
-
-		$this->uses = [
+		$this->context = [
+			'namespace' => null,
 			'functions' => [],
 			'classes' => []
 		];
@@ -67,7 +64,7 @@ class NamespaceParser
 			'traits' => []
 		];
 
-		$this->getNamespace($this->namespace);
+		$this->getNamespace($this->context['namespace']);
 
 		while ($this->input->getPosition() < count($tokens)) {
 			if (!(
@@ -83,8 +80,7 @@ class NamespaceParser
 		}
 
 		return [
-			'namespace' => $this->namespace,
-			'uses' => $this->uses,
+			'context' => $this->context,
 			'definitions' => $this->definitions
 		];
 	}
@@ -164,9 +160,9 @@ class NamespaceParser
 		list($type, $map) = $this->useParser->getOutput();
 
 		if ($type === 'class') {
-			$this->uses['classes'] = array_merge($this->uses['classes'], $map);
+			$this->context['classes'] = array_merge($this->context['classes'], $map);
 		} else {
-			$this->uses['functions'] = array_merge($this->uses['functions'], $map);
+			$this->context['functions'] = array_merge($this->context['functions'], $map);
 		}
 
 		return true;

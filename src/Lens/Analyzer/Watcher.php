@@ -80,7 +80,8 @@ class Watcher
 
 	private function setCachedModifiedTimes(File $file, array $times)
 	{
-		$file->write($times);
+		// TODO: uncomment this:
+		// $file->write($times);
 	}
 
 	private function compare($old, $new)

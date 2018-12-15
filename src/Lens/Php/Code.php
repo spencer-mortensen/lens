@@ -32,6 +32,76 @@ class Code
 		return '<?php';
 	}
 
+	public static function getFilePhp($php)
+	{
+		return "<?php\n\n{$php}\n";
+	}
+
+	public static function getFullContextPhp($namespace, array $classes, array $functions)
+	{
+		$namespacePhp = self::getNamespacePhp($namespace);
+		$classesPhp = self::getClassAliasPhp($classes);
+		$functionsPhp = self::getFunctionAliasPhp($functions);
+
+		return self::combine($namespacePhp, $classesPhp, $functionsPhp);
+	}
+
+	private static function getClassAliasPhp(array $aliases)
+	{
+		if (count($aliases) === 0) {
+			return null;
+		}
+
+		$lines = [];
+
+		foreach ($aliases as $alias => $name) {
+			$lines[] = self::getUseClassPhp($alias, $name);
+		}
+
+		return implode("\n", $lines);
+	}
+
+	private static function getUseClassPhp($alias, $name)
+	{
+		$usePhp = "use {$name}";
+
+		if ($alias !== self::getTail($name, '\\')) {
+			$usePhp .= " as {$alias}";
+		}
+
+		$usePhp .= ';';
+
+		return $usePhp;
+	}
+
+	private static function getFunctionAliasPhp(array $aliases)
+	{
+		if (count($aliases) === 0) {
+			return null;
+		}
+
+		$lines = [];
+
+		foreach ($aliases as $alias => $name) {
+			$lines[] = self::getUseFunctionPhp($alias, $name);
+		}
+
+		return implode("\n", $lines);
+	}
+
+	private static function getUseFunctionPhp($alias, $name)
+	{
+		$usePhp = "use function {$name}";
+
+		if ($alias !== self::getTail($name, '\\')) {
+			$usePhp .= " as {$alias}";
+		}
+
+		$usePhp .= ';';
+
+		return $usePhp;
+	}
+
 	public static function getValuePhp($value)
 	{
 		return var_export($value, true);

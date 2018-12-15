@@ -1,3 +1,45 @@
+BROKEN:
+
+<?php
+
+namespace Example;
+
+use DateTime;
+
+class Clock
+{
+	public function getTime()
+	{
+		$time = new DateTime();
+		return $time->format('g:i a');
+	}
+
+	public function getLastErrors()
+	{
+		return DateTime::getLastErrors();
+	}
+
+	public function getShellTime()
+	{
+		$command = "date '+%_I:%M %P'";
+		return \shell_exec($command);
+	}
+
+	public function getDinnerTime()
+	{
+		$command = "date '+%_I:%M %P'";
+		return shell_exec($command);
+	}
+}
+
+function shell_exec($command)
+{
+	return 'now';
+}
+
+
+------
+
 Lens: update the Composer autoloader (currently version-specific); add instructions to the Guide
 Lens: fix the issue where an extra mock statement can cause a test to unexpectedly pass
 Lens: scanning algorithm also executes examples

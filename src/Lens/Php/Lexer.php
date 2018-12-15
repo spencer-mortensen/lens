@@ -108,16 +108,16 @@ class Lexer
 	const DOLLAR_ = 80;
 	const DOLLAR_OPEN_CURLY_BRACES_ = 81;
 	const DOUBLE_ARROW_ = 82; // =>
-	const DOUBLE_COLON_ = 83;
+	const DOUBLE_COLON_ = 83; // ::
 	const ECHO_ = 84;
 	const ELLIPSIS_ = 85;
 	const EMPTY_ = 86;
 	const EVAL_ = 87;
 	const EXIT_ = 88;
-	const EXTENDS_ = 89;
+	const EXTENDS_ = 89; // extends
 	const FILE_ = 90;
 	const FINAL_ = 91;
-	const FUNCTION_ = 92;
+	const FUNCTION_ = 92; // function
 	const FUNC_C_ = 93;
 	const GLOBAL_ = 94;
 	const HALT_COMPILER_ = 95;
@@ -175,7 +175,7 @@ class Lexer
 	const DOUBLE_QUOTE_ = 147; // "
 	const SEMICOLON_ = 148;
 	const SPACESHIP_ = 149;
-	const STATIC_ = 150;
+	const STATIC_ = 150; // static
 	const STRING_VARNAME_ = 151;
 	const TRAIT_ = 152;
 	const TRAIT_C_ = 153;
@@ -220,7 +220,7 @@ class Lexer
 		T_DIR => self::DIR_,
 		T_DIV_EQUAL => self::ASSIGN_NUMBER_DIVIDE_,
 		T_DNUMBER => self::VALUE_FLOAT_,
-		T_DOC_COMMENT => self::COMMENT_,
+		T_DOC_COMMENT => self::COMMENT_, // /** */
 		T_DO => self::CONTROL_DO_,
 		T_DOLLAR_OPEN_CURLY_BRACES => self::DOLLAR_OPEN_CURLY_BRACES_,
 		T_DOUBLE_ARROW => self::DOUBLE_ARROW_,

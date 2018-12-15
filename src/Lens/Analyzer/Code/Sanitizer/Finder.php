@@ -23,40 +23,9 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens\Analyzer\Code\Parser;
+namespace _Lens\Lens\Analyzer\Code\Sanitizer;
 
-use _Lens\Lens\Php\Lexer;
-
-class NamespaceTokensParserStub
+interface Finder
 {
-	public $rules = <<<'EOS'
-expression: any notNamespace 1+
-notNamespace: get !NAMESPACE
-EOS;
-
-	public $startRule = 'expression';
-
-	public function expression(array $tokens)
-	{
-		return $tokens;
-	}
-
-	public function notNamespace(array $token)
-	{
-		return $token;
-	}
-
-	public function __invoke(NotTokenInput $input)
-	{
-	}
-
-	public function __get($type)
-	{
-		if (substr($type, 0, 1) === '!') {
-			$type = substr($type, 1);
-			return "-Lexer::{$type}_";
-		}
-
-		return "Lexer::{$type}_";
-	}
+	public function find(array $deflatedTokens);
 }
