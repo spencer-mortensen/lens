@@ -184,7 +184,7 @@ class Lexer
 	const VALUE_FLOAT_ = 156; // 3.14159
 	const VALUE_INTEGER_ = 157; // 3
 	const VALUE_STRING_ = 158; // 'x' or "x"
-	const VAR_ = 159;
+	const VAR_ = 159; // var
 	const VARIABLE_ = 160; // $x
 	const WHITESPACE_ = 161;
 	const YIELD_ = 162;

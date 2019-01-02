@@ -32,7 +32,6 @@ use _Lens\Lens\Jobs\TestJob;
 use _Lens\Lens\Php\Namespacing;
 use _Lens\Lens\Php\Semantics;
 use _Lens\Lens\Processor;
-use _Lens\Lens\Sanitizer;
 use _Lens\Lens\SourcePaths;
 use _Lens\Lens\Xdebug;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;

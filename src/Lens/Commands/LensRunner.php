@@ -29,9 +29,9 @@ use _Lens\Lens\Arguments;
 use _Lens\Lens\Environment;
 use _Lens\Lens\Finder;
 use _Lens\Lens\LensException;
+use _Lens\Lens\Phases\Analysis\Analyzer;
 use _Lens\Lens\Reports\ReportsBuilder;
 use _Lens\Lens\Settings;
-use _Lens\Lens\Cache\CacheBuilder;
 use _Lens\Lens\Tests\GetSuites;
 use _Lens\Lens\Tests\GetResults;
 use _Lens\Lens\Url;
@@ -65,17 +65,22 @@ class LensRunner implements Command
 		$core = $finder->getCore();
 		$project = $finder->getProject();
 		$src = $finder->getSrc();
-		$cache = $finder->getCache();
 		$tests = $finder->getTests();
+		$cache = $finder->getCache();
+
+		// TODO: remove the autoloader:
 		$autoload = $finder->getAutoload();
+		// TODO: add "external libary" directories to the configuration file
+		// TODO: analyze the external libraries
 
 		$settings = $this->getSettings($finder);
 		$mockClasses = $this->getMockClasses($settings);
 		$mockFunctions = $this->getMockFunctions($settings);
 
-		exit;
-		$sourceBuilder = new CacheBuilder($executable, $finder);
-		$sourceBuilder->run($mockFunctions);
+		// TODO: handle PHP files with fatal syntax errors
+		// TODO: generate code coverage information
+		$analyzer = new Analyzer();
+		$analyzer->analyze($project, $src, $tests, $cache);
 
 		exit;
 

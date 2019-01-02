@@ -40,10 +40,20 @@ class Code
 	public static function getFullContextPhp($namespace, array $classes, array $functions)
 	{
 		$namespacePhp = self::getNamespacePhp($namespace);
-		$classesPhp = self::getClassAliasPhp($classes);
-		$functionsPhp = self::getFunctionAliasPhp($functions);
 
-		return self::combine($namespacePhp, $classesPhp, $functionsPhp);
+		$aliasSections = [
+			self::getClassAliasPhp($classes),
+			self::getFunctionAliasPhp($functions)
+		];
+
+		$aliasPhp = self::merge($aliasSections, "\n");
+
+		$contextSections = [
+			$namespacePhp,
+			$aliasPhp
+		];
+
+		return self::merge($contextSections, "\n\n");
 	}
 
 	private static function getClassAliasPhp(array $aliases)
@@ -181,12 +191,18 @@ class Code
 	public static function combine()
 	{
 		$sections = func_get_args();
+
+		return self::merge($sections, "\n\n");
+	}
+
+	private static function merge(array $sections, $separator)
+	{
 		$sections = array_filter($sections, 'is_string');
 
 		if (count($sections) === 0) {
 			return null;
 		}
 
-		return implode("\n\n", $sections);
+		return implode($separator, $sections);
 	}
 }
