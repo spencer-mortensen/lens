@@ -30,6 +30,7 @@ use _Lens\Lens\Phases\Code\Generators\Definer;
 use _Lens\Lens\Phases\Watcher;
 use _Lens\Lens\Phases\Finder;
 use _Lens\Lens\Php\Code;
+use _Lens\Lens\Php\Semantics;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Path;
@@ -223,20 +224,15 @@ class CodePhase
 
 	private function writeMetaData(array $definitions)
 	{
-/*
-List any "conditions" (the non-trivial option in any conditional function-alias tuple): $context => $conditions
-
-Rewrite any unsafe aliases: $context => $context
-* Remember to copy over any necessary "Lens" class or function live definition files...
-List all function dependencies, including any absolute paths, but skipping any conditional dependencies, and skipping any built-in functions which are already defined: ($paths, $context) => $dependencies
-Remove any trivial aliases: $context => $context
-*/
+		// TODO:
+		// List all function dependencies, including any absolute paths, but skipping any conditional dependencies, and skipping any built-in functions which are already defined: ($paths, $context) => $dependencies
+		// Remember to copy over any necessary "Lens" class or function live definition files...
 
 		foreach ($definitions['classes'] as $name => $definition) {
-			$context = $definition['context'];
-			$php = $definition['definition'];
-			$conditions = [];
-			$dependencies = [];
+			$context = $this->getCleanContext($definition['live']['context']);
+			$php = $definition['live']['definition'];
+			$dependencies = []; // TODO
+			$conditions = $this->getConditions($context['functions']);
 
 			$this->meta['classes'][$name] = [
 				'context' => $context,
@@ -249,6 +245,98 @@ Remove any trivial aliases: $context => $context
 
 		// TODO: functions, interfaces, traits
 		exit;
+	}
+
+	private function getCleanContext(array $context)
+	{
+		$namespace = $context['namespace'];
+		$classes = $this->getSafeClassAliases($context['classes']);
+		$classes = $this->getNontrivialClassAliases($namespace, $classes);
+		$functions = $this->getSafeFunctionAliases($context['functions']);
+		$functions = $this->getNontrivialFunctionAliases($namespace, $functions);
+
+		return [
+			'namespace' => $namespace,
+			'classes' => $classes,
+			'functions' => $functions
+		];
+	}
+
+	private function getSafeClassAliases(array $aliases)
+	{
+		foreach ($aliases as $alias => &$name) {
+			if (Semantics::isUnsafeClass($name)) {
+				$name = "Lens\\{$name}";
+			}
+		}
+
+		return $aliases;
+	}
+
+	private function getNontrivialClassAliases($namespace, array $aliases)
+	{
+		foreach ($aliases as $alias => $name) {
+			$aliasName = $this->getFullName($namespace, $alias);
+
+			if ($name === $aliasName) {
+				unset($aliases[$alias]);
+			}
+		}
+
+		return $aliases;
+	}
+
+	private function getFullName($namespace, $alias)
+	{
+		if ($namespace === null) {
+			return $alias;
+		}
+
+		return "{$namespace}\\{$alias}";
+	}
+
+	private function getSafeFunctionAliases(array $aliases)
+	{
+		foreach ($aliases as $alias => &$name) {
+			if (is_array($name)) {
+				$name = &$name[1];
+			}
+
+			if (Semantics::isUnsafeFunction($name)) {
+				$name = "Lens\\{$name}";
+			}
+		}
+
+		return $aliases;
+	}
+
+	private function getNontrivialFunctionAliases($namespace, array $aliases)
+	{
+		if ($namespace !== null) {
+			return $aliases;
+		}
+
+		foreach ($aliases as $alias => $name) {
+			if ($name === $alias) {
+				unset($aliases[$alias]);
+			}
+		}
+
+		return $aliases;
+	}
+
+	private function getConditions(array $functions)
+	{
+		$conditions = [];
+
+		foreach ($functions as $function => $options) {
+			if (is_array($options)) {
+				$name = $options[0];
+				$conditions[$name] = $name;
+			}
+		}
+
+		return $conditions;
 	}
 
 	private function rememberLive(array $fileDefinitions)

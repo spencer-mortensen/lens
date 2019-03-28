@@ -1,5 +1,4 @@
 src: src
-autoload: lens/autoload.php
 cache: lens/cache
 checkForUpdates: false
 mockClasses: null

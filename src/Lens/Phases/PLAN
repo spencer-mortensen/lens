@@ -151,41 +151,6 @@ STEPS:
 
 ======
 
-use _Lens\Lens\Php\Semantics;
-
-	private function getClassAliases(array $aliases)
-	{
-		$safe = [];
-
-		foreach ($aliases as $alias => $name) {
-			if (Semantics::isUnsafeClass($name)) {
-				$name = "Lens\\{$name}";
-			}
-
-			$safe[$alias] = $name;
-		}
-
-		return $safe;
-	}
-
-	private function getFunctionAliases(array $aliases)
-	{
-		$safe = [];
-
-		foreach ($aliases as $alias => $name) {
-			if (Semantics::isUnsafeFunction($name)) {
-				$name = "Lens\\{$name}";
-			} elseif ($alias === $name) {
-				continue;
-			}
-
-			$safe[$alias] = $name;
-		}
-
-		return $safe;
-	}
-
-
 	private function getXdebugDefinitionPhp($functionPhp)
 	{
 		return "new Class() {\npublic {$functionPhp}\n};";
