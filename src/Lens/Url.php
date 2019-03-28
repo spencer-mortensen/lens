@@ -27,9 +27,7 @@ namespace _Lens\Lens;
 
 class Url
 {
-	const COMPOSER_INSTALLATION = 'https://getcomposer.org/doc/00-intro.md';
 	const INI_SYNTAX = 'https://en.wikipedia.org/wiki/INI_file';
-	const LENS_AUTOLOADER = 'http://lens.guide/support/organization/lens/autoload.php/';
 	const LENS_CHECK_FOR_UPDATES = 'http://lens.guide/check-for-updates/';
 	const LENS_COMMAND = 'http://lens.guide/support/command/';
 	const LENS_GUIDE = 'http://lens.guide/guide/';

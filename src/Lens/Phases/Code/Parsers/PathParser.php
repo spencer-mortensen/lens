@@ -23,29 +23,55 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Code\Parsers;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Phases\Code\Input;
+use _Lens\Lens\Php\Lexer;
 
-class Environment
+class PathParser
 {
-	public function getOperatingSystemName()
+	/** @var Input */
+	private $input;
+
+	public function parse(Input $input, &$range = null)
 	{
-		return php_uname('s');
+		$this->input = $input;
+		$iBegin = $this->input->getPosition();
+
+		$this->input->get(Lexer::NAMESPACE_SEPARATOR_);
+
+		if (
+			$this->input->get(Lexer::IDENTIFIER_) &&
+			$this->getLinks()
+		) {
+			$iEnd = $this->input->getPosition() - 1;
+			$range = [$iBegin => $iEnd];
+			return true;
+		}
+
+		$this->input->setPosition($iBegin);
+		return false;
 	}
 
-	public function getPhpVersion()
+	private function getLinks()
 	{
-		$versionString = phpversion();
+		while ($this->getLink());
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
+		return true;
 	}
 
-	public function getLensVersion()
+	private function getLink()
 	{
-		return VersionCommand::VERSION;
+		$position = $this->input->getPosition();
+
+		if (
+			$this->input->get(Lexer::NAMESPACE_SEPARATOR_) &&
+			$this->input->get(Lexer::IDENTIFIER_)
+		) {
+			return true;
+		}
+
+		$this->input->setPosition($position);
+		return false;
 	}
 }

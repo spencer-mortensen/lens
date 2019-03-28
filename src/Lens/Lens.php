@@ -29,11 +29,11 @@ use Error;
 use Exception;
 use _Lens\Lens\Exceptions\TerminalMessage;
 use _Lens\Lens\Exceptions\LogMessage;
-use _Lens\Lens\Commands\LensSource;
-use _Lens\Lens\Commands\LensCoverage;
-use _Lens\Lens\Commands\LensRunner;
-use _Lens\Lens\Commands\LensTest;
-use _Lens\Lens\Commands\LensVersion;
+use _Lens\Lens\Commands\SourceCommand;
+use _Lens\Lens\Commands\CoverageCommand;
+use _Lens\Lens\Commands\RunnerCommand;
+use _Lens\Lens\Commands\TestCommand;
+use _Lens\Lens\Commands\VersionCommand;
 use _Lens\SpencerMortensen\Exceptions\Exceptions;
 
 class Lens
@@ -75,31 +75,31 @@ class Lens
 
 	private function runCoverage(&$stdout, &$stderr, &$exitCode)
 	{
-		$coverage = new LensCoverage($this->arguments);
+		$coverage = new CoverageCommand($this->arguments);
 		return $coverage->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runTest(&$stdout, &$stderr, &$exitCode)
 	{
-		$test = new LensTest($this->arguments);
+		$test = new TestCommand($this->arguments);
 		return $test->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runSource(&$stdout, &$stderr, &$exitCode)
 	{
-		$cache = new LensSource($this->arguments);
+		$cache = new SourceCommand($this->arguments);
 		return $cache->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runVersion(&$stdout, &$stderr, &$exitCode)
 	{
-		$version = new LensVersion($this->arguments);
+		$version = new VersionCommand($this->arguments);
 		return $version->run($stdout, $stderr, $exitCode);
 	}
 
 	private function runRunner(&$stdout, &$stderr, &$exitCode)
 	{
-		$runner = new LensRunner($this->arguments);
+		$runner = new RunnerCommand($this->arguments);
 		return $runner->run($stdout, $stderr, $exitCode);
 	}
 

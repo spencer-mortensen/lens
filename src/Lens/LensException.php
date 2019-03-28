@@ -28,7 +28,7 @@ namespace _Lens\Lens;
 use Error;
 use ErrorException;
 use Exception;
-use _Lens\Lens\Commands\LensVersion;
+use _Lens\Lens\Commands\VersionCommand;
 use _Lens\Lens\Exceptions\ParsingException;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;
 use _Lens\SpencerMortensen\Filesystem\Path;
@@ -38,20 +38,14 @@ class LensException extends Exception
 	/** @var string */
 	private static $lensExecutable = 'lens';
 
-	/** @var int */
-	private static $maximumLineLength = 96;
-
 	const CODE_FAILURES = 1;
 	const CODE_USAGE = 2;
 	const CODE_UNKNOWN_LENS_DIRECTORY = 3;
 	const CODE_UNKNOWN_SRC_DIRECTORY = 4;
-	const CODE_UNKNOWN_AUTOLOAD_FILE = 5;
-	const CODE_MISSING_COMPOSER_DIRECTORY = 6;
-	const CODE_INVALID_SETTINGS_FILE = 7;
-	const CODE_INVALID_TESTS_PATH = 8;
-	const CODE_INVALID_TESTS_FILE_SYNTAX = 9;
-	const CODE_INVALID_REPORT = 10;
-	const CODE_PROCESSOR = 11;
+	const CODE_INVALID_SETTINGS_FILE = 5;
+	const CODE_INVALID_TESTS_FILE_SYNTAX = 7;
+	const CODE_INVALID_REPORT = 8;
+	const CODE_PROCESSOR = 9;
 	const CODE_INTERNAL = 255;
 
 	const SEVERITY_NOTICE = 1; // Surprising, but might be normal, and no intervention is necessary (e.g. a configuration file is missing)
@@ -172,53 +166,6 @@ class LensException extends Exception
 		return new self($code, $severity, $message, $help);
 	}
 
-	public static function unknownAutoloadFile()
-	{
-		$code = self::CODE_UNKNOWN_AUTOLOAD_FILE;
-
-		$severity = self::SEVERITY_ERROR;
-
-		$message = "Unable to find the autoload file.";
-
-		$help = [
-			"If you do have an autoloader, then add the autoloader path to your \"settings.yml\" file:\n" . Url::LENS_SETTINGS,
-			"If you don't have an autoloader, then create one now:\n" . Url::LENS_AUTOLOADER
-		];
-
-		return new self($code, $severity, $message, $help);
-	}
-
-	public static function missingComposerDirectory(Path $absoluteProjectPath)
-	{
-		$code = self::CODE_MISSING_COMPOSER_DIRECTORY;
-
-		$severity = self::SEVERITY_ERROR;
-
-		$message = "Unable to find your Composer vendor directory.";
-
-		$composerCommand = self::getComposerInstallCommand($absoluteProjectPath);
-
-		$help = [
-			"Is Composer installed? You should install Composer now, if you haven't already:\n" . Url::COMPOSER_INSTALLATION,
-			"Once Composer is installed, you should download the project dependencies like this:\n$composerCommand"
-		];
-
-		return new self($code, $severity, $message, $help);
-	}
-
-	private static function getComposerInstallCommand(Path $absoluteProjectPath)
-	{
-		$relativeProjectPath = self::getRelativePath($absoluteProjectPath);
-		$relativeProjectComponents = $relativeProjectPath->getComponents();
-
-		if (count($relativeProjectComponents) === 0) {
-			return 'composer install';
-		}
-
-		$escapedRelativeProjectPath = escapeshellarg((string)$relativeProjectPath);
-		return "composer --working-dir={$escapedRelativeProjectPath} install";
-	}
-
 	public static function invalidSettingsFile($path, ErrorException $exception)
 	{
 		$code = self::CODE_INVALID_SETTINGS_FILE;
@@ -239,95 +186,6 @@ class LensException extends Exception
 		];
 
 		return new self($code, $severity, $message, $help, $data, $exception);
-	}
-
-	public static function invalidTestsPath($input)
-	{
-		$code = self::CODE_INVALID_TESTS_PATH;
-
-		$severity = self::SEVERITY_ERROR;
-
-		$message = self::getInvalidPathMessage($input, 'a tests file or directory');
-
-		$help = null;
-
-		$data = [
-			'path' => $input
-		];
-
-		return new self($code, $severity, $message, $help, $data);
-	}
-
-	private static function getInvalidPathMessage($input, $description)
-	{
-		// TODO: use the "Filesystem":
-		// TODO: display all quotations in double quotes:
-		$displayer = new Displayer();
-
-		if (!is_string($input) || (strlen($input) === 0)) {
-			$testsDirectoryValue = self::getValueDescription($input);
-			return "Expected a path to {$description}, but received {$testsDirectoryValue} instead";
-		}
-
-		if (!file_exists($input)) {
-			$testsDirectoryValue = $displayer->display($input);
-			return "Expected a path to {$description}, but there doesn't seem to be anything at {$testsDirectoryValue}";
-		}
-
-		if (!is_dir($input) && !is_file($input)) {
-			$testsDirectoryValue = $displayer->display($input);
-			return "Expected a path to {$description}, but {$testsDirectoryValue} is not a file or a directory";
-		}
-
-		if (!is_readable($input)) {
-			$testsDirectoryValue = $displayer->display($input);
-			return "Expected a path to {$description}, but {$testsDirectoryValue} is not readable";
-		}
-
-		return "Expected a valid path to {$description}";
-	}
-
-	private static function getValueDescription($value)
-	{
-		$type = gettype($value);
-
-		switch ($type) {
-			case 'NULL':
-				return 'a null value';
-
-			case 'boolean':
-				$valueJson = json_encode($value);
-				return "a boolean ({$valueJson})";
-
-			case 'integer':
-				$valueJson = json_encode($value);
-				return "an integer ({$valueJson})";
-
-			case 'double':
-				$valueJson = json_encode($value);
-				return "a float ({$valueJson})";
-
-			case 'string':
-				if (strlen($value) === 0) {
-					return 'an empty string';
-				}
-
-				$valueJson = json_encode($value);
-				return "a string ({$valueJson})";
-
-			case 'array':
-				$valueJson = json_encode($value);
-				return "an array ({$valueJson})";
-
-			case 'object':
-				return 'an object';
-
-			case 'resource':
-				return 'a resource';
-
-			default:
-				return 'an unknown value';
-		}
 	}
 
 	public static function invalidTestsFileSyntax(Path $path, ParsingException $exception)
@@ -419,7 +277,7 @@ class LensException extends Exception
 		$reportText = $displayer->display($reportType);
 		$message = "There is no report called {$reportText}!";
 
-		$version = LensVersion::VERSION;
+		$version = VersionCommand::VERSION;
 
 		$help = [
 			"Make sure that the report name is spelled correctly. Here is a list of the supported reports:\n" . Url::LENS_REPORTS,

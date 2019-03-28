@@ -52,9 +52,15 @@ class Semantics
 		return self::$unsafeFunctions;
 	}
 
+	// TODO: delete this:
 	public static function isUnsafeFunction($name)
 	{
 		return isset(self::$unsafeFunctions[$name]);
+	}
+
+	public static function isSafeFunction($name)
+	{
+		return !isset(self::$unsafeFunctions[$name]);
 	}
 
 	public static function getUnsafeClasses()
@@ -62,9 +68,15 @@ class Semantics
 		return self::$unsafeClasses;
 	}
 
+	// TODO: delete this:
 	public static function isUnsafeClass($name)
 	{
 		return isset(self::$unsafeClasses[$name]);
+	}
+
+	public static function isSafeClass($name)
+	{
+		return !isset(self::$unsafeClasses[$name]);
 	}
 
 	private static $classIdentifiers = [

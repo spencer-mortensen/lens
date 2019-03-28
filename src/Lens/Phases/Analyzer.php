@@ -23,29 +23,41 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Files\MetaFile;
+use _Lens\Lens\Phases\Code\CodePhase;
+use _Lens\Lens\Phases\Tests\TestsPhase;
 
-class Environment
+class Analyzer
 {
-	public function getOperatingSystemName()
+	public function analyze(Finder $finder)
 	{
-		return php_uname('s');
+		$metaFile = $this->getMetaFile($finder);
+
+		$meta = $metaFile->read();
+
+		$codePhase = new CodePhase();
+		$codePhase->execute($finder, $meta);
+
+		// TODO: generate code coverage information
+
+		exit;
+
+		// TODO: pass the "Finder" to the "TestsPhase" (instead of all of these little paths)
+		$tests = $finder->getTestsPath();
+		$cache = $finder->getCachePath();
+
+		$testsPhase = new TestsPhase();
+		$testsPhase->cache($tests, $cache);
+
+		$metaFile->write($meta);
 	}
 
-	public function getPhpVersion()
+	private function getMetaFile(Finder $finder)
 	{
-		$versionString = phpversion();
-
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		$cachePath = $finder->getCachePath();
+		$metaPath = $cachePath->add('meta.json');
+		return new MetaFile($metaPath);
 	}
 }

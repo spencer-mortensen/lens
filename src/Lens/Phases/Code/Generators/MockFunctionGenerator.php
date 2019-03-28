@@ -23,29 +23,23 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Code\Generators;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
-
-class Environment
+class MockFunctionGenerator extends MockGenerator
 {
-	public function getOperatingSystemName()
+	public function generate(array $context, array $function, array $map, array $inflatedTokens)
 	{
-		return php_uname('s');
+		$context = $this->getContext($context['namespace']);
+		$definitionPhp = $this->getDefinitionPhp($function, $map, $inflatedTokens);
+
+		return [$context, $definitionPhp];
 	}
 
-	public function getPhpVersion()
+	private function getDefinitionPhp(array $function, array $map, array $inflatedTokens)
 	{
-		$versionString = phpversion();
+		$signaturePhp = $this->getRangePhp($function['signatureRange'], $map, $inflatedTokens);
+		$bodyPhp = $this->getMethodBodyPhp('null', '__FUNCTION__', 'func_get_args()');
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		return "{$signaturePhp}\n{\n\t{$bodyPhp}\n}";
 	}
 }

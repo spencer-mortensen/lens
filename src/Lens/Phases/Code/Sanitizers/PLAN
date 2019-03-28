@@ -1,0 +1,110 @@
+Example
+	time
+	\time <-- _time
+
+
+Example
+	\time <-- time
+
+
+Alias preferences:
+	time
+	_time
+	__time
+	...
+
+
+Example
+	cats	cats => Example\cats
+	\time	time => time
+	time	_time => Example\time
+
+Example
+	cats	cats => Example\cats
+	time	time => Example\time
+	\time	_time => time
+
+======
+
+1. Make a list of the aliases that are actively in use:
+	For each path in the source code:
+		If the path is absolute:
+			Ignore it
+
+		Otherwise if the path is a single-word function path:
+			If a matching function alias was provided by the user:
+				Save that function alias
+
+			Otherwise:
+				If the namespace is null:
+					Add a trivial function alias ("time" => "time")
+
+				Otherwise:
+					Add a conditional function alias ("time" => ["Example\time", "time"])
+
+		Otherwise:
+			Find the first word in the path
+
+			If a matching class alias was provided by the user:
+				Save that class alias
+
+			Otherwise:
+				Add a trivial class alias ("Cats" => "Example\Cats")
+
+
+2. For each path in the source code:
+	If (path is relative)
+		Done
+
+	If (path is a class path):
+		If (class name is safe):
+			Done
+
+		If there is an existing class alias that maps to this dangerous class name:
+			Choose that existing class alias
+
+		Otherwise:
+			Choose a brand-new alias (e.g. "DateTime", "_DateTime", "__DateTime", ... => "DateTime")
+
+		Replace the absolute path with the chosen alias
+		Done
+
+
+	If (path is a function path):
+		If (function name is safe):
+			Done
+
+		If there is an existing function alias that maps to this dangerous function name:
+			Choose that existing function alias
+
+		Otherwise:
+			Choose a brand-new alias (e.g. "time", "_time", "__time", ... => "time")
+
+		Replace the absolute path with the chosen alias
+		Done
+
+--- HERE ---
+
+3. Go through each conditional alias:
+
+	If "Example\time" is defined elsewhere:
+		Rewrite the conditional alias: ("time" => "Example\time")
+
+	Otherwise:
+		Rewrite the conditional alias: ("time" => "time")
+
+
+4. Generate the LIVE aliases:
+	For each class alias:
+		If the target class name is dangerous:
+			Rewrite the dangerous class name (e.g. "DateTime" => "Lens\DateTime")
+
+		If the map is trivial (null: "Cats" => "Cats") or ("Example": "Cats" => "Example\Cats"):
+			Ignore this trivial alias
+
+	For each function alias:
+		If the target function name is dangerous:
+			Rewrite the dangerous function name (e.g. "time" => "Lens\time")
+
+		If the map is trivial (null: "cats" => "cats") or ("Example": "cats" => "Example\cats"):
+			Ignore this trivial alias

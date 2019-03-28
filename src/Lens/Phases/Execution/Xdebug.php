@@ -23,29 +23,49 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Execution;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
-
-class Environment
+class Xdebug
 {
-	public function getOperatingSystemName()
+	/** @var int */
+	private $options;
+
+	public static function isEnabled()
 	{
-		return php_uname('s');
+		return function_exists('xdebug_start_code_coverage');
 	}
 
-	public function getPhpVersion()
+	public function __construct($isExecuted)
 	{
-		$versionString = phpversion();
-
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
+		if ($isExecuted) {
+			$this->options = 0;
+		} else {
+			$this->options = XDEBUG_CC_UNUSED | XDEBUG_CC_DEAD_CODE;
+		}
 	}
 
-	public function getLensVersion()
+	public function start()
 	{
-		return VersionCommand::VERSION;
+		if (function_exists('xdebug_start_code_coverage')) {
+			xdebug_start_code_coverage($this->options);
+		}
+	}
+
+	public function stop()
+	{
+		if (function_exists('xdebug_stop_code_coverage')) {
+			xdebug_stop_code_coverage(false);
+		}
+	}
+
+	public function getCoverage()
+	{
+		if (function_exists('xdebug_get_code_coverage')) {
+			$coverage = xdebug_get_code_coverage();
+			xdebug_stop_code_coverage(true);
+			return $coverage;
+		}
+
+		return null;
 	}
 }

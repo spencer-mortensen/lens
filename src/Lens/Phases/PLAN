@@ -1,0 +1,192 @@
+FILES:
+
+"cache/meta.json":
+{
+	"classes": {
+		"Nightingale": {
+			"context": {...},
+			"definition": "...",
+			"coverage": null,
+			"coverage": [7, 8, 12],
+			"conditions": ["Example\\time", "Example\\fluff", ...],
+			"dependencies": ["Example\\absoluteFunction", ...]
+		}
+	},
+	"functions": {
+		"Example\\shell_exec": {
+			"context": {...},
+			"definition": "...",
+			"coverage": [9, 10, 11],
+			"conditions": [...],
+			"dependencies": [...]
+		}
+	}
+}
+
+
+STEPS:
+
+0. Read: "cache/meta.json" => $meta
+
+1. Process any source file changes:
+
+# REMOVED or MODIFIED
+
+	# INDEX:
+	Read the index file (get a list of the definitions that were contained in the source file)
+	Delete the index file
+
+	For each definition:
+		# CONDITIONS:
+		if ($type === 'function'):
+			Remember that the definition was deleted (so we can update any classes or functions that use it):
+			$changedFunctions[$name] = true;
+
+		# CODE: MOCK:
+		Delete the mock file
+
+		# CODE: LIVE:
+		Delete the live file
+
+		# META:
+		if ($type === 'function'):
+			$group = 'functions';
+		else:
+			$group = 'classes';
+
+		unset($meta[$group][$name]);
+
+
+# MODIFIED or ADDED
+
+	# INDEX:
+	List any definitions contained within the source file
+	Save the index file (mapping the source file to its definitions)
+
+	For each definition:
+		# CONDITIONS:
+		if ($type === 'function'):
+			if (isset($changedFunctions[$name])):
+				unset($changedFunctions[$name]); // modified
+			else:
+				$changedFunctions[$name] = true; // added
+
+		# CODE: MOCK:
+		If ($type !== 'interface'):
+			Generate the mock artifacts: ($definition) => ($context, $definitionPhp) => $mockFilePhp
+			Save the mock file
+
+		# CODE: LIVE:
+		Generate the live artifacts: ($context, $definition, $tokens) => ($context, $definitionPhp)
+
+		List any "conditions" (the non-trivial option in any conditional function-alias tuple): $context => $conditions
+
+		Rewrite any unsafe aliases: $context => $context
+		* Remember to copy over any necessary "Lens" class or function live definition files...
+		List all function dependencies, including any absolute paths, but skipping any conditional dependencies, and skipping any built-in functions which are already defined: ($paths, $context) => $dependencies
+		Remove any trivial aliases: $context => $context
+
+		# META:
+		if ($type === 'function'):
+			$group = 'functions';
+		else:
+			$group = 'classes';
+
+		Remember to regenerate the live file later:
+		$generate[$group][$name] = $name;
+
+		$meta[$group][$name]['context'] = $context; <-- used when regenerating, and when assessing executable/evaluated code coverage lines
+		$meta[$group][$name]['definition'] = $definitionPhp; <-- used when regenerating, and when displaying code coverage results
+		$meta[$group][$name]['coverage'] = null; <-- we search through all of these
+		$meta[$group][$name]['conditions'] = ["Example\\time", "Example\\fluff", ...]; <-- we search through all of these
+		$meta[$group][$name]['dependencies'] = ["Example\\absoluteFunction", ...]; <-- used only when regenerating
+
+
+2. Changed functions
+
+	For each $meta[$group][$name]['conditions'] as $condition;
+			if (isset($changedFunctions[$condition])):
+				Remember to regenerate the live file later: $generate[$space][$name] = $name;
+
+	unset($changedFunctions);
+
+3. Generate live files
+
+	For each $generate[$space] as $name:
+		Resolve any conditional-alias choices: ($context => $context) <-- length will remain unchanged; trivial aliases are not possible
+		Generate the live file: ($context, $definitionPhp) => $liveFilePhp
+		Save the live file
+
+		Start with the 'dependencies' list
+		Add any new conditional-alias function dependency choices
+		Remove any function dependencies that can't be included because they are undefined
+		* Save this list of functions... somewhere (this will be used exclusively by the autoloader, on a per-file basis)
+		* The autoloader will choose between the live and the mock version of each file at run time, which will determine the file path
+
+	unset($generate);
+
+
+3. Generate code coverage:
+
+	If xdebug is enabled:
+		For each $meta['classes'][$name] as 'coverage' => null:
+			Get code coverage from live class file
+
+			Subtract the $context lines
+			$meta['classes'][$name]['coverage'] = $executable;
+
+		For each $meta['functions'][$name] as 'coverage' => null:
+			Generate the xdebug PHP: ($context, $definitionPhp) => $xdebugFilePhp
+			Save the xdebug function file
+			Get code coverage from xdebug function file
+			Delete the xdebug function file
+
+			Subtract the $context lines
+			$meta['functions'][$name]['coverage'] = $executable;
+
+		Delete the "cache/code/xdebug" directory
+
+
+4. Save: $meta => "cache/meta.json"
+
+======
+
+use _Lens\Lens\Php\Semantics;
+
+	private function getClassAliases(array $aliases)
+	{
+		$safe = [];
+
+		foreach ($aliases as $alias => $name) {
+			if (Semantics::isUnsafeClass($name)) {
+				$name = "Lens\\{$name}";
+			}
+
+			$safe[$alias] = $name;
+		}
+
+		return $safe;
+	}
+
+	private function getFunctionAliases(array $aliases)
+	{
+		$safe = [];
+
+		foreach ($aliases as $alias => $name) {
+			if (Semantics::isUnsafeFunction($name)) {
+				$name = "Lens\\{$name}";
+			} elseif ($alias === $name) {
+				continue;
+			}
+
+			$safe[$alias] = $name;
+		}
+
+		return $safe;
+	}
+
+
+	private function getXdebugDefinitionPhp($functionPhp)
+	{
+		return "new Class() {\npublic {$functionPhp}\n};";
+	}

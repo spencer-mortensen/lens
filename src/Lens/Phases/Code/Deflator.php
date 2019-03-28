@@ -23,29 +23,41 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Code;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Php\Lexer;
 
-class Environment
+class Deflator
 {
-	public function getOperatingSystemName()
+	private static $metaTokens = [
+		Lexer::COMMENT_ => Lexer::COMMENT_,
+		Lexer::WHITESPACE_ => Lexer::WHITESPACE_,
+	];
+
+	public function deflate(array $inflatedTokens, array &$deflatedTokens = null, array &$map = null)
 	{
-		return php_uname('s');
+		$deflatedTokens = [];
+		$map = [];
+
+		$iDeflated = 0;
+
+		foreach ($inflatedTokens as $iInflated => $token) {
+			if ($this->isMetaToken($token)) {
+				continue;
+			}
+
+			$deflatedTokens[$iDeflated] = $token;
+			$map[$iDeflated] = $iInflated;
+			++$iDeflated;
+		}
+
+		return [$deflatedTokens, $map];
 	}
 
-	public function getPhpVersion()
+	private function isMetaToken(array $node)
 	{
-		$versionString = phpversion();
+		$type = key($node);
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		return isset(self::$metaTokens[$type]);
 	}
 }

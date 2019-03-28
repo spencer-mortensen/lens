@@ -28,7 +28,6 @@ namespace _Lens\Lens\Tests;
 use _Lens\Lens\Exceptions\ParsingException;
 use _Lens\Lens\LensException;
 use _Lens\Lens\Paragraph;
-use _Lens\Lens\Tests\Parse\Parser;
 use _Lens\SpencerMortensen\Filesystem\Directory;
 use _Lens\SpencerMortensen\Filesystem\File;
 use _Lens\SpencerMortensen\Filesystem\Filesystem;

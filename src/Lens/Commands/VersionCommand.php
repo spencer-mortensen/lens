@@ -23,29 +23,37 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Commands;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Arguments;
 
-class Environment
+class VersionCommand implements Command
 {
-	public function getOperatingSystemName()
+	/** @var Arguments */
+	private $arguments;
+
+	/** @var string */
+	const VERSION = '0.0.63';
+
+	public function __construct(Arguments $arguments)
 	{
-		return php_uname('s');
+		$this->arguments = $arguments;
 	}
 
-	public function getPhpVersion()
+	public function run(&$stdout = null, &$stderr = null, &$exitCode = null)
 	{
-		$versionString = phpversion();
+		$options = $this->arguments->getOptions();
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
+		if (!isset($options['version'])) {
+			return false;
+		}
 
-		return $versionNumber;
-	}
+		// TODO: if there are any other options, or any other values, then throw a usage exception
 
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		$stdout = 'lens ' . self::VERSION;
+		$stderr = null;
+		$exitCode = 0;
+
+		return true;
 	}
 }

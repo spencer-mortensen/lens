@@ -23,29 +23,23 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Execution;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Phases\Finder;
+use _Lens\SpencerMortensen\Filesystem\Filesystem;
 
-class Environment
+class Executor
 {
-	public function getOperatingSystemName()
+	/** @var Coverager */
+	private $coverager;
+
+	public function __construct(Filesystem $filesystem)
 	{
-		return php_uname('s');
+		$this->coverager = new Coverager($filesystem);
 	}
 
-	public function getPhpVersion()
+	public function execute(Finder $finder)
 	{
-		$versionString = phpversion();
-
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		$this->coverager->getCoverage($finder);
 	}
 }

@@ -23,29 +23,29 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Code\Parsers;
 
-use _Lens\Lens\Commands\VersionCommand;
-use _Lens\SpencerMortensen\RegularExpressions\Re;
+use _Lens\Lens\Phases\Code\Input;
+use _Lens\Lens\Php\Lexer;
 
-class Environment
+class BlockParser
 {
-	public function getOperatingSystemName()
+	// This assumes we're starting on, or before, the opening '{'
+	// (The final position will be just after the closing '}')
+	public function parse(Input $input, &$output = null)
 	{
-		return php_uname('s');
-	}
+		$depth = 0;
 
-	public function getPhpVersion()
-	{
-		$versionString = phpversion();
+		while ($input->read($type)) {
+			$input->move(1);
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
+			if ($type === Lexer::BRACE_LEFT_) {
+				++$depth;
+			} elseif (($type === Lexer::BRACE_RIGHT_) && (--$depth === 0)) {
+				return true;
+			}
+		}
 
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		return false;
 	}
 }

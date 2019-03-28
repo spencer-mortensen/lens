@@ -23,29 +23,54 @@
  * @copyright 2017 Spencer Mortensen
  */
 
-namespace _Lens\Lens;
+namespace _Lens\Lens\Phases\Code\Sanitizers;
 
-use _Lens\Lens\Commands\VersionCommand;
+use _Lens\Lens\Paragraph;
+use _Lens\Lens\Php\Lexer as PhpLexer;
 use _Lens\SpencerMortensen\RegularExpressions\Re;
 
-class Environment
+class WhitespaceStandardizer
 {
-	public function getOperatingSystemName()
+	public function standardize(array $tokens)
 	{
-		return php_uname('s');
+		$output = [];
+
+		$depth = 0;
+
+		foreach ($tokens as $i => $token) {
+			$type = key($token);
+
+			switch ($type) {
+				case PhpLexer::WHITESPACE_:
+					$value = &$token[$type];
+					$value = Paragraph::standardizeNewlines($value);
+
+					if (is_int(strpos($value, "\n"))) {
+						$value = Re::replace('[^\\n]', '', $value) . $this->getPadding($tokens, $i, $depth);
+					}
+					break;
+
+				case PhpLexer::BRACE_LEFT_:
+					++$depth;
+					break;
+
+				case PhpLexer::BRACE_RIGHT_:
+					--$depth;
+					break;
+			}
+
+			$output[] = $token;
+		}
+
+		return $output;
 	}
 
-	public function getPhpVersion()
+	private function getPadding(array $tokens, $i, $depth)
 	{
-		$versionString = phpversion();
+		if (isset($tokens[$i + 1]) && (key($tokens[$i + 1]) === PhpLexer::BRACE_RIGHT_)) {
+			--$depth;
+		}
 
-		Re::match('^[0-9]+\.[0-9]+\.[0-9]+', $versionString, $versionNumber);
-
-		return $versionNumber;
-	}
-
-	public function getLensVersion()
-	{
-		return VersionCommand::VERSION;
+		return str_repeat("\t", $depth);
 	}
 }
